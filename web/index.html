@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
 <title>机忆书库 · 样章预览</title>
 <style>
   :root {
@@ -98,6 +99,10 @@
   .sug-item i { font-style: normal; color: var(--dim); font-size: 11px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
 
+  /* ---------- 3D 舞台 ---------- */
+  #scene3d { position: fixed; inset: 0; z-index: 0; }
+  header, .search, #app { position: relative; z-index: 5; }
+
   @media (max-width: 1200px) {
     #reader { grid-template-columns: 46px minmax(0, 1fr); }
     #reader.rail-collapsed { grid-template-columns: 46px minmax(0, 1fr); }
@@ -115,8 +120,10 @@
 <div class="search">
   <input id="q" placeholder="卡片目录检索：神经网络 / 达特茅斯 / 扩散 ……" onkeydown="if(event.key==='Enter')doSearch()">
   <button onclick="doSearch()">检索</button>
-  <button class="back" style="margin:0" onclick="showShelf()">返回书架</button>
+  <button class="back" style="margin:0" onclick="backToRoom()">3D 阅览室</button>
+  <button class="back" style="margin:0" onclick="showShelf()">书架列表</button>
 </div>
+<div id="scene3d"></div>
 <div id="app"></div>
 <script>
 const $ = (s) => document.querySelector(s);
@@ -161,7 +168,7 @@ function renderMd(md, el) {
 
 // ---------- 书架 ----------
 async function showShelf() {
-  document.body.classList.remove('reading');
+  document.body.classList.add('grid');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在取出书架……</div>';
   const [books, health] = await Promise.all([
@@ -185,6 +192,18 @@ async function showBook(id) {
   if (!book.chapters.length) { app.innerHTML = '<div class="empty">这本书还没有样章</div>'; return; }
   await showChapter(book.chapters[0].id);
 }
+
+// 回到 3D 阅览室
+function backToRoom() {
+  document.body.classList.remove('reading', 'grid');
+  app.innerHTML = '';
+  if (window.mm3d) window.mm3d.reset();
+}
+
+// 3D 启动时把书目映射灌进共享缓存（接待卡/馆员署名要用）
+window.mmAdoptBooks = (bs) => {
+  bs.forEach((b) => { bookNames[b.id] = b.title; bookFloors[b.id] = b.floor; bookCalls[b.id] = b.call; });
+};
 
 // ---------- 阅读三栏 ----------
 function splitNotes(content) {
@@ -226,7 +245,7 @@ async function showChapter(id) {
     </aside>
     <main>
       <div class="paper ${m.style}" id="paperBox">
-        <button class="back" onclick="showShelf()">← 合上书，回到书架</button>
+        <button class="back" onclick="backToRoom()">← 合上书，回到阅览室</button>
         <div class="reception">
           <div class="rc-title">接待记录 No. ${esc(callNo)}</div>
           <div>宾客：<b>${esc(m.title)}（${esc(m.year)}）</b></div>
@@ -387,6 +406,7 @@ document.addEventListener('click', (e) => {
 async function doSearch() {
   const q = $('#q').value.trim();
   if (!q) return;
+  document.body.classList.add('grid');
   app.innerHTML = '<div class="empty">正在翻查卡片目录……</div>';
   const r = await (await fetch('/api/search?q=' + encodeURIComponent(q))).json();
   if (!r.results.length) { app.innerHTML = '<div class="empty">目录里没有查到「' + esc(q) + '」，试试别的词（神经网络 / 符号主义 / 蛋白质）</div>'; return; }
@@ -421,7 +441,41 @@ sugBox.addEventListener('mousedown', (e) => {
 qIn.addEventListener('blur', () => { hideTimer = setTimeout(() => { sugBox.innerHTML = ''; }, 200); });
 qIn.addEventListener('focus', () => clearTimeout(hideTimer));
 
-showShelf();
+// 初始状态：3D 阅览室由下方 module 启动；失败则回退书架列表
+fetch('/api/health').then((r) => r.json()).then((h) => {
+  const stat = $('#stat');
+  if (stat) stat.textContent = `已入库 ${h.chapters}/96 章`;
+}).catch(() => {});
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "/vendor/three.module.js",
+    "rapier": "/vendor/rapier.mjs"
+  }
+}
+</script>
+<script type="module">
+import { init3D } from '/app3d.js';
+(async () => {
+  try {
+    const [catalog, floors] = await Promise.all([
+      fetch('/api/catalog').then((r) => r.json()),
+      fetch('/api/floors').then((r) => r.json()),
+    ]);
+    window.mmAdoptBooks(catalog);
+    window.mm3d = await init3D({
+      container: document.getElementById('scene3d'),
+      books: catalog,
+      floors,
+      onOpenBook: (id) => window.showChapter(id),
+    });
+    document.body.classList.remove('grid', 'reading');
+  } catch (e) {
+    console.error('[3D] 初始化失败，回退书架列表', e);
+    showShelf();
+  }
+})();
 </script>
 </body>
 </html>

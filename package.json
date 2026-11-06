@@ -13,7 +13,9 @@
     "verify:links": "node tools/verify.mjs --links"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.21.0",
     "fastify": "^5.2.0",
+    "three": "^0.187.0",
     "yaml": "^2.7.0"
   }
 }

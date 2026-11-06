@@ -25,6 +25,21 @@ app.get('/', async (request, reply) => {
   return reply.type('text/html; charset=utf-8').send(readFileSync(WEB_INDEX, 'utf8'));
 });
 
+// 3D 前端模块与 vendor（three.js / Rapier）
+app.get('/app3d.js', async (request, reply) => {
+  const p = path.join(ROOT, 'web', 'app3d.js');
+  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'app3d.js 缺失' } });
+  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
+});
+
+app.get('/vendor/*', async (request, reply) => {
+  const rel = String(request.params['*'] || '');
+  if (!rel || rel.includes('..')) return reply.code(400).send({ error: { code: 'BAD_REQUEST', message: '非法路径' } });
+  const p = path.join(ROOT, 'web', 'vendor', rel);
+  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'vendor 文件缺失' } });
+  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
+});
+
 // ---------- 鉴权装饰 ----------
 app.decorateRequest('user', null);
 
@@ -121,6 +136,17 @@ app.get('/api/books/:id', async (request, reply) => {
     .sort((a, b) => a.no - b.no);
   return { ...book, chapters };
 });
+
+// 3D 大厅用：一次拿全部书 + 章节索引
+app.get('/api/catalog', async () => ctx.books.map((b) => ({
+  ...b,
+  chapters: [...ctx.chapters.values()]
+    .filter(({ meta }) => meta.book === b.id)
+    .sort((a, b2) => a.meta.no - b2.meta.no)
+    .map(({ meta }) => ({ id: meta.id, no: meta.no, title: meta.title, style: meta.style, year: meta.year })),
+})));
+
+app.get('/api/floors', async (request, reply) => jsonContent(reply, 'floors.json'));
 
 app.get('/api/chapters/:id', async (request, reply) => {
   const entry = ctx.chapters.get(request.params.id);

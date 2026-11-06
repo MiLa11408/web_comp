@@ -1,0 +1,6 @@
+[
+  {"id": "L1", "name": "历史典藏", "librarian": "旧纸馆员", "welcome": "档案都在架上，翻页轻一点——纸比人老。", "color": "#8a6d33"},
+  {"id": "L2", "name": "技术工坊", "librarian": "蓝图馆员", "welcome": "图纸都在架上，扳手自己带。", "color": "#3f6b8a"},
+  {"id": "L3", "name": "产业观察", "librarian": "账簿馆员", "welcome": "数字不会说谎，但会收费。", "color": "#7a5a4a"},
+  {"id": "L4", "name": "未编目地库", "librarian": "蜡封馆员", "welcome": "不该问的，别问；找不到的，问我。", "color": "#5a4a6a"}
+]
