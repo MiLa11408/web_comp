@@ -9,7 +9,7 @@ const DECAY = ['完好', '轻残', '中残', '高残'];
 const SHELF_X = [-4.4, 0, 4.4];
 const SHELF_Z = -3.1;
 const BOARD_Y = [0.6, 1.6, 2.6];
-const BOOK_H = 0.44;
+const BOOK_H = 0.60;
 
 const CSS = `
 .mm-root { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
@@ -55,30 +55,30 @@ function injectCss() {
 // ---------- 书脊：Canvas 竖排 ----------
 function spineTexture(book) {
   const c = document.createElement('canvas');
-  c.width = 192;
-  c.height = 512;
+  c.width = 256;
+  c.height = 768;
   const ctx = c.getContext('2d');
   ctx.fillStyle = book.color || '#4a3a2e';
-  ctx.fillRect(0, 0, 192, 512);
-  for (let i = 0; i < 800; i++) {
+  ctx.fillRect(0, 0, 256, 768);
+  for (let i = 0; i < 1200; i++) {
     ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.07})`;
-    ctx.fillRect(Math.random() * 192, Math.random() * 512, 2, 2);
+    ctx.fillRect(Math.random() * 256, Math.random() * 768, 2, 2);
   }
   ctx.strokeStyle = '#c8a24a';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(12, 12, 168, 488);
+  ctx.lineWidth = 4;
+  ctx.strokeRect(14, 14, 228, 740);
   ctx.lineWidth = 1;
-  ctx.strokeRect(20, 20, 152, 472);
+  ctx.strokeRect(24, 24, 208, 720);
 
   const title = String(book.title || '').replace(/[《》]/g, '');
-  ctx.fillStyle = '#f0e2c0';
+  ctx.fillStyle = '#f6ecc9';
   ctx.textAlign = 'center';
-  ctx.font = 'bold 40px "Songti SC", "SimSun", serif';
-  [...title].slice(0, 9).forEach((ch, i) => ctx.fillText(ch, 96, 66 + i * 46));
+  ctx.font = 'bold 54px "Songti SC", "SimSun", serif';
+  [...title].slice(0, 10).forEach((ch, i) => ctx.fillText(ch, 128, 90 + i * 64));
 
-  ctx.font = 'bold 18px monospace';
-  ctx.fillStyle = '#d8b45a';
-  ctx.fillText(String(book.call || ''), 96, 470);
+  ctx.font = 'bold 24px monospace';
+  ctx.fillStyle = '#e2c06a';
+  ctx.fillText(String(book.call || ''), 128, 716);
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -104,27 +104,43 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.95;
+  renderer.toneMappingExposure = 1.85;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;';
   root.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x120e0b);
-  scene.fog = new THREE.Fog(0x120e0b, 7, 26);
+  scene.background = new THREE.Color(0x171009);
+  scene.fog = new THREE.Fog(0x171009, 8, 34);
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 60);
   const cam = {
-    theta: 0, phi: 1.27, radius: 7.6, target: new THREE.Vector3(0, 1.5, -0.6),
-    tTheta: 0, tPhi: 1.27, tRadius: 7.6, tTarget: new THREE.Vector3(0, 1.5, -0.6),
+    theta: 0, phi: 1.22, radius: 5.9, target: new THREE.Vector3(0, 1.8, -1.6),
+    tTheta: 0, tPhi: 1.22, tRadius: 5.9, tTarget: new THREE.Vector3(0, 1.8, -1.6),
   };
 
   // ---------- 灯光 ----------
-  const ambient = new THREE.AmbientLight(0x4a3a28, 0.9);
+  const ambient = new THREE.AmbientLight(0x7a6a52, 2.2);
   scene.add(ambient);
-  scene.add(new THREE.HemisphereLight(0x6b5a3a, 0x120e0b, 0.45));
+  scene.add(new THREE.HemisphereLight(0x9a8a6a, 0x3a2f22, 1.6));
 
-  const spot = new THREE.SpotLight(0xffd9a0, 2.3, 0, 0.95, 0.55, 1.2);
+  const key = new THREE.DirectionalLight(0xffe3b0, 2.2);
+  key.position.set(2.5, 5, 4.5);
+  scene.add(key);
+  const fillA = new THREE.PointLight(0xffcf9a, 1.6, 14, 2);
+  fillA.position.set(3.2, 2.8, 3.8);
+  scene.add(fillA);
+  const fillB = new THREE.PointLight(0x9fc2ff, 1.2, 14, 2);
+  fillB.position.set(-3.2, 2.8, 3.8);
+  scene.add(fillB);
+  // 书架灯：照亮书脊
+  for (const sx of [-4.4, 0, 4.4]) {
+    const lamp = new THREE.PointLight(0xffc37a, 1.0, 7, 2);
+    lamp.position.set(sx, 2.9, -2.5);
+    scene.add(lamp);
+  }
+
+  const spot = new THREE.SpotLight(0xffd9a0, 6.0, 0, 0.95, 0.55, 1.2);
   spot.position.set(0, 5.6, 2.2);
   spot.target.position.set(0, 0.8, -2.6);
   spot.castShadow = true;
@@ -141,16 +157,16 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   scene.add(sideR);
 
   // ---------- 房间 ----------
-  const woodDark = new THREE.MeshStandardMaterial({ color: 0x2a1c12, roughness: 0.82, metalness: 0.05 });
-  const wood = new THREE.MeshStandardMaterial({ color: 0x362415, roughness: 0.75, metalness: 0.06 });
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x1c1510, roughness: 0.9 });
+  const woodDark = new THREE.MeshStandardMaterial({ color: 0x523a24, roughness: 0.82, metalness: 0.05 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.75, metalness: 0.06 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x342a20, roughness: 0.9 });
 
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(19, 14), new THREE.MeshStandardMaterial({ color: 0x241a11, roughness: 0.92 }));
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(19, 14), new THREE.MeshStandardMaterial({ color: 0x4a3722, roughness: 0.92 }));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const rug = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 4.2), new THREE.MeshStandardMaterial({ color: 0x3a2216, roughness: 0.95 }));
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 4.2), new THREE.MeshStandardMaterial({ color: 0x5a3520, roughness: 0.95 }));
   rug.rotation.x = -Math.PI / 2;
   rug.position.set(0.2, 0.012, 0.2);
   rug.receiveShadow = true;
@@ -166,7 +182,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     side.position.set(sx * 9.5, 3.25, 0);
     scene.add(side);
   }
-  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(19, 14), new THREE.MeshStandardMaterial({ color: 0x0e0a07, roughness: 1 }));
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(19, 14), new THREE.MeshStandardMaterial({ color: 0x241c16, roughness: 1 }));
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.y = 6.5;
   scene.add(ceiling);
@@ -218,16 +234,20 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     const unit = i % 3;
     const slot = Math.floor(i / 3); // 0..3
     const level = BOARD_Y[slot < 2 ? 0 : 1] + 0.03;
-    const sx = slot % 2 === 0 ? -0.36 : 0.2;
-    const basePos = new THREE.Vector3(SHELF_X[unit] + sx, level + BOOK_H / 2 + 0.004, SHELF_Z + 0.02);
+    const sx = slot % 2 === 0 ? -0.42 : 0.28;
+    const basePos = new THREE.Vector3(SHELF_X[unit] + sx, level + BOOK_H / 2 + 0.004, SHELF_Z + 0.05);
     const baseQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, (Math.random() - 0.5) * 0.08, 0));
 
+    const baseColor = new THREE.Color(book.color || '#4a3a2e');
     const sideMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(book.color || '#4a3a2e').multiplyScalar(0.62),
+      color: baseColor.clone().multiplyScalar(0.78),
       roughness: 0.7, metalness: 0.05,
     });
-    const spineMat = new THREE.MeshStandardMaterial({ map: spineTexture(book), roughness: 0.62, metalness: 0.05 });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.16, BOOK_H, 0.30), [sideMat, sideMat, sideMat, sideMat, spineMat, sideMat]);
+    const spineMat = new THREE.MeshStandardMaterial({
+      map: spineTexture(book), roughness: 0.62, metalness: 0.05,
+      emissive: baseColor.clone().multiplyScalar(0.25), emissiveIntensity: 0.35,
+    });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, BOOK_H, 0.40), [sideMat, sideMat, sideMat, sideMat, spineMat, sideMat]);
     mesh.position.copy(basePos);
     mesh.quaternion.copy(baseQuat);
     mesh.castShadow = true;
@@ -348,7 +368,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
           .setLinearDamping(0.4)
           .setAngularDamping(0.7)
       );
-      world.createCollider(RAPIER.ColliderDesc.cuboid(0.08, BOOK_H / 2, 0.15).setFriction(0.98).setRestitution(0.02), rb);
+      world.createCollider(RAPIER.ColliderDesc.cuboid(0.11, BOOK_H / 2, 0.20).setFriction(0.98).setRestitution(0.02), rb);
       item.body = rb;
     }
   } catch (e) {
@@ -393,23 +413,23 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   elevPanel.appendChild(closeBtn);
   const allBtn = document.createElement('button');
   allBtn.innerHTML = '<span>全馆大厅</span><i>三排书架 · 12 本</i>';
-  allBtn.onclick = () => { setFloor('all'); elevPanel.classList.remove('show'); };
+  allBtn.onclick = () => { elevPanel.classList.remove('show'); travelTo('all'); };
   elevPanel.appendChild(allBtn);
   for (const f of floors) {
     const b = document.createElement('button');
     b.innerHTML = `<span>${f.name}</span><i>等级 ${f.tier} · ${DECAY[f.decay] || '残'} · ${f.librarian}</i>`;
-    b.onclick = () => { setFloor(f.id); elevPanel.classList.remove('show'); };
+    b.onclick = () => { elevPanel.classList.remove('show'); travelTo(f.id); };
     elevPanel.appendChild(b);
   }
   root.appendChild(elevPanel);
 
-  // 楼层氛围：越高层，雾越浓、光越暗、尘埃越少
+  // 楼层氛围：越高层，雾越浓、光越暗、尘埃越少（但保证可读）
   const ATMOS = {
-    all: { near: 7, far: 26, bg: 0x120e0b, amb: 0.9, spot: 2.3, dust: 0.28 },
-    L1: { near: 6.5, far: 22, bg: 0x14100b, amb: 0.85, spot: 2.4, dust: 0.30 },
-    L2: { near: 5.4, far: 17, bg: 0x0d1216, amb: 0.70, spot: 2.0, dust: 0.22 },
-    L3: { near: 4.6, far: 13.5, bg: 0x14100a, amb: 0.55, spot: 1.7, dust: 0.18 },
-    L4: { near: 3.6, far: 10.5, bg: 0x0a0a10, amb: 0.35, spot: 1.1, dust: 0.10 },
+    all: { near: 8, far: 34, bg: 0x171009, amb: 2.2, spot: 4.8, dir: 2.2, dust: 0.30 },
+    L1: { near: 7, far: 28, bg: 0x1a130b, amb: 2.4, spot: 5.2, dir: 2.4, dust: 0.32 },
+    L2: { near: 6.5, far: 24, bg: 0x111820, amb: 2.1, spot: 4.8, dir: 2.1, dust: 0.24 },
+    L3: { near: 5.8, far: 20, bg: 0x1a140c, amb: 1.9, spot: 4.4, dir: 1.9, dust: 0.20 },
+    L4: { near: 5.0, far: 18, bg: 0x0e0d14, amb: 1.6, spot: 3.6, dir: 1.4, dust: 0.12 },
   };
   function applyAtmos(fid) {
     const a = ATMOS[fid] || ATMOS.all;
@@ -418,11 +438,17 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     scene.background.setHex(a.bg);
     ambient.intensity = a.amb;
     spot.intensity = a.spot;
+    key.intensity = a.dir;
     dust.material.opacity = a.dust;
   }
 
   let currentFloor = 'all';
-  function setFloor(fid) {
+  function floorWelcome(fid) {
+    if (fid === 'all') return '全馆大厅：三排书架都在，慢慢看。';
+    const f = floors.find((x) => x.id === fid);
+    return f ? `${f.name} · ${f.librarian}：${f.welcome}` : '';
+  }
+  function setFloor(fid, silent = false) {
     currentFloor = fid;
     applyAtmos(fid);
     for (const it of bookItems) {
@@ -430,16 +456,15 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     }
     const idx = floors.findIndex((f) => f.id === fid);
     if (fid === 'all') {
-      cam.tTheta = 0; cam.tPhi = 1.27; cam.tRadius = 7.6; cam.tTarget.set(0, 1.5, -0.6);
-      toast('全馆大厅：三排书架都在，慢慢看。');
+      cam.tTheta = 0; cam.tPhi = 1.22; cam.tRadius = 5.9; cam.tTarget.set(0, 1.8, -1.6);
     } else {
       const f = floors[idx];
-      cam.tTheta = [-0.26, 0, 0.26, 0][idx] ?? 0;
-      cam.tPhi = 1.24;
-      cam.tRadius = 5.9;
-      cam.tTarget.set(0, 1.65, -2.2);
-      toast(`${f.name} · ${f.librarian}：${f.welcome}`);
+      cam.tTheta = [-0.30, 0, 0.30, 0][idx] ?? 0;
+      cam.tPhi = 1.20;
+      cam.tRadius = 5.4;
+      cam.tTarget.set(0, 1.85, -2.35);
     }
+    if (!silent) toast(floorWelcome(fid));
   }
 
   // ---------- 相机控制 ----------
@@ -495,6 +520,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   }
 
   function pick(x, y) {
+    if (traveling) return;
     setPointer(x, y);
     const elevHits = raycaster.intersectObject(elevator, true);
     if (elevHits.length) {
@@ -512,6 +538,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
 
   // ---------- 取书翻开（签名时刻） ----------
   let taking = false;
+  let traveling = false;
   function takeBook(item) {
     if (taking) return;
     taking = true;
@@ -563,6 +590,69 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     requestAnimationFrame(step);
   }
 
+  // ---------- 电梯入舱转场 ----------
+  let override = null;
+  function tween(dur, onUpdate) {
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / dur);
+        onUpdate(easeInOut(p), p);
+        if (p < 1) requestAnimationFrame(step);
+        else resolve();
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  function setDoors(open) {
+    doorL.position.x = -0.44 - 0.44 * open;
+    doorR.position.x = 0.44 + 0.44 * open;
+  }
+
+  function snapCamToPreset() {
+    cam.theta = cam.tTheta;
+    cam.phi = cam.tPhi;
+    cam.radius = cam.tRadius;
+    cam.target.copy(cam.tTarget);
+  }
+
+  async function travelTo(fid) {
+    if (traveling || taking) return;
+    traveling = true;
+    hint.style.opacity = '0';
+    const startPos = camera.position.clone();
+    const doorLook = new THREE.Vector3(-5.6, 1.45, -0.6);
+    const doorFront = new THREE.Vector3(-3.85, 1.55, -0.6);
+    const insidePos = new THREE.Vector3(-6.9, 1.5, -0.6);
+    const insideLook = new THREE.Vector3(-7.8, 1.45, -0.6);
+
+    // 1. 飞到电梯门前
+    await tween(900, (e) => {
+      override = { pos: startPos.clone().lerp(doorFront, e), look: doorLook.clone() };
+    });
+    // 2. 门开
+    await tween(550, (e) => { setDoors(e); });
+    // 3. 走入轿厢，灯光渐暗
+    await tween(850, (e) => {
+      override = { pos: doorFront.clone().lerp(insidePos, e), look: doorLook.clone().lerp(insideLook, e) };
+      if (e > 0.55) fade(true);
+    });
+    // 4. 门关（全黑）
+    await tween(520, (e) => { setDoors(1 - e); });
+    await new Promise((r) => setTimeout(r, 200));
+    // 5. 黑场中切换楼层，相机直接落到新楼层
+    setFloor(fid, true);
+    snapCamToPreset();
+    override = null;
+    setDoors(0);
+    await new Promise((r) => setTimeout(r, 260));
+    fade(false);
+    setTimeout(() => toast(floorWelcome(fid)), 320);
+    hint.style.opacity = '1';
+    traveling = false;
+  }
+
   // ---------- 复位（从阅读页回到房间时调用） ----------
   function reset() {
     taking = false;
@@ -581,7 +671,11 @@ export async function init3D({ container, books, floors, onOpenBook }) {
       }
     }
     fade(false);
+    override = null;
+    traveling = false;
+    setDoors(0);
     setFloor('all');
+    snapCamToPreset();
     currentFloor = 'all';
   }
 
@@ -603,9 +697,13 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   let elapsed = 0;
   function tick(now) {
     requestAnimationFrame(tick);
-    const dt = (now || 0) / 1000;
     elapsed += 1 / 60;
-    updateCamera();
+    if (override) {
+      camera.position.copy(override.pos);
+      camera.lookAt(override.look);
+    } else {
+      updateCamera();
+    }
 
     if (world) {
       world.step();
