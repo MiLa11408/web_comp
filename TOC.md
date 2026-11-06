@@ -282,3 +282,20 @@ LeNet-5（~6 万）、AlexNet（6,000 万）、ResNet-50（2,560 万）、BERT-l
 4. 失窃页 8 处、历史分岔 4 条是否保留？
 
 确认后我按这个目录写 12 个样章（每本 1 章），你审完再批量。
+
+---
+
+## 15. 三大模型家族覆盖核对（Boss 2026-11-07 追加）
+
+> 要求：**GPT（OpenAI）、Claude（Anthropic）、DeepSeek（梁文锋团队）的功绩必须作为正式内容出现**，不允许只做成脚注或被一笔带过。
+
+| 家族 | 落点章节 | 必须写到的锚点 |
+|---|---|---|
+| GPT（OpenAI） | b5-c5 GPT 与自回归（GPT-2 2019 / GPT-3 2020 / GPT-4 2023）、b7-c7 RLHF（InstructGPT 2022）、b12-c2 推理（o1 2024 / o3 2024） | 论文与技术报告年份、公开参数量、InstructGPT 的 SFT→奖励模型→PPO 流程 |
+| Claude（Anthropic） | b11-c1 对齐（Constitutional AI，Bai 等 2022）、b5-c8 长上下文（Claude 系列长上下文实践）、b7-c7 RLHF（Anthropic 的 Christiano 2017 为共同起点） | Anthropic 2021 成立、Constitutional AI 论文、Claude 2023 发布、RLHF 原始论文 |
+| DeepSeek（梁文锋） | b10-c6 中国 AI 产业简史（已写：V3/R1）、b12-c2 推理与测试时计算（已写：R1 纯 RL 涌现）、b10-c7 算力与能源（低成本训练账） | DeepSeek-V3（671B 总参/37B 激活、557.6 万美元估算）、R1（2025-01 开源）、Nature 2025 论文 |
+
+写手注意：
+1. 写上述章节时，必须把对应家族写进「时间·人物·机构」或「它改变了什么」段，不允许一笔带过。
+2. Claude 相关章节标注 Anthropic；DeepSeek 相关章节标注梁文锋与「深度求索」。
+3. 事实纪律不变：无法核验的数字不写；「推测」内容必须标注。
