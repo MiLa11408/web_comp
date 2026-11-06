@@ -6,10 +6,22 @@ import RAPIER from 'rapier';
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const DECAY = ['完好', '轻残', '中残', '高残'];
 
-const SHELF_UNITS = [
-  { x: -7.2, z: -3.5 }, { x: -3.6, z: -3.5 }, { x: 0, z: -3.5 }, { x: 3.6, z: -3.5 }, { x: 7.2, z: -3.5 },
-  { x: -5.4, z: -1.3 }, { x: -1.8, z: -1.3 }, { x: 1.8, z: -1.3 }, { x: 5.4, z: -1.3 },
-];
+// 书架容量可配置：按书数动态计算需要多少组书架、排成几行
+function layoutShelves(totalBooks, capacity, maxPerRow = 5) {
+  const units = Math.max(1, Math.ceil(totalBooks / capacity));
+  const rows = Math.ceil(units / maxPerRow);
+  const base = Math.floor(units / rows);
+  const extra = units % rows;
+  const spacing = 3.6;
+  const out = [];
+  for (let r = 0; r < rows; r++) {
+    const count = base + (r < extra ? 1 : 0);
+    const startX = -((count - 1) * spacing) / 2;
+    const z = -3.5 + r * 2.2;
+    for (let i = 0; i < count; i++) out.push({ x: startX + i * spacing, z });
+  }
+  return out;
+}
 const BOARD_Y = [0.6, 1.6, 2.6];
 const BOOK_H = 0.60;
 
@@ -88,7 +100,7 @@ function spineTexture(book) {
   return tex;
 }
 
-export async function init3D({ container, books, floors, onOpenBook }) {
+export async function init3D({ container, books, floors, shelfConfig = {}, onOpenBook }) {
   injectCss();
 
   const root = document.createElement('div');
@@ -124,6 +136,12 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   };
   const keys = { w: false, a: false, s: false, d: false };
 
+  // 书架容量：内容配置决定每组书架能放多少本，组数由实际书数动态推导
+  const booksPerBoard = Math.max(1, Number(shelfConfig.booksPerBoard) || 3);
+  const boardsPerUnit = Math.min(BOARD_Y.length, Math.max(1, Number(shelfConfig.boardsPerUnit) || 2));
+  const perUnit = booksPerBoard * boardsPerUnit;
+  const SHELF_UNITS = layoutShelves(books.length, perUnit);
+
   // ---------- 灯光 ----------
   const ambient = new THREE.AmbientLight(0x7a6a52, 2.2);
   scene.add(ambient);
@@ -139,9 +157,9 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   fillB.position.set(-3.2, 2.8, 3.8);
   scene.add(fillB);
   // 书架灯：照亮书脊
-  for (const sx of [-7.2, -3.6, 0, 3.6, 7.2]) {
+  for (const u of SHELF_UNITS.slice(0, 5)) {
     const lamp = new THREE.PointLight(0xffc37a, 1.0, 7, 2);
-    lamp.position.set(sx, 2.9, -2.4);
+    lamp.position.set(u.x, 2.9, -2.4);
     scene.add(lamp);
   }
 
@@ -242,10 +260,12 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   const bookItems = [];
   books.forEach((book, i) => {
     const unitIdx = i % SHELF_UNITS.length;
-    const slot = Math.floor(i / SHELF_UNITS.length); // 0..3
+    const slot = Math.floor(i / SHELF_UNITS.length); // 0..perUnit-1
     const unit = SHELF_UNITS[unitIdx];
-    const level = BOARD_Y[slot < 2 ? 0 : 1] + 0.03;
-    const sx = slot % 2 === 0 ? -0.42 : 0.28;
+    const board = Math.floor(slot / booksPerBoard);
+    const pos = slot % booksPerBoard;
+    const level = (BOARD_Y[board] ?? BOARD_Y[BOARD_Y.length - 1]) + 0.03;
+    const sx = (pos - (booksPerBoard - 1) / 2) * 0.72;
     const basePos = new THREE.Vector3(unit.x + sx, level + BOOK_H / 2 + 0.004, unit.z + 0.05);
     const baseQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, (Math.random() - 0.5) * 0.08, 0));
 
@@ -506,7 +526,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   closeBtn.onclick = () => elevPanel.classList.remove('show');
   elevPanel.appendChild(closeBtn);
   const allBtn = document.createElement('button');
-  allBtn.innerHTML = '<span>全馆大厅</span><i>九排书架 · 36 本</i>';
+  allBtn.innerHTML = `<span>全馆大厅</span><i>${SHELF_UNITS.length} 组书架 · ${books.length} 本</i>`;
   allBtn.onclick = () => { elevPanel.classList.remove('show'); travelTo('all'); };
   elevPanel.appendChild(allBtn);
   for (const f of floors) {
@@ -877,7 +897,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   });
 
   return {
-    reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups,
+    reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups, shelfUnits: SHELF_UNITS,
     getFloor: () => currentFloor,
     toastFloor: () => toast(floorWelcome(currentFloor)),
   };

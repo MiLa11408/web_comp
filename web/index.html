@@ -192,6 +192,15 @@ const LIBRARIANS = { L1: '旧纸馆员', L2: '蓝图馆员', L3: '账簿馆员',
 const floorInfo = {};
 const chapterFragments = {};
 let iflineInfo = null;
+let shelfConfig = { booksPerBoard: 3, boardsPerUnit: 2 };
+
+async function ensureShelfConfig() {
+  try {
+    const cfg = await (await fetch('/api/shelves')).json();
+    if (cfg && Number(cfg.booksPerBoard) > 0 && Number(cfg.boardsPerUnit) > 0) shelfConfig = cfg;
+  } catch (e) { console.warn('[shelves] 配置加载失败，使用默认值', e); }
+  return shelfConfig;
+}
 
 async function loadMeta() {
   try {
@@ -301,17 +310,23 @@ async function showShelves(floor) {
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在取出书架……</div>';
   const [catalog, floors] = await Promise.all([ensureCatalog(), ensureFloors()]);
+  await ensureShelfConfig();
   const active = shelfFloor;
   // 与 3D 同步：在书架视图选层后，3D 也切到同一层
   if (floor && window.mm3d && window.mm3d.getFloor && window.mm3d.getFloor() !== floor) {
     try { window.mm3d.setFloor(floor, true); } catch (e) { console.warn('[sync] 3D 切层失败', e); }
   }
   const visible = active === 'all' ? catalog : catalog.filter((b) => b.floor === active);
-  const cols = Math.max(1, Math.ceil(visible.length / 4));
+  const perBoard = Math.max(1, Number(shelfConfig.booksPerBoard) || 3);
+  const boardsPerUnit = Math.max(1, Number(shelfConfig.boardsPerUnit) || 2);
+  const capacity = perBoard * boardsPerUnit;
+  const cols = Math.max(1, Math.ceil(visible.length / capacity));
   const units = [];
   for (let c = 0; c < cols; c++) {
-    const slice = visible.slice(c * 4, c * 4 + 4);
-    units.push({ top: slice.slice(0, 2), bottom: slice.slice(2, 4) });
+    const slice = visible.slice(c * capacity, (c + 1) * capacity);
+    const boards = [];
+    for (let b = 0; b < boardsPerUnit; b++) boards.push(slice.slice(b * perBoard, (b + 1) * perBoard));
+    units.push({ boards });
   }
   const spineHtml = (b) => `
     <div class="book-spine" style="background:linear-gradient(180deg, ${b.color}, ${shade(b.color, 0.55)})"
@@ -323,13 +338,13 @@ async function showShelves(floor) {
   const elevHtml = ['all', ...floors.map((f) => f.id)].map((id) => {
     const f = id === 'all' ? null : floors.find((x) => x.id === id);
     const label = f ? f.name : '全馆大厅';
-    const sub = f ? `等级 ${f.tier} · ${decayLbl[f.decay] || '残'} · ${f.librarian}` : '九排书架 · 36 本';
+    const sub = f ? `等级 ${f.tier} · ${decayLbl[f.decay] || '残'} · ${f.librarian}` : `${Math.max(1, Math.ceil(catalog.length / capacity))} 组书架 · ${catalog.length} 本`;
     return `<button class="elev-btn ${active === id ? 'active' : ''}" onclick="showShelves('${id}')"><span>${esc(label)}</span><i>${esc(sub)}</i></button>`;
   }).join('');
   const cur = active === 'all' ? null : floors.find((f) => f.id === active);
   const welcome = cur
     ? `${cur.name} · ${cur.librarian}：${cur.welcome}`
-    : '全馆大厅：九排书架都在，慢慢看。';
+    : '全馆大厅：全馆的书架都在，慢慢看。';
   app.innerHTML = `
   <div class="shelf-view">
     <aside class="shelf-elevator">
@@ -341,8 +356,7 @@ async function showShelves(floor) {
     <main class="shelf-main">
       ${units.map((u) => `
         <div class="unit">
-          <div class="board">${u.top.map(spineHtml).join('')}</div>
-          <div class="board">${u.bottom.map(spineHtml).join('')}</div>
+          ${u.boards.map((board) => `<div class="board">${board.map(spineHtml).join('')}</div>`).join('')}
         </div>`).join('')}
       ${visible.length === 0 ? '<div class="empty">这一层暂时没有样章</div>' : ''}
     </main>
@@ -661,15 +675,17 @@ fetch('/api/health').then((r) => r.json()).then((h) => {
 import { init3D } from '/app3d.js';
 (async () => {
   try {
-    const [catalog, floors] = await Promise.all([
+    const [catalog, floors, shelves] = await Promise.all([
       fetch('/api/catalog').then((r) => r.json()),
       fetch('/api/floors').then((r) => r.json()),
+      fetch('/api/shelves').then((r) => r.json()).catch(() => ({ booksPerBoard: 3, boardsPerUnit: 2 })),
     ]);
     window.mmAdoptBooks(catalog);
     window.mm3d = await init3D({
       container: document.getElementById('scene3d'),
       books: catalog,
       floors,
+      shelfConfig: shelves,
       onOpenBook: (id) => window.showChapter(id),
     });
     document.body.classList.remove('grid', 'reading');
