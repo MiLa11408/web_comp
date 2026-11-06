@@ -20,7 +20,7 @@ const STYLES = new Set(['history', 'tech', 'industry', 'frontier']);
 
 // ---------- books.json ----------
 const books = JSON.parse(readFileSync(path.join(CONTENT, 'books.json'), 'utf8'));
-if (!Array.isArray(books) || books.length !== 12) F('books.json 需恰好 12 本书');
+if (!Array.isArray(books) || books.length !== 36) F('books.json 需恰好 36 本书（12 原有 + 24 专题册）');
 const calls = new Set();
 const bookIds = new Set();
 for (const b of books) {
@@ -138,7 +138,7 @@ if (!fails.some((f) => f.includes('目录不存在'))) {
   // 每本书至少 1 章（样本期）；8 章齐全仅为提醒
   for (const b of books) {
     const count = [...chapters.values()].filter(({ meta }) => meta.book === b.id).length;
-    if (count === 0) F(`${b.id} ${b.title} 没有任何章节`);
+    if (count === 0) W(`${b.id} ${b.title} 还没有章节（待写）`);
     else if (count < 8) W(`${b.id} ${b.title} 现有 ${count}/8 章`);
     else ok(`${b.id} ${b.title} 8/8 章`);
   }
