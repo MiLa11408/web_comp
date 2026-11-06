@@ -1,0 +1,19 @@
+{
+  "name": "machine-memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "node --watch server/src/index.js",
+    "start": "node server/src/index.js",
+    "verify": "node tools/verify.mjs",
+    "verify:links": "node tools/verify.mjs --links"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "yaml": "^2.7.0"
+  }
+}
