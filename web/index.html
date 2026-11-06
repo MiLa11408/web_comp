@@ -43,6 +43,11 @@
   .results .hit:hover { border-color: var(--gold); }
   .results .hit h4 { margin: 0 0 6px; color: var(--gold); font-size: 15px; }
   .results .hit p { margin: 0; font-size: 13px; color: var(--dim); }
+  .results .hit p mark { background: #b78a2f; color: #171310; padding: 0 2px; }
+  .sugbox { position: absolute; left: 0; right: 0; top: 100%; background: #241c14; border: 1px solid var(--gold); z-index: 20; margin-top: 2px; }
+  .sug-item { display: flex; justify-content: space-between; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--ink); }
+  .sug-item:hover { background: #2c241a; }
+  .sug-item i { font-style: normal; color: var(--dim); font-size: 11px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
 </style>
 </head>
@@ -141,9 +146,33 @@ async function doSearch() {
   app.innerHTML = '<div class="results">' + r.results.map((h) => `
     <div class="hit" onclick="showChapter('${h.id}')">
       <h4>${esc(h.title)} <small style="color:#9a8a6f">${esc(h.book_title)} · 命中 ${h.score}</small></h4>
-      <p>${esc(h.snippet)}</p>
+      <p>${h.snippet}</p>
     </div>`).join('') + '</div>';
 }
+
+// 输入补全：章节/书/标签/人物
+const qIn = $('#q');
+const wrap = document.createElement('span');
+wrap.style.cssText = 'position:relative;flex:0 1 420px;display:block;';
+qIn.parentNode.insertBefore(wrap, qIn);
+wrap.appendChild(qIn);
+const sugBox = document.createElement('div');
+sugBox.className = 'sugbox';
+wrap.appendChild(sugBox);
+let hideTimer = null;
+qIn.addEventListener('input', async () => {
+  const v = qIn.value.trim();
+  if (!v) { sugBox.innerHTML = ''; return; }
+  const r = await (await fetch('/api/suggest?q=' + encodeURIComponent(v))).json();
+  clearTimeout(hideTimer);
+  sugBox.innerHTML = r.items.map((i) => `<div class="sug-item" data-text="${esc(i.text)}"><span>${esc(i.text)}</span><i>${esc(i.type)}</i></div>`).join('');
+});
+sugBox.addEventListener('mousedown', (e) => {
+  const item = e.target.closest('.sug-item');
+  if (item) { qIn.value = item.dataset.text; sugBox.innerHTML = ''; doSearch(); }
+});
+qIn.addEventListener('blur', () => { hideTimer = setTimeout(() => { sugBox.innerHTML = ''; }, 200); });
+qIn.addEventListener('focus', () => clearTimeout(hideTimer));
 
 // 章节列表缺 book 名称，从书架缓存补
 const bookNames = {};

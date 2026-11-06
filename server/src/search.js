@@ -64,6 +64,7 @@ export function initSearch(contentDir) {
   }
 
   // 倒排索引：term -> Map(docId -> weight)
+  // 权重即检索优先级（Boss 定）：标题(12) > tag/别名(8) > 小标题/人物/摘要(3-4) > 正文出现次数(1，逐次累计)
   const index = new Map();
   const addDoc = (docId, fieldText, weight) => {
     for (const term of tokenize(fieldText)) {
@@ -73,32 +74,56 @@ export function initSearch(contentDir) {
     }
   };
 
+  const titleSets = new Map(); // docId -> 标题分词集合（命中加成最高）
+  const tagSets = new Map();   // docId -> tag+书名别名分词集合（命中加成次之）
+  const suggestTitles = [];
+  const suggestTags = new Set();
+  const suggestPeople = new Set();
+
   for (const [id, { meta, body }] of chapters) {
     const book = bookMeta.get(meta.book);
-    addDoc(id, meta.title || '', 6);
-    addDoc(id, (meta.tags || []).join(' '), 5);
-    addDoc(id, ((book && book.aliases) || []).join(' '), 5);
-    addDoc(id, meta.summary || '', 3);
+    addDoc(id, meta.title || '', 12);
+    addDoc(id, (meta.tags || []).join(' '), 8);
+    addDoc(id, ((book && book.aliases) || []).join(' '), 8);
+    addDoc(id, meta.summary || '', 4);
     addDoc(id, ((meta.people || []).map((p) => p.name).join(' ')), 3);
     // 小标题与正文
     const headings = [...body.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1]).join(' ');
     addDoc(id, headings, 3);
     addDoc(id, body, 1);
+
+    titleSets.set(id, new Set(tokenize(meta.title || '')));
+    tagSets.set(id, new Set(tokenize(`${(meta.tags || []).join(' ')} ${((book && book.aliases) || []).join(' ')}`)));
+    if (meta.title) suggestTitles.push(meta.title);
+    for (const t of meta.tags || []) suggestTags.add(t);
+    for (const p of meta.people || []) if (p.name) suggestPeople.add(p.name);
   }
 
-  return { books, chapters, index };
+  return { books, chapters, index, titleSets, tagSets, suggestTitles, suggestTags, suggestPeople };
 }
 
 export function search(ctx, q, limit = 10) {
   const tokens = tokenize(q || '');
   if (tokens.length === 0) return [];
   const scores = new Map();
+  const matched = new Map();
   for (const term of tokens) {
     const docMap = ctx.index.get(term);
     if (!docMap) continue;
     for (const [docId, weight] of docMap) {
       scores.set(docId, (scores.get(docId) || 0) + weight);
+      if (!matched.has(docId)) matched.set(docId, new Set());
+      matched.get(docId).add(term);
     }
+  }
+  // 层级加成：命中标题 +40/词，命中 tag/别名 +12/词，保证 标题 > tag > 正文频次 的梯队
+  for (const [docId, score] of scores) {
+    const titleSet = ctx.titleSets.get(docId) || new Set();
+    const tagSet = ctx.tagSets.get(docId) || new Set();
+    let bonus = 0;
+    for (const t of tokens) if (titleSet.has(t)) bonus += 40;
+    for (const t of tokens) if (tagSet.has(t)) bonus += 12;
+    scores.set(docId, score + bonus);
   }
   const ranked = [...scores.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -115,9 +140,30 @@ export function search(ctx, q, limit = 10) {
       book_title: book ? book.title : '',
       tags: meta.tags || [],
       score,
-      snippet: makeSnippet(body, tokens),
+      snippet: makeSnippet(body, [...(matched.get(docId) || [])]),
     };
   });
+}
+
+// 输入补全：章节标题 / 书名 / 标签 / 人物（拉丁字母走前缀匹配，中文走包含匹配）
+export function suggest(ctx, q, limit = 10) {
+  const key = (q || '').trim().toLowerCase();
+  if (!key) return [];
+  const isLatin = /^[a-z0-9]/.test(key);
+  const match = (s) => {
+    const lower = String(s).toLowerCase();
+    return isLatin ? lower.startsWith(key) : lower.includes(key);
+  };
+  const out = [];
+  for (const t of ctx.suggestTitles) if (match(t)) out.push({ text: t, type: '章节' });
+  for (const b of ctx.books) if (match(b.title)) out.push({ text: b.title, type: '书' });
+  for (const t of ctx.suggestTags) if (match(t)) out.push({ text: t, type: '标签' });
+  for (const t of ctx.suggestPeople) if (match(t)) out.push({ text: t, type: '人物' });
+  return out.slice(0, limit);
+}
+
+function escHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function makeSnippet(body, tokens) {
@@ -127,8 +173,12 @@ function makeSnippet(body, tokens) {
     const pos = flat.indexOf(t);
     if (pos >= 0 && (best < 0 || pos < best)) best = pos;
   }
-  if (best < 0) return flat.slice(0, 120);
-  const start = Math.max(0, best - 60);
-  const end = Math.min(flat.length, best + 80);
-  return (start > 0 ? '…' : '') + flat.slice(start, end) + (end < flat.length ? '…' : '');
+  const start = best >= 0 ? Math.max(0, best - 60) : 0;
+  const end = best >= 0 ? Math.min(flat.length, best + 80) : Math.min(flat.length, 120);
+  let seg = escHtml(flat.slice(start, end));
+  for (const t of tokens) {
+    const te = escHtml(t);
+    if (te) seg = seg.split(te).join('<mark>' + te + '</mark>');
+  }
+  return (start > 0 ? '…' : '') + seg + (end < flat.length ? '…' : '');
 }

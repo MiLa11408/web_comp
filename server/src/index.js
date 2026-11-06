@@ -8,7 +8,7 @@ import {
   createUser, createSession, verifyPassword, getUserByToken, destroySession,
   allowLoginAttempt, allowRegisterAttempt,
 } from './auth.js';
-import { initSearch, search } from './search.js';
+import { initSearch, search, suggest } from './search.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', '..');
@@ -133,6 +133,11 @@ app.get('/api/search', async (request, reply) => {
   if (!q) return { results: [] };
   const limit = Math.min(50, Math.max(1, Number(request.query.limit) || 10));
   return { results: search(ctx, q, limit) };
+});
+
+app.get('/api/suggest', async (request) => {
+  const q = (request.query.q || '').toString().trim();
+  return { items: suggest(ctx, q) };
 });
 
 app.get('/api/graph', async (request, reply) => {
