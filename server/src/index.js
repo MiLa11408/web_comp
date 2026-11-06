@@ -148,6 +148,8 @@ app.get('/api/catalog', async () => ctx.books.map((b) => ({
 
 app.get('/api/floors', async (request, reply) => jsonContent(reply, 'floors.json'));
 
+app.get('/api/fragments', async (request, reply) => jsonContent(reply, 'fragments.json'));
+
 app.get('/api/chapters/:id', async (request, reply) => {
   const entry = ctx.chapters.get(request.params.id);
   if (!entry) return fail(reply, 404, 'NOT_FOUND', '没有这一章');

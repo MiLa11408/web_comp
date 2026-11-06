@@ -80,6 +80,8 @@
   .note-anchor { display: flex; justify-content: space-between; align-items: center; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 11px; color: #8a6d33; letter-spacing: 1px; border-bottom: 1px dashed #c9b98f; padding-bottom: 4px; margin-bottom: 5px; }
   .note-sign { text-align: right; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 11px; color: #8a7a5c; margin-top: 6px; }
   .notes-empty { color: #7d6e55; font-size: 12px; }
+  .ifline-card { background: #211a13; border: 1px dashed #8f7a52; color: #d8c89e; font-size: 12px; padding: 9px 11px; margin-bottom: 12px; line-height: 1.8; }
+  .ifline-card small { color: #8a7a5c; font-size: 11px; }
 
   /* ---------- 接待卡 ---------- */
   .reception { border: 1px dashed #8f7a52; background: #f6edda; color: #3b3020; padding: 10px 14px; margin-bottom: 18px; font-family: "Consolas", "Microsoft YaHei", monospace; font-size: 12.5px; line-height: 1.85; transform: rotate(-.2deg); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
@@ -134,6 +136,24 @@ const bookNames = {};
 const bookFloors = {};
 const bookCalls = {};
 const LIBRARIANS = { L1: '旧纸馆员', L2: '蓝图馆员', L3: '账簿馆员', L4: '蜡封馆员' };
+const floorInfo = {};
+const chapterFragments = {};
+let iflineInfo = null;
+
+async function loadMeta() {
+  try {
+    const [floors, frags] = await Promise.all([
+      fetch('/api/floors').then((r) => r.json()),
+      fetch('/api/fragments').then((r) => r.json()),
+    ]);
+    floors.forEach((f) => { floorInfo[f.id] = f; });
+    iflineInfo = frags.ifline || null;
+    (frags.fragments || []).forEach((fr) => { chapterFragments[fr.chapter] = fr; });
+  } catch (e) {
+    console.warn('[meta] 分级/残页数据加载失败', e);
+  }
+}
+loadMeta();
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -233,6 +253,10 @@ async function showChapter(id) {
   const summary = String(m.summary || '').split(/[。．.]/)[0].trim();
   const purpose = summary.length > 46 ? summary.slice(0, 46) + '…' : summary;
   const missing = (m.features || []).some((f) => String(f).startsWith('stolen:'));
+  const fl = floorInfo[bookFloors[m.book]] || null;
+  const roman = ['I', 'II', 'III', 'IV'][((fl ? fl.tier : 1) - 1)] || 'I';
+  const decayTxt = ['完好', '轻残', '中残', '高残'][fl ? fl.decay : 0] || '完好';
+  const fr = chapterFragments[m.id] || null;
   app.innerHTML = `
   <div id="reader">
     <aside id="rail">
@@ -251,6 +275,8 @@ async function showChapter(id) {
           <div>宾客：<b>${esc(m.title)}（${esc(m.year)}）</b></div>
           <div>来访目的：<b>${esc(purpose || '——')}</b></div>
           <div>当值馆员：<b>${librarian}</b></div>
+          <div>楼层：<b>${esc((fl && fl.name) || bookNames[m.book] || '—')} · 等级 ${roman} · ${decayTxt}</b></div>
+          <div>残页：<b>${fr ? `${esc(fr.id)} · ${esc(fr.title)}（推测 · 未收编）` : '—'}</b></div>
           <div>接待结果：<b>${missing ? '已收编 · 缺一页' : '已收编'}</b></div>
         </div>
         <h1>${esc(m.title)} <small style="color:#6b5a3a;font-size:15px">${esc(m.title_en || '')}</small></h1>
@@ -261,6 +287,7 @@ async function showChapter(id) {
     </main>
     <aside id="notesCol">
       <div class="notes-title">页边注</div>
+      <div class="ifline-card">另一条时间线 · 残页 0/${iflineInfo ? iflineInfo.total : 8}<br><small>八张残页，拼出另一条时间线（推测）</small></div>
       ${notes.length ? notes.map((n) => `
         <div class="note"${n.anchor ? ` data-anchor="${esc(n.anchor)}" title="点击跳到「${esc(n.anchor)}」"` : ''}>
           ${n.anchor ? `<div class="note-anchor"><span>〔${esc(n.anchor)}〕</span><span>↘</span></div>` : ''}

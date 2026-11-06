@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import RAPIER from 'rapier';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const DECAY = ['完好', '轻残', '中残', '高残'];
 
 const SHELF_X = [-4.4, 0, 4.4];
 const SHELF_Z = -3.1;
@@ -119,7 +120,8 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   };
 
   // ---------- 灯光 ----------
-  scene.add(new THREE.AmbientLight(0x4a3a28, 0.9));
+  const ambient = new THREE.AmbientLight(0x4a3a28, 0.9);
+  scene.add(ambient);
   scene.add(new THREE.HemisphereLight(0x6b5a3a, 0x120e0b, 0.45));
 
   const spot = new THREE.SpotLight(0xffd9a0, 2.3, 0, 0.95, 0.55, 1.2);
@@ -395,15 +397,34 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   elevPanel.appendChild(allBtn);
   for (const f of floors) {
     const b = document.createElement('button');
-    b.innerHTML = `<span>${f.name}</span><i>${f.librarian}</i>`;
+    b.innerHTML = `<span>${f.name}</span><i>等级 ${f.tier} · ${DECAY[f.decay] || '残'} · ${f.librarian}</i>`;
     b.onclick = () => { setFloor(f.id); elevPanel.classList.remove('show'); };
     elevPanel.appendChild(b);
   }
   root.appendChild(elevPanel);
 
+  // 楼层氛围：越高层，雾越浓、光越暗、尘埃越少
+  const ATMOS = {
+    all: { near: 7, far: 26, bg: 0x120e0b, amb: 0.9, spot: 2.3, dust: 0.28 },
+    L1: { near: 6.5, far: 22, bg: 0x14100b, amb: 0.85, spot: 2.4, dust: 0.30 },
+    L2: { near: 5.4, far: 17, bg: 0x0d1216, amb: 0.70, spot: 2.0, dust: 0.22 },
+    L3: { near: 4.6, far: 13.5, bg: 0x14100a, amb: 0.55, spot: 1.7, dust: 0.18 },
+    L4: { near: 3.6, far: 10.5, bg: 0x0a0a10, amb: 0.35, spot: 1.1, dust: 0.10 },
+  };
+  function applyAtmos(fid) {
+    const a = ATMOS[fid] || ATMOS.all;
+    scene.fog.near = a.near;
+    scene.fog.far = a.far;
+    scene.background.setHex(a.bg);
+    ambient.intensity = a.amb;
+    spot.intensity = a.spot;
+    dust.material.opacity = a.dust;
+  }
+
   let currentFloor = 'all';
   function setFloor(fid) {
     currentFloor = fid;
+    applyAtmos(fid);
     for (const it of bookItems) {
       it.mesh.visible = fid === 'all' || it.book.floor === fid;
     }

@@ -1,6 +1,6 @@
 [
-  {"id": "L1", "name": "历史典藏", "librarian": "旧纸馆员", "welcome": "档案都在架上，翻页轻一点——纸比人老。", "color": "#8a6d33"},
-  {"id": "L2", "name": "技术工坊", "librarian": "蓝图馆员", "welcome": "图纸都在架上，扳手自己带。", "color": "#3f6b8a"},
-  {"id": "L3", "name": "产业观察", "librarian": "账簿馆员", "welcome": "数字不会说谎，但会收费。", "color": "#7a5a4a"},
-  {"id": "L4", "name": "未编目地库", "librarian": "蜡封馆员", "welcome": "不该问的，别问；找不到的，问我。", "color": "#5a4a6a"}
+  {"id": "L1", "name": "历史典藏", "librarian": "旧纸馆员", "welcome": "档案都在架上，翻页轻一点——纸比人老。", "color": "#8a6d33", "tier": 1, "tierName": "基础", "decay": 0, "mystery": 0, "tagline": "史料的原样"},
+  {"id": "L2", "name": "技术工坊", "librarian": "蓝图馆员", "welcome": "图纸都在架上，扳手自己带。", "color": "#3f6b8a", "tier": 2, "tierName": "进阶", "decay": 1, "mystery": 1, "tagline": "图纸的边缘有烧焦的痕迹"},
+  {"id": "L3", "name": "产业观察", "librarian": "账簿馆员", "welcome": "数字不会说谎，但会收费。", "color": "#7a5a4a", "tier": 3, "tierName": "高端", "decay": 2, "mystery": 2, "tagline": "账本缺了几页，数字还在"},
+  {"id": "L4", "name": "未编目地库", "librarian": "蜡封馆员", "welcome": "不该问的，别问；找不到的，问我。", "color": "#5a4a6a", "tier": 4, "tierName": "机密", "decay": 3, "mystery": 3, "tagline": "封蜡之下，书页自己会说话"}
 ]
