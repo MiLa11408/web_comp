@@ -114,10 +114,13 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   scene.fog = new THREE.Fog(0x171009, 8, 34);
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 60);
-  const cam = {
-    theta: 0, phi: 1.22, radius: 5.9, target: new THREE.Vector3(0, 1.8, -1.6),
-    tTheta: 0, tPhi: 1.22, tRadius: 5.9, tTarget: new THREE.Vector3(0, 1.8, -1.6),
+  camera.rotation.order = 'YXZ';
+  // 第一人称：WASD 移动 + 鼠标拖拽转视角
+  const player = {
+    pos: new THREE.Vector3(0, 1.62, 4.6),
+    yaw: 0, pitch: -0.03, tYaw: 0, tPitch: -0.03,
   };
+  const keys = { w: false, a: false, s: false, d: false };
 
   // ---------- 灯光 ----------
   const ambient = new THREE.AmbientLight(0x7a6a52, 2.2);
@@ -155,6 +158,11 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   const sideR = new THREE.PointLight(0x9fc2ff, 0.4, 8, 2);
   sideR.position.set(4.6, 2.6, -1.4);
   scene.add(sideR);
+
+  // 楼层主题光（颜色随楼层变化）
+  const accent = new THREE.PointLight(0xffc37a, 0.9, 16, 2);
+  accent.position.set(0, 4.6, 2.0);
+  scene.add(accent);
 
   // ---------- 房间 ----------
   const woodDark = new THREE.MeshStandardMaterial({ color: 0x523a24, roughness: 0.82, metalness: 0.05 });
@@ -252,6 +260,20 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     mesh.quaternion.copy(baseQuat);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    // 楼层个性：L2 蓝图带 / L3 账签 / L4 封蜡
+    if (book.floor === 'L2') {
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.228, 0.035, 0.408), new THREE.MeshStandardMaterial({ color: 0x7fb6d6, emissive: 0x2a4a5a, emissiveIntensity: 0.45 }));
+      band.position.y = 0.18;
+      mesh.add(band);
+    } else if (book.floor === 'L3') {
+      const tag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.02), new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.55, roughness: 0.35 }));
+      tag.position.set(0.02, 0.02, 0.21);
+      mesh.add(tag);
+    } else if (book.floor === 'L4') {
+      const seal = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 10), new THREE.MeshStandardMaterial({ color: 0x6a4a86, emissive: 0x3a2460, emissiveIntensity: 0.55 }));
+      seal.position.set(0, -0.18, 0.21);
+      mesh.add(seal);
+    }
     scene.add(mesh);
 
     const chapterId = (book.chapters && book.chapters[0] && book.chapters[0].id) || null;
@@ -333,6 +355,75 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   cabinet.rotation.y = -0.35;
   scene.add(cabinet);
 
+  // ---------- 各层专属陈设（切层显示） ----------
+  const propGroups = {};
+  const propMats = {
+    paper: new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.9 }),
+    blue: new THREE.MeshStandardMaterial({ color: 0x7fb6d6, roughness: 0.6 }),
+    ledger: new THREE.MeshStandardMaterial({ color: 0x3a4a34, roughness: 0.8 }),
+    wax: new THREE.MeshStandardMaterial({ color: 0xd8c89e, roughness: 0.5 }),
+    flame: new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffa040, emissiveIntensity: 1.3 }),
+    drape: new THREE.MeshStandardMaterial({ color: 0x2a2238, roughness: 1 }),
+  };
+  function makePropGroup(name) {
+    const g = new THREE.Group();
+    g.name = name;
+    g.visible = false;
+    scene.add(g);
+    return g;
+  }
+  // L1：旧纸堆
+  const p1 = makePropGroup('prop-L1');
+  for (let i = 0; i < 4; i++) {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.07, 0.46), propMats.paper);
+    box.position.set(-2.6 + (i % 2) * 0.06, 0.04 + i * 0.07, 2.1 + (i % 2) * 0.05);
+    box.rotation.y = (i - 1.5) * 0.08;
+    box.castShadow = true;
+    p1.add(box);
+  }
+  // L2：蓝图卷
+  const p2 = makePropGroup('prop-L2');
+  for (let i = 0; i < 3; i++) {
+    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.25, 12), propMats.blue);
+    roll.position.set(2.3 + i * 0.2, 0.63, 2.0 - i * 0.12);
+    roll.rotation.z = 0.28;
+    roll.rotation.x = 0.1 * i;
+    p2.add(roll);
+  }
+  // L3：账本与数据板
+  const p3 = makePropGroup('prop-L3');
+  for (let i = 0; i < 3; i++) {
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 0.5), propMats.ledger);
+    led.position.set(-2.4, 0.05 + i * 0.1, 1.8);
+    led.rotation.y = 0.1 * i;
+    p3.add(led);
+  }
+  const board = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.05), woodDark);
+  board.position.set(2.6, 1.5, 1.4);
+  board.rotation.y = -0.3;
+  p3.add(board);
+  const boardFrame = new THREE.Mesh(new THREE.BoxGeometry(1.46, 0.96, 0.02), new THREE.MeshStandardMaterial({ color: 0xc8a24a, metalness: 0.5, roughness: 0.4 }));
+  boardFrame.position.set(2.58, 1.5, 1.36);
+  boardFrame.rotation.y = -0.3;
+  p3.add(boardFrame);
+  // L4：帷幕与封蜡烛
+  const p4 = makePropGroup('prop-L4');
+  const drape = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.6), propMats.drape);
+  drape.position.set(0, 2.2, -3.9);
+  p4.add(drape);
+  for (let i = 0; i < 2; i++) {
+    const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.55, 12), propMats.wax);
+    candle.position.set(-1.6 + i * 3.2, 0.55, 1.2);
+    p4.add(candle);
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), propMats.flame);
+    flame.position.set(-1.6 + i * 3.2, 0.86, 1.2);
+    p4.add(flame);
+  }
+  propGroups.L1 = p1;
+  propGroups.L2 = p2;
+  propGroups.L3 = p3;
+  propGroups.L4 = p4;
+
   // ---------- 尘埃 ----------
   const dustCount = 320;
   const dustGeo = new THREE.BufferGeometry();
@@ -378,7 +469,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   // ---------- UI：提示 / 提示条 / 遮罩 / 电梯面板 ----------
   const hint = document.createElement('div');
   hint.className = 'mm-hint';
-  hint.textContent = '拖拽环视 · 点击书取书 · 点击左侧黄铜电梯选层';
+  hint.textContent = 'WASD 移动 · 鼠标拖拽转视角 · 点击书取书 · 点击黄铜电梯或右下按钮选层';
   root.appendChild(hint);
 
   const toastEl = document.createElement('div');
@@ -431,6 +522,14 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     L3: { near: 5.8, far: 20, bg: 0x1a140c, amb: 1.9, spot: 4.4, dir: 1.9, dust: 0.20 },
     L4: { near: 5.0, far: 18, bg: 0x0e0d14, amb: 1.6, spot: 3.6, dir: 1.4, dust: 0.12 },
   };
+  // 楼层主题：书架材质与主题光（越高层越冷、越神秘）
+  const THEME = {
+    all: { shelf: 0x6b4a2a, shelfDark: 0x523a24, accent: 0xffc37a, acc: 0.9 },
+    L1: { shelf: 0x6b4a2a, shelfDark: 0x523a24, accent: 0xffc37a, acc: 1.0 },
+    L2: { shelf: 0x5b6b74, shelfDark: 0x44525a, accent: 0x7fb6d6, acc: 1.0 },
+    L3: { shelf: 0x6b5230, shelfDark: 0x4f3a22, accent: 0xffd27a, acc: 1.0 },
+    L4: { shelf: 0x4a3a52, shelfDark: 0x362a3e, accent: 0xa98cff, acc: 0.9 },
+  };
   function applyAtmos(fid) {
     const a = ATMOS[fid] || ATMOS.all;
     scene.fog.near = a.near;
@@ -440,6 +539,12 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     spot.intensity = a.spot;
     key.intensity = a.dir;
     dust.material.opacity = a.dust;
+    const th = THEME[fid] || THEME.all;
+    wood.color.setHex(th.shelf);
+    woodDark.color.setHex(th.shelfDark);
+    accent.color.setHex(th.accent);
+    accent.intensity = th.acc;
+    for (const id of Object.keys(propGroups)) propGroups[id].visible = fid === id;
   }
 
   let currentFloor = 'all';
@@ -456,18 +561,18 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     }
     const idx = floors.findIndex((f) => f.id === fid);
     if (fid === 'all') {
-      cam.tTheta = 0; cam.tPhi = 1.22; cam.tRadius = 5.9; cam.tTarget.set(0, 1.8, -1.6);
+      player.pos.set(0, 1.62, 4.6);
+      player.tYaw = 0;
+      player.tPitch = -0.03;
     } else {
-      const f = floors[idx];
-      cam.tTheta = [-0.30, 0, 0.30, 0][idx] ?? 0;
-      cam.tPhi = 1.20;
-      cam.tRadius = 5.4;
-      cam.tTarget.set(0, 1.85, -2.35);
+      player.pos.set([-1.9, 0, 1.9, 0.4][idx] ?? 0, 1.62, [3.3, 3.7, 3.7, 3.1][idx] ?? 3.5);
+      player.tYaw = [0.30, 0, -0.30, 0][idx] ?? 0;
+      player.tPitch = -0.03;
     }
     if (!silent) toast(floorWelcome(fid));
   }
 
-  // ---------- 相机控制 ----------
+  // ---------- 相机控制：鼠标拖拽转视角 + WASD 移动 ----------
   const el = renderer.domElement;
   let dragging = false;
   let lastX = 0;
@@ -489,8 +594,8 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     const dy = e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
-    cam.tTheta = Math.max(-0.75, Math.min(0.75, cam.tTheta - dx * 0.0035));
-    cam.tPhi = Math.max(1.12, Math.min(1.45, cam.tPhi + dy * 0.0025));
+    player.tYaw -= dx * 0.0042;
+    player.tPitch = Math.max(-1.15, Math.min(0.85, player.tPitch - dy * 0.0032));
   });
   window.addEventListener('pointerup', (e) => {
     if (!dragging) return;
@@ -498,10 +603,21 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
     if (moved < 6) pick(e.clientX, e.clientY);
   });
-  el.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    cam.tRadius = Math.max(4.5, Math.min(10.5, cam.tRadius + Math.sign(e.deltaY) * 0.4));
-  }, { passive: false });
+  el.addEventListener('wheel', (e) => { e.preventDefault(); }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const k = e.key.toLowerCase();
+    if (k === 'w' || k === 'a' || k === 's' || k === 'd') {
+      keys[k] = true;
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (k in keys) keys[k] = false;
+  });
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
@@ -611,10 +727,9 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   }
 
   function snapCamToPreset() {
-    cam.theta = cam.tTheta;
-    cam.phi = cam.tPhi;
-    cam.radius = cam.tRadius;
-    cam.target.copy(cam.tTarget);
+    player.yaw = player.tYaw;
+    player.pitch = player.tPitch;
+    updateCamera();
   }
 
   async function travelTo(fid) {
@@ -680,28 +795,48 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   }
 
   // ---------- 渲染循环 ----------
+  let lastFrame = performance.now();
   function updateCamera() {
-    cam.theta += (cam.tTheta - cam.theta) * 0.09;
-    cam.phi += (cam.tPhi - cam.phi) * 0.09;
-    cam.radius += (cam.tRadius - cam.radius) * 0.09;
-    cam.target.lerp(cam.tTarget, 0.09);
-    const sinPhi = Math.sin(cam.phi);
-    camera.position.set(
-      cam.target.x + cam.radius * sinPhi * Math.sin(cam.theta),
-      cam.target.y + cam.radius * Math.cos(cam.phi),
-      cam.target.z + cam.radius * sinPhi * Math.cos(cam.theta)
-    );
-    camera.lookAt(cam.target);
+    player.yaw += (player.tYaw - player.yaw) * 0.12;
+    player.pitch += (player.tPitch - player.pitch) * 0.12;
+    camera.position.copy(player.pos);
+    camera.rotation.set(player.pitch, player.yaw, 0);
+  }
+
+  function movePlayer(dt) {
+    if (traveling || taking) return;
+    if (document.body.classList.contains('reading') || document.body.classList.contains('grid')) return;
+    const speed = 3.0;
+    let fx = 0;
+    let fz = 0;
+    if (keys.w) fz -= 1;
+    if (keys.s) fz += 1;
+    if (keys.a) fx -= 1;
+    if (keys.d) fx += 1;
+    if (!fx && !fz) return;
+    const len = Math.hypot(fx, fz);
+    fx /= len;
+    fz /= len;
+    const cos = Math.cos(player.yaw);
+    const sin = Math.sin(player.yaw);
+    const wx = fx * cos + fz * sin;
+    const wz = -fx * sin + fz * cos;
+    player.pos.x = Math.max(-8.4, Math.min(8.4, player.pos.x + wx * speed * dt));
+    player.pos.z = Math.max(-2.25, Math.min(6.2, player.pos.z + wz * speed * dt));
   }
 
   let elapsed = 0;
   function tick(now) {
     requestAnimationFrame(tick);
-    elapsed += 1 / 60;
+    const nowMs = now || performance.now();
+    const dt = Math.min(0.06, Math.max(0.001, (nowMs - lastFrame) / 1000));
+    lastFrame = nowMs;
+    elapsed += dt;
     if (override) {
       camera.position.copy(override.pos);
       camera.lookAt(override.look);
     } else {
+      movePlayer(dt);
       updateCamera();
     }
 
@@ -739,7 +874,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  return { reset, setFloor, scene, camera, renderer, bookItems, elevator };
+  return { reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups };
 }
 
 export function dispose3D(api) {
