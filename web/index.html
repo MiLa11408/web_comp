@@ -68,6 +68,8 @@
   .paper .meta-line { color: #6b5a3a; font-size: 13px; margin-top: 6px; }
   .paper mark.find { background: #d8b45a; color: #2c2318; padding: 0 1px; border-radius: 2px; }
   .paper mark.find.active { background: #b78a2f; outline: 2px solid #8a6320; }
+  .paper-end { margin-top: 46px; padding-top: 18px; border-top: 1px dashed rgba(107,90,58,.45); }
+  .paper-end .back { margin-bottom: 0; }
   .back { background: none; border: 1px solid #6b5a3a; color: #5a451f; padding: 6px 14px; cursor: pointer; margin-bottom: 16px; font-size: 13px; }
 
   /* ---------- 右栏页边注 ---------- */
@@ -450,6 +452,9 @@ async function showChapter(id) {
         <div class="meta-line">${esc(bookNames[m.book] || m.book)} · ${esc(m.year)} · ${(m.tags || []).map(esc).join(' / ')}</div>
         <div class="meta-line">${(m.people || []).map((p) => esc(p.name + (p.org ? '（' + p.org + '）' : ''))).join('；')}</div>
         <div id="paperBody"></div>
+        <div class="paper-end">
+          <button class="back" onclick="enter3D()">← 合上书，回到阅览室</button>
+        </div>
       </div>
     </main>
     <aside id="notesCol">
