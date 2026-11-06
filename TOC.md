@@ -203,7 +203,7 @@
 | 2 | 推理与测试时计算 | 多想一会儿能不能更强 | CoT（2022）；测试时缩放（2024）；o1（2024） | https://arxiv.org/abs/2201.11903；https://arxiv.org/abs/2408.03314 |
 | 3 | 合成数据 | 没有真实数据时，模型能否自己造教材 | Self-Instruct（2022）；Textbooks（2023）；模型崩溃（2023） | https://arxiv.org/abs/2212.10560；https://arxiv.org/abs/2306.11644；https://arxiv.org/abs/2305.17493 |
 | 4 | 递归自我改进 | 机器能否改进自己，边界在哪 | Good（1965）；Gödel machine（2003） | Good《Speculations》；https://arxiv.org/abs/cs/0309048 |
-| 5 | AGI 的定义与主张 | “通用”到底怎么定义、怎么测 | Levels of AGI（2023，DeepMind）；AI Index 2026 | https://arxiv.org/abs/2312.13771；AI Index 2026 |
+| 5 | AGI 的定义与主张 | “通用”到底怎么定义、怎么测 | Levels of AGI（2023，DeepMind）；AI Index 2026 | https://arxiv.org/abs/2311.02462（原稿误作 2312.13771，已更正）；AI Index 2026 |
 | 6 | 意识与主观性 | 行为像人是否意味着有体验 | Chalmers（1995）；Butlin 等（2023） | https://consc.net/papers/facing.html；https://arxiv.org/abs/2308.08708 |
 | 7 | 量子机器学习 | 量子能不能真的加速学习 | Biamonte 等（2017）；NISQ 局限 | https://arxiv.org/abs/1611.09347；https://doi.org/10.1038/nature23474 |
 | 8 | 开放问题清单 | 还有哪些硬骨头没啃 | 组合性、因果、 grounding、评测、对齐 | AIMA 第 26–27 章；AI Index 2026 |
