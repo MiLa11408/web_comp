@@ -70,6 +70,8 @@
   .paper mark.find.active { background: #b78a2f; outline: 2px solid #8a6320; }
   .paper-end { margin-top: 46px; padding-top: 18px; border-top: 1px dashed rgba(107,90,58,.45); }
   .paper-end .back { margin-bottom: 0; }
+  .reader-float-close { position: fixed; right: 24px; bottom: 24px; z-index: 55; background: #241c14; color: var(--gold); border: 1px solid var(--gold); padding: 10px 16px; cursor: pointer; font-size: 13px; letter-spacing: 1px; box-shadow: 0 10px 26px rgba(0,0,0,.55); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .reader-float-close:hover { background: #2c241a; }
   .back { background: none; border: 1px solid #6b5a3a; color: #5a451f; padding: 6px 14px; cursor: pointer; margin-bottom: 16px; font-size: 13px; }
 
   /* ---------- 右栏页边注 ---------- */
@@ -467,7 +469,8 @@ async function showChapter(id) {
           <div class="note-sign">—— ${librarian}</div>
         </div>`).join('') : '<div class="notes-empty">这一章暂时没有页边注</div>'}
     </aside>
-  </div>`;
+  </div>
+  <button class="reader-float-close" onclick="enter3D()">← 合上书</button>`;
   renderMd(main, $('#paperBody'));
   $('#railToggle').onclick = toggleRail;
   const qIn2 = $('#railQ');
