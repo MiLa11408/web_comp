@@ -12,15 +12,19 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: radial-gradient(1200px 600px at 50% -10%, #241c14, var(--bg)); color: var(--ink); font-family: "Segoe UI", "Microsoft YaHei", serif; min-height: 100vh; }
-  header { padding: 26px 34px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
-  header h1 { margin: 0; font-size: 26px; letter-spacing: 4px; color: var(--gold); font-weight: 600; }
+  header { padding: 18px 30px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 24px; letter-spacing: 4px; color: var(--gold); font-weight: 600; }
   header .sub { color: var(--dim); font-size: 13px; }
   header .note { margin-left: auto; color: #8a7a5c; font-size: 12px; }
-  .search { padding: 14px 34px; display: flex; gap: 10px; align-items: center; }
+  .search { padding: 14px 30px; display: flex; gap: 10px; align-items: center; }
   .search input { flex: 0 1 420px; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; font-size: 14px; outline: none; }
   .search input:focus { border-color: var(--gold); }
   .search button { background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; cursor: pointer; font-size: 13px; }
-  #app { padding: 10px 34px 60px; }
+  #app { padding: 10px 30px 60px; }
+  body.reading .search { display: none; }
+  body.reading #app { padding: 10px 18px 40px; }
+
+  /* ---------- 书架 ---------- */
   .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
   .book { background: linear-gradient(160deg, #221a13, #191310); border: 1px solid var(--line); border-left: 6px solid; padding: 16px 18px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
   .book:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(0,0,0,.5); }
@@ -30,15 +34,59 @@
   .book .tags { margin-top: 8px; font-size: 12px; color: #b09a72; }
   .book .meta { margin-top: 8px; font-size: 12px; color: var(--dim); }
   .style-badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); font-size: 11px; padding: 1px 7px; margin-left: 8px; letter-spacing: 2px; }
-  .paper { max-width: 880px; margin: 0 auto; background: var(--paper-history); color: #2c2318; padding: 44px 60px 60px; box-shadow: 0 24px 80px rgba(0,0,0,.55); border-radius: 2px; font-family: "Songti SC", "STSong", "SimSun", serif; font-size: 16px; line-height: 1.95; }
+
+  /* ---------- 阅读三栏 ---------- */
+  #reader { display: grid; grid-template-columns: 300px minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+  #reader.rail-collapsed { grid-template-columns: 46px minmax(0, 1fr) 280px; }
+  #rail { position: sticky; top: 10px; background: #1a140f; border: 1px solid var(--line); padding: 10px; min-height: 70vh; max-height: calc(100vh - 30px); display: flex; flex-direction: column; }
+  #railBody { overflow-y: auto; flex: 1; }
+  #reader.rail-collapsed #railBody, #reader.rail-collapsed .rail-title { display: none; }
+  #railToggle { background: #2c241a; border: 1px solid var(--gold); color: var(--gold); cursor: pointer; font-size: 13px; padding: 3px 8px; align-self: flex-start; margin-bottom: 8px; }
+  .rail-title { color: var(--gold); font-size: 13px; letter-spacing: 2px; margin: 4px 0 8px; }
+  #railQ { width: 100%; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 7px 10px; font-size: 13px; outline: none; }
+  #railQ:focus { border-color: var(--gold); }
+  #railResults { margin-top: 10px; }
+  .rail-sec { color: var(--dim); font-size: 11px; letter-spacing: 1px; margin: 12px 0 6px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
+  .rail-hint { color: #7d6e55; font-size: 12px; padding: 8px 2px; }
+  .find-item { background: #211a13; border-left: 2px solid #6b5a3a; padding: 6px 8px; margin-bottom: 6px; font-size: 12px; color: #cbb892; cursor: pointer; line-height: 1.5; }
+  .find-item:hover { border-left-color: var(--gold); color: var(--ink); }
+  .find-item.active { border-left-color: var(--gold); background: #2c241a; }
+  .rail-hit { background: #211a13; border: 1px solid var(--line); padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
+  .rail-hit:hover { border-color: var(--gold); }
+  .rail-hit b { display: block; color: var(--gold); font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
+  .rail-hit span { color: var(--dim); font-size: 11.5px; line-height: 1.5; }
+  .rail-hit mark { background: #b78a2f; color: #171310; padding: 0 1px; }
+
+  .paper { max-width: 780px; margin: 0 auto; background: var(--paper-history); color: #2c2318; padding: 40px 52px 56px; box-shadow: 0 24px 80px rgba(0,0,0,.55); border-radius: 2px; font-family: "Songti SC", "STSong", "SimSun", serif; font-size: 16px; line-height: 1.95; }
   .paper.tech { background: #d3dde8; color: #18303e; font-family: "Consolas", "Microsoft YaHei", monospace; }
   .paper.industry { background: #e2dccd; color: #33302a; }
   .paper.frontier { background: #dcc9a3; color: #3a2f1c; }
-  .paper h1 { font-size: 26px; border-bottom: 2px solid #6b5a3a; padding-bottom: 10px; }
-  .paper h2 { font-size: 19px; margin-top: 34px; color: #5a451f; }
+  .paper h1 { font-size: 25px; border-bottom: 2px solid #6b5a3a; padding-bottom: 10px; }
+  .paper h2 { font-size: 19px; margin-top: 32px; color: #5a451f; }
   .paper a { color: #3f5f8a; }
   .paper .meta-line { color: #6b5a3a; font-size: 13px; margin-top: 6px; }
-  .back { background: none; border: 1px solid var(--gold); color: var(--gold); padding: 7px 16px; cursor: pointer; margin-bottom: 18px; font-size: 13px; }
+  .paper mark.find { background: #d8b45a; color: #2c2318; padding: 0 1px; border-radius: 2px; }
+  .paper mark.find.active { background: #b78a2f; outline: 2px solid #8a6320; }
+  .back { background: none; border: 1px solid #6b5a3a; color: #5a451f; padding: 6px 14px; cursor: pointer; margin-bottom: 16px; font-size: 13px; }
+
+  /* ---------- 右栏页边注 ---------- */
+  #notesCol { position: sticky; top: 10px; max-height: calc(100vh - 30px); overflow-y: auto; padding: 2px 2px 20px; }
+  .notes-title { color: var(--gold); font-size: 13px; letter-spacing: 3px; margin: 4px 0 10px; }
+  .note { background: #f4ead1; color: #3b3020; font-family: "KaiTi", "STKaiti", "楷体", serif; font-size: 13.5px; line-height: 1.75; padding: 10px 12px; margin-bottom: 10px; border-left: 3px solid var(--gold); box-shadow: 0 5px 14px rgba(0,0,0,.4); transform: rotate(-.25deg); }
+  .note:nth-child(even) { transform: rotate(.3deg); background: #efe3c6; }
+  .note[data-anchor] { cursor: pointer; }
+  .note[data-anchor]:hover { border-left-color: #8a6320; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+  .note-anchor { display: flex; justify-content: space-between; align-items: center; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 11px; color: #8a6d33; letter-spacing: 1px; border-bottom: 1px dashed #c9b98f; padding-bottom: 4px; margin-bottom: 5px; }
+  .note-sign { text-align: right; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 11px; color: #8a7a5c; margin-top: 6px; }
+  .notes-empty { color: #7d6e55; font-size: 12px; }
+
+  /* ---------- 接待卡 ---------- */
+  .reception { border: 1px dashed #8f7a52; background: #f6edda; color: #3b3020; padding: 10px 14px; margin-bottom: 18px; font-family: "Consolas", "Microsoft YaHei", monospace; font-size: 12.5px; line-height: 1.85; transform: rotate(-.2deg); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+  .reception .rc-title { color: #8a6d33; letter-spacing: 1px; font-size: 11px; border-bottom: 1px dashed #c9b98f; padding-bottom: 4px; margin-bottom: 6px; }
+  .reception b { color: #6b4f1d; font-weight: 600; }
+  .paper h2.flash { background: rgba(200,162,74,.42); box-shadow: 0 0 0 6px rgba(200,162,74,.25); border-left: 4px solid #a37c2a; padding-left: 8px; border-radius: 2px; transition: background .2s; }
+
+  /* ---------- 索引卡检索结果（书架模式） ---------- */
   .results .hit { background: #221a13; border: 1px solid var(--line); padding: 12px 16px; margin-bottom: 10px; cursor: pointer; }
   .results .hit:hover { border-color: var(--gold); }
   .results .hit h4 { margin: 0 0 6px; color: var(--gold); font-size: 15px; }
@@ -49,6 +97,13 @@
   .sug-item:hover { background: #2c241a; }
   .sug-item i { font-style: normal; color: var(--dim); font-size: 11px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
+
+  @media (max-width: 1200px) {
+    #reader { grid-template-columns: 46px minmax(0, 1fr); }
+    #reader.rail-collapsed { grid-template-columns: 46px minmax(0, 1fr); }
+    #rail { grid-row: 1; }
+    #notesCol { grid-column: 2; position: static; max-height: none; margin-top: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -67,6 +122,11 @@
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
 const styleName = { history: '旧纸·历史', tech: '蓝图·技术', industry: '报告·产业', frontier: '档案·前沿' };
+const state = { query: '', findMarks: [], global: [], chapterMain: '' };
+const bookNames = {};
+const bookFloors = {};
+const bookCalls = {};
+const LIBRARIANS = { L1: '旧纸馆员', L2: '蓝图馆员', L3: '账簿馆员', L4: '蜡封馆员' };
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -76,13 +136,17 @@ function linkify(text) {
   text = text.replace(/(https?:\/\/[^\s\)】，。]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
   return text;
 }
+function fmtInline(text) {
+  text = linkify(text);
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  return text;
+}
 // 极简 Markdown：标题/列表/加粗
-function renderMd(md, paperEl) {
+function renderMd(md, el) {
   const lines = md.split(/\r?\n/);
   let html = '', list = null;
   const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
-  for (let line of lines) {
-    let m;
+  for (const line of lines) {
     if (/^##\s+/.test(line)) { closeList(); html += `<h2>${esc(line.replace(/^##\s+/, ''))}</h2>`; }
     else if (/^###\s+/.test(line)) { closeList(); html += `<h3>${esc(line.replace(/^###\s+/, ''))}</h3>`; }
     else if (/^\s*-\s+/.test(line)) { if (list !== 'ul') { closeList(); html += '<ul>'; list = 'ul'; } html += `<li>${fmtInline(line.replace(/^\s*-\s+/, ''))}</li>`; }
@@ -92,18 +156,19 @@ function renderMd(md, paperEl) {
     else { closeList(); html += `<p>${fmtInline(line)}</p>`; }
   }
   closeList();
-  paperEl.innerHTML = html;
-}
-function fmtInline(text) {
-  text = linkify(text);
-  text = text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
-  return text;
+  el.innerHTML = html;
 }
 
+// ---------- 书架 ----------
 async function showShelf() {
+  document.body.classList.remove('reading');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在取出书架……</div>';
-  const books = await (await fetch('/api/books')).json();
-  const health = await (await fetch('/api/health')).json();
+  const [books, health] = await Promise.all([
+    fetch('/api/books').then((r) => r.json()),
+    fetch('/api/health').then((r) => r.json()),
+  ]);
+  books.forEach((b) => { bookNames[b.id] = b.title; bookFloors[b.id] = b.floor; bookCalls[b.id] = b.call; });
   $('#stat').textContent = `已入库 ${health.chapters}/96 章`;
   app.innerHTML = '<div class="shelf">' + books.map((b) => `
     <div class="book" style="border-left-color:${b.color}" onclick="showBook('${b.id}')">
@@ -118,25 +183,207 @@ async function showShelf() {
 async function showBook(id) {
   const book = await (await fetch('/api/books/' + id)).json();
   if (!book.chapters.length) { app.innerHTML = '<div class="empty">这本书还没有样章</div>'; return; }
-  const c = book.chapters[0];
-  await showChapter(c.id);
+  await showChapter(book.chapters[0].id);
+}
+
+// ---------- 阅读三栏 ----------
+function splitNotes(content) {
+  const i = content.indexOf('## 页边注');
+  if (i < 0) return { main: content, notes: [] };
+  const main = content.slice(0, i);
+  const notes = content.slice(i + '## 页边注'.length)
+    .split(/\r?\n/).map((l) => l.trim())
+    .filter((l) => l.startsWith('- '))
+    .map((l) => {
+      const t = l.slice(2).trim();
+      const mm = t.match(/^〔(.+?)〕\s*(.+)$/);
+      return mm ? { anchor: mm[1], text: mm[2] } : { anchor: '', text: t };
+    });
+  return { main, notes };
 }
 
 async function showChapter(id) {
-  app.innerHTML = '<div class="empty">正在翻开书页……</div>';
+  document.body.classList.add('reading');
   const r = await (await fetch('/api/chapters/' + id)).json();
   const m = r.meta;
-  const paper = document.createElement('div');
-  paper.className = 'paper ' + m.style;
-  paper.innerHTML = `<button class="back" style="border-color:#6b5a3a;color:#5a451f" onclick="showShelf()">← 合上书，回到书架</button>
-    <h1>${esc(m.title)} <small style="color:#6b5a3a">${esc(m.title_en || '')}</small></h1>
-    <div class="meta-line">${esc(m.book_name || '')} · ${esc(m.year)} · ${(m.tags || []).map(esc).join(' / ')}</div>
-    <div class="meta-line">${(m.people || []).map((p) => esc(p.name + (p.org ? '（' + p.org + '）' : ''))).join('；')}</div>`;
-  app.innerHTML = '';
-  app.appendChild(paper);
-  renderMd(r.content, paper);
+  const { main, notes } = splitNotes(r.content);
+  state.chapterMain = main;
+  state.findMarks = []; state.global = [];
+  const librarian = LIBRARIANS[bookFloors[m.book]] || '当值馆员';
+  const callNo = `${bookCalls[m.book] || '?'}-${String(m.no || 0).padStart(2, '0')}`;
+  const summary = String(m.summary || '').split(/[。．.]/)[0].trim();
+  const purpose = summary.length > 46 ? summary.slice(0, 46) + '…' : summary;
+  const missing = (m.features || []).some((f) => String(f).startsWith('stolen:'));
+  app.innerHTML = `
+  <div id="reader">
+    <aside id="rail">
+      <button id="railToggle" title="收起 / 展开检索">⟨</button>
+      <div class="rail-title">卡片目录</div>
+      <div id="railBody">
+        <input id="railQ" placeholder="本章 / 全馆 检索…">
+        <div id="railResults"></div>
+      </div>
+    </aside>
+    <main>
+      <div class="paper ${m.style}" id="paperBox">
+        <button class="back" onclick="showShelf()">← 合上书，回到书架</button>
+        <div class="reception">
+          <div class="rc-title">接待记录 No. ${esc(callNo)}</div>
+          <div>宾客：<b>${esc(m.title)}（${esc(m.year)}）</b></div>
+          <div>来访目的：<b>${esc(purpose || '——')}</b></div>
+          <div>当值馆员：<b>${librarian}</b></div>
+          <div>接待结果：<b>${missing ? '已收编 · 缺一页' : '已收编'}</b></div>
+        </div>
+        <h1>${esc(m.title)} <small style="color:#6b5a3a;font-size:15px">${esc(m.title_en || '')}</small></h1>
+        <div class="meta-line">${esc(bookNames[m.book] || m.book)} · ${esc(m.year)} · ${(m.tags || []).map(esc).join(' / ')}</div>
+        <div class="meta-line">${(m.people || []).map((p) => esc(p.name + (p.org ? '（' + p.org + '）' : ''))).join('；')}</div>
+        <div id="paperBody"></div>
+      </div>
+    </main>
+    <aside id="notesCol">
+      <div class="notes-title">页边注</div>
+      ${notes.length ? notes.map((n) => `
+        <div class="note"${n.anchor ? ` data-anchor="${esc(n.anchor)}" title="点击跳到「${esc(n.anchor)}」"` : ''}>
+          ${n.anchor ? `<div class="note-anchor"><span>〔${esc(n.anchor)}〕</span><span>↘</span></div>` : ''}
+          <div class="note-text">${esc(n.text)}</div>
+          <div class="note-sign">—— ${librarian}</div>
+        </div>`).join('') : '<div class="notes-empty">这一章暂时没有页边注</div>'}
+    </aside>
+  </div>`;
+  renderMd(main, $('#paperBody'));
+  $('#railToggle').onclick = toggleRail;
+  const qIn2 = $('#railQ');
+  qIn2.value = state.query;
+  qIn2.addEventListener('input', onRailInput);
+  qIn2.focus();
+  onRailInput();
 }
 
+function toggleRail() {
+  const rail = $('#reader');
+  rail.classList.toggle('rail-collapsed');
+  $('#railToggle').textContent = rail.classList.contains('rail-collapsed') ? '⟩' : '⟨';
+}
+
+// ---------- 本章内查找（高亮 + 定位） ----------
+function makeCtx(text, pos, len) {
+  const s = Math.max(0, pos - 18);
+  const e = Math.min(text.length, pos + len + 18);
+  return (s > 0 ? '…' : '') + text.slice(s, e) + (e < text.length ? '…' : '');
+}
+
+function applyFind(q) {
+  renderMd(state.chapterMain, $('#paperBody'));
+  state.findMarks = [];
+  if (!q) return;
+  const walker = document.createTreeWalker($('#paperBody'), NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let n;
+  while ((n = walker.nextNode())) nodes.push(n);
+  const key = q.toLowerCase();
+  for (const node of nodes) {
+    const text = node.nodeValue;
+    if (!text || !text.trim()) continue;
+    const lower = text.toLowerCase();
+    const parts = [];
+    let idx = 0;
+    while (true) {
+      const p = lower.indexOf(key, idx);
+      if (p < 0) break;
+      parts.push({ start: p, end: p + key.length });
+      idx = p + key.length;
+    }
+    if (!parts.length) continue;
+    const frag = document.createDocumentFragment();
+    let cursor = 0;
+    for (const part of parts) {
+      if (part.start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, part.start)));
+      const mark = document.createElement('mark');
+      mark.className = 'find';
+      mark.textContent = text.slice(part.start, part.end);
+      frag.appendChild(mark);
+      state.findMarks.push({ mark, context: makeCtx(text, part.start, key.length) });
+      cursor = part.end;
+    }
+    if (cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+    node.parentNode.replaceChild(frag, node);
+  }
+}
+
+function renderRailResults() {
+  const q = state.query;
+  const box = $('#railResults');
+  if (!box) return;
+  let html = '';
+  if (!q) {
+    html = '<div class="rail-hint">敲字即搜：先在本章里找，再查全馆目录。</div>';
+  } else {
+    html += `<div class="rail-sec">本章命中 ${state.findMarks.length} 处</div>`;
+    if (state.findMarks.length) {
+      html += state.findMarks.map((m, i) => `<div class="find-item" data-i="${i}">${esc(m.context)}</div>`).join('');
+    } else {
+      html += '<div class="rail-hint">本章没有命中，试试全馆结果。</div>';
+    }
+    if (state.global.length) {
+      html += '<div class="rail-sec">全馆检索</div>';
+      html += state.global.map((h) => `
+        <div class="rail-hit" data-id="${h.id}">
+          <b>${esc(h.title)}</b>
+          <span>${h.snippet}</span>
+        </div>`).join('');
+    }
+  }
+  box.innerHTML = html;
+}
+
+let findTimer = null;
+let globalTimer = null;
+function onRailInput() {
+  const q = $('#railQ').value.trim();
+  state.query = q;
+  clearTimeout(findTimer);
+  findTimer = setTimeout(() => {
+    applyFind(q);
+    renderRailResults();
+  }, 120);
+  clearTimeout(globalTimer);
+  globalTimer = setTimeout(async () => {
+    if (!q) { state.global = []; renderRailResults(); return; }
+    const r = await (await fetch('/api/search?q=' + encodeURIComponent(q) + '&limit=8')).json();
+    state.global = r.results;
+    renderRailResults();
+  }, 320);
+}
+
+document.addEventListener('click', (e) => {
+  const findItem = e.target.closest('.find-item');
+  if (findItem) {
+    const i = Number(findItem.dataset.i);
+    const entry = state.findMarks[i];
+    if (entry) {
+      entry.mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      $('#paperBody').querySelectorAll('mark.find.active').forEach((mk) => mk.classList.remove('active'));
+      entry.mark.classList.add('active');
+      document.querySelectorAll('.find-item.active').forEach((it) => it.classList.remove('active'));
+      findItem.classList.add('active');
+    }
+    return;
+  }
+  const railHit = e.target.closest('.rail-hit');
+  if (railHit) { showChapter(railHit.dataset.id); return; }
+  const note = e.target.closest('.note[data-anchor]');
+  if (note) {
+    const anchor = note.dataset.anchor;
+    const target = [...$('#paperBody').querySelectorAll('h2')].find((h) => h.textContent.trim() === anchor);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.classList.add('flash');
+      setTimeout(() => target.classList.remove('flash'), 2200);
+    }
+  }
+});
+
+// ---------- 书架模式检索 ----------
 async function doSearch() {
   const q = $('#q').value.trim();
   if (!q) return;
@@ -150,7 +397,7 @@ async function doSearch() {
     </div>`).join('') + '</div>';
 }
 
-// 输入补全：章节/书/标签/人物
+// 输入补全（书架模式）
 const qIn = $('#q');
 const wrap = document.createElement('span');
 wrap.style.cssText = 'position:relative;flex:0 1 420px;display:block;';
@@ -174,9 +421,6 @@ sugBox.addEventListener('mousedown', (e) => {
 qIn.addEventListener('blur', () => { hideTimer = setTimeout(() => { sugBox.innerHTML = ''; }, 200); });
 qIn.addEventListener('focus', () => clearTimeout(hideTimer));
 
-// 章节列表缺 book 名称，从书架缓存补
-const bookNames = {};
-fetch('/api/books').then(async (r) => { const bs = await r.json(); bs.forEach((b) => bookNames[b.id] = b.title); });
 showShelf();
 </script>
 </body>
