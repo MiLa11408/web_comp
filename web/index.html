@@ -367,7 +367,7 @@ async function showOverview() {
           <span class="call">${esc(b.call)}</span>
           <span class="bt">${esc(b.title)}<small>${esc(b.title_en || '')}</small></span>
           <span class="sp">${b.span[0]}–${b.span[1]}</span>
-          <span class="tg">${(b.aliases || []).slice(0, 3).map(esc).join(' · ')}</span>
+          <span class="tg">${(b.tags || b.aliases || []).slice(0, 4).map(esc).join(' · ')}</span>
           <span class="ch">${b.chapters.length}/8 章</span>
         </div>`).join('')}
     </section>`;

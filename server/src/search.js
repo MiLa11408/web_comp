@@ -74,16 +74,19 @@ export function initSearch(contentDir) {
     }
   };
 
-  const titleSets = new Map(); // docId -> 标题分词集合（命中加成最高）
-  const tagSets = new Map();   // docId -> tag+书名别名分词集合（命中加成次之）
+  const titleSets = new Map(); // docId -> 标题分词集合（章节标题）
+  const bookTitleSets = new Map(); // docId -> 书名分词集合（大标题优先）
+  const tagSets = new Map();   // docId -> tag+别名分词集合（命中加成次之）
   const suggestTitles = [];
   const suggestTags = new Set();
   const suggestPeople = new Set();
 
   for (const [id, { meta, body }] of chapters) {
     const book = bookMeta.get(meta.book);
-    addDoc(id, meta.title || '', 12);
-    addDoc(id, (meta.tags || []).join(' '), 8);
+    addDoc(id, ((book && book.title) || ''), 14);       // 优先级 0：大标题（书名）
+    addDoc(id, meta.title || '', 12);                   // 优先级 1：章节标题
+    addDoc(id, (meta.tags || []).join(' '), 8);         // 优先级 2：章节 tag
+    addDoc(id, ((book && book.tags) || []).join(' '), 8); // 优先级 2：书 tag
     addDoc(id, ((book && book.aliases) || []).join(' '), 8);
     addDoc(id, meta.summary || '', 4);
     addDoc(id, ((meta.people || []).map((p) => p.name).join(' ')), 3);
@@ -92,14 +95,16 @@ export function initSearch(contentDir) {
     addDoc(id, headings, 3);
     addDoc(id, body, 1);
 
+    bookTitleSets.set(id, new Set(tokenize(`${(book && book.title) || ''} ${(book && book.title_en) || ''}`)));
     titleSets.set(id, new Set(tokenize(meta.title || '')));
-    tagSets.set(id, new Set(tokenize(`${(meta.tags || []).join(' ')} ${((book && book.aliases) || []).join(' ')}`)));
+    tagSets.set(id, new Set(tokenize(`${(meta.tags || []).join(' ')} ${((book && book.aliases) || []).join(' ')} ${((book && book.tags) || []).join(' ')}`)));
     if (meta.title) suggestTitles.push(meta.title);
     for (const t of meta.tags || []) suggestTags.add(t);
+    for (const t of (book && book.tags) || []) suggestTags.add(t);
     for (const p of meta.people || []) if (p.name) suggestPeople.add(p.name);
   }
 
-  return { books, chapters, index, titleSets, tagSets, suggestTitles, suggestTags, suggestPeople };
+  return { books, chapters, index, titleSets, bookTitleSets, tagSets, suggestTitles, suggestTags, suggestPeople };
 }
 
 export function search(ctx, q, limit = 10) {
@@ -116,13 +121,21 @@ export function search(ctx, q, limit = 10) {
       matched.get(docId).add(term);
     }
   }
-  // 层级加成：命中标题 +40/词，命中 tag/别名 +12/词，保证 标题 > tag > 正文频次 的梯队
+  // 层级加成（Boss 定的检索优先级）：大标题(书名) +60/词 > 章节标题 +35 > tag/别名 +12 > 正文频次（索引权重递增）
   for (const [docId, score] of scores) {
+    const bookTitleSet = ctx.bookTitleSets.get(docId) || new Set();
     const titleSet = ctx.titleSets.get(docId) || new Set();
     const tagSet = ctx.tagSets.get(docId) || new Set();
     let bonus = 0;
-    for (const t of tokens) if (titleSet.has(t)) bonus += 40;
-    for (const t of tokens) if (tagSet.has(t)) bonus += 12;
+    for (const t of tokens) {
+      if (bookTitleSet.has(t)) bonus += 60;
+    }
+    for (const t of tokens) {
+      if (titleSet.has(t)) bonus += 35;
+    }
+    for (const t of tokens) {
+      if (tagSet.has(t)) bonus += 12;
+    }
     scores.set(docId, score + bonus);
   }
   const ranked = [...scores.entries()]
