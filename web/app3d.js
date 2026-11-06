@@ -6,8 +6,10 @@ import RAPIER from 'rapier';
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const DECAY = ['完好', '轻残', '中残', '高残'];
 
-const SHELF_X = [-4.4, 0, 4.4];
-const SHELF_Z = -3.1;
+const SHELF_UNITS = [
+  { x: -7.2, z: -3.5 }, { x: -3.6, z: -3.5 }, { x: 0, z: -3.5 }, { x: 3.6, z: -3.5 }, { x: 7.2, z: -3.5 },
+  { x: -5.4, z: -1.3 }, { x: -1.8, z: -1.3 }, { x: 1.8, z: -1.3 }, { x: 5.4, z: -1.3 },
+];
 const BOARD_Y = [0.6, 1.6, 2.6];
 const BOOK_H = 0.60;
 
@@ -117,7 +119,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   camera.rotation.order = 'YXZ';
   // 第一人称：WASD 移动 + 鼠标拖拽转视角
   const player = {
-    pos: new THREE.Vector3(0, 1.62, 4.6),
+    pos: new THREE.Vector3(0, 1.62, 5.2),
     yaw: 0, pitch: -0.03, tYaw: 0, tPitch: -0.03,
   };
   const keys = { w: false, a: false, s: false, d: false };
@@ -137,9 +139,9 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   fillB.position.set(-3.2, 2.8, 3.8);
   scene.add(fillB);
   // 书架灯：照亮书脊
-  for (const sx of [-4.4, 0, 4.4]) {
+  for (const sx of [-7.2, -3.6, 0, 3.6, 7.2]) {
     const lamp = new THREE.PointLight(0xffc37a, 1.0, 7, 2);
-    lamp.position.set(sx, 2.9, -2.5);
+    lamp.position.set(sx, 2.9, -2.4);
     scene.add(lamp);
   }
 
@@ -196,7 +198,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   scene.add(ceiling);
 
   // ---------- 书架 ----------
-  function createShelf(x) {
+  function createShelf(unit) {
     const g = new THREE.Group();
     const postGeo = new THREE.BoxGeometry(0.09, 3.3, 0.52);
     for (const px of [-1.52, 1.52]) {
@@ -230,20 +232,21 @@ export async function init3D({ container, books, floors, onOpenBook }) {
       edge.position.set(0, by + 0.035, 0.235);
       g.add(edge);
     }
-    g.position.set(x, 0, SHELF_Z);
+    g.position.set(unit.x, 0, unit.z);
     scene.add(g);
     return g;
   }
-  for (const x of SHELF_X) createShelf(x);
+  for (const u of SHELF_UNITS) createShelf(u);
 
   // ---------- 书 ----------
   const bookItems = [];
   books.forEach((book, i) => {
-    const unit = i % 3;
-    const slot = Math.floor(i / 3); // 0..3
+    const unitIdx = i % SHELF_UNITS.length;
+    const slot = Math.floor(i / SHELF_UNITS.length); // 0..3
+    const unit = SHELF_UNITS[unitIdx];
     const level = BOARD_Y[slot < 2 ? 0 : 1] + 0.03;
     const sx = slot % 2 === 0 ? -0.42 : 0.28;
-    const basePos = new THREE.Vector3(SHELF_X[unit] + sx, level + BOOK_H / 2 + 0.004, SHELF_Z + 0.05);
+    const basePos = new THREE.Vector3(unit.x + sx, level + BOOK_H / 2 + 0.004, unit.z + 0.05);
     const baseQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, (Math.random() - 0.5) * 0.08, 0));
 
     const baseColor = new THREE.Color(book.color || '#4a3a2e');
@@ -304,7 +307,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     knob.position.set(1.2, 1.38 + k * 0.12, 0.21);
     elevator.add(knob);
   }
-  elevator.position.set(-6.2, 0, -0.6);
+  elevator.position.set(-8.6, 0, -0.6);
   elevator.rotation.y = Math.PI / 2;
   scene.add(elevator);
 
@@ -351,7 +354,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
       cabinet.add(label);
     }
   }
-  cabinet.position.set(5.9, 0, -0.9);
+  cabinet.position.set(8.2, 0, 1.0);
   cabinet.rotation.y = -0.35;
   scene.add(cabinet);
 
@@ -445,9 +448,9 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     world.timestep = 1 / 60;
     const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
     world.createCollider(RAPIER.ColliderDesc.cuboid(9, 0.5, 6.5).setFriction(0.9), ground);
-    for (const x of SHELF_X) {
+    for (const u of SHELF_UNITS) {
       for (const by of BOARD_Y) {
-        const rb = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, by, SHELF_Z));
+        const rb = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(u.x, by, u.z));
         world.createCollider(RAPIER.ColliderDesc.cuboid(1.55, 0.03, 0.23).setFriction(0.95), rb);
       }
     }
@@ -503,7 +506,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
   closeBtn.onclick = () => elevPanel.classList.remove('show');
   elevPanel.appendChild(closeBtn);
   const allBtn = document.createElement('button');
-  allBtn.innerHTML = '<span>全馆大厅</span><i>三排书架 · 12 本</i>';
+  allBtn.innerHTML = '<span>全馆大厅</span><i>九排书架 · 36 本</i>';
   allBtn.onclick = () => { elevPanel.classList.remove('show'); travelTo('all'); };
   elevPanel.appendChild(allBtn);
   for (const f of floors) {
@@ -549,7 +552,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
 
   let currentFloor = 'all';
   function floorWelcome(fid) {
-    if (fid === 'all') return '全馆大厅：三排书架都在，慢慢看。';
+    if (fid === 'all') return '全馆大厅：九排书架都在，慢慢看。';
     const f = floors.find((x) => x.id === fid);
     return f ? `${f.name} · ${f.librarian}：${f.welcome}` : '';
   }
@@ -561,7 +564,7 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     }
     const idx = floors.findIndex((f) => f.id === fid);
     if (fid === 'all') {
-      player.pos.set(0, 1.62, 4.6);
+      player.pos.set(0, 1.62, 5.2);
       player.tYaw = 0;
       player.tPitch = -0.03;
     } else {
@@ -737,10 +740,10 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     traveling = true;
     hint.style.opacity = '0';
     const startPos = camera.position.clone();
-    const doorLook = new THREE.Vector3(-5.6, 1.45, -0.6);
-    const doorFront = new THREE.Vector3(-3.85, 1.55, -0.6);
-    const insidePos = new THREE.Vector3(-6.9, 1.5, -0.6);
-    const insideLook = new THREE.Vector3(-7.8, 1.45, -0.6);
+    const doorLook = new THREE.Vector3(-8.45, 1.45, -0.6);
+    const doorFront = new THREE.Vector3(-6.9, 1.55, -0.6);
+    const insidePos = new THREE.Vector3(-8.9, 1.5, -0.6);
+    const insideLook = new THREE.Vector3(-9.4, 1.45, -0.6);
 
     // 1. 飞到电梯门前
     await tween(900, (e) => {

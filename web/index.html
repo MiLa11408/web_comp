@@ -323,13 +323,13 @@ async function showShelves(floor) {
   const elevHtml = ['all', ...floors.map((f) => f.id)].map((id) => {
     const f = id === 'all' ? null : floors.find((x) => x.id === id);
     const label = f ? f.name : '全馆大厅';
-    const sub = f ? `等级 ${f.tier} · ${decayLbl[f.decay] || '残'} · ${f.librarian}` : '三排书架 · 12 本';
+    const sub = f ? `等级 ${f.tier} · ${decayLbl[f.decay] || '残'} · ${f.librarian}` : '九排书架 · 36 本';
     return `<button class="elev-btn ${active === id ? 'active' : ''}" onclick="showShelves('${id}')"><span>${esc(label)}</span><i>${esc(sub)}</i></button>`;
   }).join('');
   const cur = active === 'all' ? null : floors.find((f) => f.id === active);
   const welcome = cur
     ? `${cur.name} · ${cur.librarian}：${cur.welcome}`
-    : '全馆大厅：三排书架都在，慢慢看。';
+    : '全馆大厅：九排书架都在，慢慢看。';
   app.innerHTML = `
   <div class="shelf-view">
     <aside class="shelf-elevator">
