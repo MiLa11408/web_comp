@@ -789,9 +789,8 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     override = null;
     traveling = false;
     setDoors(0);
-    setFloor('all');
+    setFloor(currentFloor, true);
     snapCamToPreset();
-    currentFloor = 'all';
   }
 
   // ---------- 渲染循环 ----------
@@ -874,7 +873,11 @@ export async function init3D({ container, books, floors, onOpenBook }) {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  return { reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups };
+  return {
+    reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups,
+    getFloor: () => currentFloor,
+    toastFloor: () => toast(floorWelcome(currentFloor)),
+  };
 }
 
 export function dispose3D(api) {

@@ -101,6 +101,10 @@
   .sug-item i { font-style: normal; color: var(--dim); font-size: 11px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
 
+  /* ---------- 视图切换淡入淡出 ---------- */
+  #viewFade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .38s ease; z-index: 60; }
+  #viewFade.on { opacity: 1; }
+
   /* ---------- 3D 舞台 ---------- */
   #scene3d { position: fixed; inset: 0; z-index: 0; }
   header, .search, #app { position: relative; z-index: 5; }
@@ -165,12 +169,13 @@
 <div class="search">
   <input id="q" placeholder="卡片目录检索：神经网络 / 达特茅斯 / 扩散 ……" onkeydown="if(event.key==='Enter')doSearch()">
   <button onclick="doSearch()">检索</button>
-  <button class="back" style="margin:0" onclick="backToRoom()">3D 阅览室</button>
-  <button class="back" style="margin:0" onclick="showShelves()">书架视图</button>
-  <button class="back" style="margin:0" onclick="showOverview()">书架总览</button>
+  <button class="back" style="margin:0" onclick="enter3D()">3D 阅览室</button>
+  <button class="back" style="margin:0" onclick="enterShelf()">书架视图</button>
+  <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
 </div>
 <div id="scene3d"></div>
 <div id="app"></div>
+<div id="viewFade"></div>
 <script>
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
@@ -266,13 +271,37 @@ function openBookFirst(id) {
   showChapter(b.chapters[0].id);
 }
 
+// 视图切换（黑场淡入淡出）
+let viewBusy = false;
+function fadeSwap(fn) {
+  if (viewBusy) return;
+  viewBusy = true;
+  const f = $('#viewFade');
+  const done = () => {
+    setTimeout(() => { f.classList.remove('on'); setTimeout(() => { viewBusy = false; }, 420); }, 80);
+  };
+  if (!f) { Promise.resolve(fn()).finally(() => { viewBusy = false; }); return; }
+  f.classList.add('on');
+  setTimeout(async () => {
+    try { await fn(); } catch (e) { console.error('[view] 切换失败', e); }
+    done();
+  }, 380);
+}
+function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
+function enterOverview() { fadeSwap(() => showOverview()); }
+function enter3D() { fadeSwap(() => backToRoom()); }
+
 async function showShelves(floor) {
-  shelfFloor = floor || shelfFloor || 'all';
+  shelfFloor = floor || (window.mm3d && window.mm3d.getFloor ? window.mm3d.getFloor() : shelfFloor) || 'all';
   document.body.classList.add('grid');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在取出书架……</div>';
   const [catalog, floors] = await Promise.all([ensureCatalog(), ensureFloors()]);
   const active = shelfFloor;
+  // 与 3D 同步：在书架视图选层后，3D 也切到同一层
+  if (floor && window.mm3d && window.mm3d.getFloor && window.mm3d.getFloor() !== floor) {
+    try { window.mm3d.setFloor(floor, true); } catch (e) { console.warn('[sync] 3D 切层失败', e); }
+  }
   const visible = active === 'all' ? catalog : catalog.filter((b) => b.floor === active);
   const cols = Math.max(1, Math.ceil(visible.length / 4));
   const units = [];
@@ -303,7 +332,7 @@ async function showShelves(floor) {
       <div class="elev-title">黄铜电梯 · 选层</div>
       ${elevHtml}
       <div class="elev-welcome">${esc(welcome)}</div>
-      <div class="elev-links"><a onclick="showOverview()">→ 书架总览（全部书目）</a></div>
+      <div class="elev-links"><a onclick="enterOverview()">→ 书架总览（全部书目）</a></div>
     </aside>
     <main class="shelf-main">
       ${units.map((u) => `
@@ -329,7 +358,7 @@ async function showOverview() {
     <section class="overview-sec">
       <div class="floor-head">
         <span class="fd">${esc(f.name)} · 等级 ${f.tier} · ${decayLbl[f.decay] || '残'} · ${esc(f.librarian)}</span>
-        <span class="head-links"><a onclick="showShelves('${f.id}')">本层书架 →</a></span>
+        <span class="head-links"><a onclick="enterShelf('${f.id}')">本层书架 →</a></span>
       </div>
       ${list.map((b) => `
         <div class="book-row" onclick="openBookFirst('${b.id}')">
@@ -343,16 +372,19 @@ async function showOverview() {
   }).join('');
   app.innerHTML = `
     <div class="overview-head">书架总览 · ${catalog.length} 本书 · 已入库 ${totalChapters}/96 章
-      <span class="head-links"><a onclick="showShelves()">书架视图 →</a></span>
+      <span class="head-links"><a onclick="enterShelf()">书架视图 →</a></span>
     </div>
     <div class="overview">${sections}</div>`;
 }
 
-// 回到 3D 阅览室
+// 回到 3D 阅览室（保留当前楼层）
 function backToRoom() {
   document.body.classList.remove('reading', 'grid');
   app.innerHTML = '';
-  if (window.mm3d) window.mm3d.reset();
+  if (window.mm3d) {
+    window.mm3d.reset();
+    if (window.mm3d.toastFloor) window.mm3d.toastFloor();
+  }
 }
 
 // 3D 启动时把书目映射灌进共享缓存（接待卡/馆员署名要用）
@@ -404,7 +436,7 @@ async function showChapter(id) {
     </aside>
     <main>
       <div class="paper ${m.style}" id="paperBox">
-        <button class="back" onclick="backToRoom()">← 合上书，回到阅览室</button>
+        <button class="back" onclick="enter3D()">← 合上书，回到阅览室</button>
         <div class="reception">
           <div class="rc-title">接待记录 No. ${esc(callNo)}</div>
           <div>宾客：<b>${esc(m.title)}（${esc(m.year)}）</b></div>
