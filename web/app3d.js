@@ -6,18 +6,28 @@ import RAPIER from './vendor/rapier.mjs';
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const DECAY = ['完好', '轻残', '中残', '高残'];
 
+// 房间尺寸：在旧 19×14×6.5 基础上放大 1.5 倍（28.5×21×9.75）
+const ROOM = {
+  w: 28.5, d: 21, h: 9.75,
+  backZ: -6.9, sideX: 14.25,
+  minX: 12.6, minZ: -1.5, maxZ: 9.4,
+};
+const CHANDELIER_POS = { x: 0, y: 4.8, z: 1.8 };
+const SCONCE_POS = [[-1, -2.6], [1, -2.6], [-1, 3.4], [1, 3.4]];
+const FLOOR_LAMP_POS = [[-7.2, 6.2], [7.2, 6.2]];
+
 // 书架容量可配置：按书数动态计算需要多少组书架、排成几行
-function layoutShelves(totalBooks, capacity, maxPerRow = 5) {
+function layoutShelves(totalBooks, capacity, maxPerRow = 6) {
   const units = Math.max(1, Math.ceil(totalBooks / capacity));
   const rows = Math.ceil(units / maxPerRow);
   const base = Math.floor(units / rows);
   const extra = units % rows;
-  const spacing = 3.6;
+  const spacing = 4.4;
   const out = [];
   for (let r = 0; r < rows; r++) {
     const count = base + (r < extra ? 1 : 0);
     const startX = -((count - 1) * spacing) / 2;
-    const z = -3.5 + r * 2.2;
+    const z = -5.4 + r * 2.9;
     for (let i = 0; i < count; i++) out.push({ x: startX + i * spacing, z });
   }
   return out;
@@ -100,6 +110,276 @@ function spineTexture(book) {
   return tex;
 }
 
+// ---------- 程序化贴图：地面 / 墙面 / 挂画 / 蓝图 ----------
+function canvasTexture(w, h, painter) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  painter(c.getContext('2d'), w, h);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function makeFloorTexture(kind) {
+  const tex = canvasTexture(512, 512, (g, W, H) => {
+    if (kind === 'wood') {
+      g.fillStyle = '#402e1d';
+      g.fillRect(0, 0, W, H);
+      const tones = ['#4a3722', '#44311f', '#503c26', '#3e2c1b'];
+      for (let y = 0; y < H; y += 64) {
+        g.fillStyle = tones[(y / 64) % tones.length];
+        g.fillRect(0, y, W, 64);
+        for (let i = 0; i < 18; i++) {
+          g.strokeStyle = `rgba(18,11,5,${0.06 + Math.random() * 0.09})`;
+          g.lineWidth = 1;
+          g.beginPath();
+          let yy = y + Math.random() * 64;
+          g.moveTo(0, yy);
+          for (let x = 0; x <= W; x += 48) {
+            yy += Math.sin((x + i * 33 + y) / 70) * 1.8 + (Math.random() - 0.5) * 1.6;
+            g.lineTo(x, yy);
+          }
+          g.stroke();
+        }
+        g.fillStyle = 'rgba(0,0,0,.35)';
+        g.fillRect(0, y + 63, W, 1);
+        const off = (y / 64) % 2 ? 128 : 0;
+        for (let x = off; x < W; x += 256) g.fillRect(x, y, 1, 64);
+      }
+      for (let i = 0; i < 12; i++) {
+        const kx = Math.random() * W;
+        const ky = Math.random() * H;
+        g.strokeStyle = 'rgba(20,12,6,.35)';
+        for (let r = 3; r < 11; r += 3) {
+          g.beginPath();
+          g.ellipse(kx, ky, r, r * 0.6, 0, 0, Math.PI * 2);
+          g.stroke();
+        }
+      }
+    } else if (kind === 'metal') {
+      g.fillStyle = '#2b343b';
+      g.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 64) {
+        g.fillStyle = (y / 64) % 2 ? 'rgba(255,255,255,.025)' : 'rgba(0,0,0,.06)';
+        g.fillRect(0, y, W, 64);
+        g.fillStyle = 'rgba(10,14,18,.75)';
+        g.fillRect(0, y, W, 2);
+        g.fillStyle = 'rgba(120,150,168,.18)';
+        g.fillRect(0, y + 2, W, 1);
+      }
+      for (let x = 0; x < W; x += 64) {
+        g.fillStyle = 'rgba(10,14,18,.6)';
+        g.fillRect(x, 0, 2, H);
+      }
+      for (let y = 32; y < H; y += 64) {
+        for (let x = 32; x < W; x += 64) {
+          g.fillStyle = 'rgba(130,158,174,.45)';
+          g.beginPath();
+          g.arc(x, y, 3.2, 0, Math.PI * 2);
+          g.fill();
+          g.fillStyle = 'rgba(12,16,20,.6)';
+          g.beginPath();
+          g.arc(x, y, 1.3, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+      g.strokeStyle = 'rgba(127,182,214,.08)';
+      for (let i = -H; i < W; i += 64) {
+        g.beginPath();
+        g.moveTo(i, 0);
+        g.lineTo(i + H, H);
+        g.stroke();
+      }
+      for (let i = 0; i < 1300; i++) {
+        g.fillStyle = `rgba(160,180,195,${Math.random() * 0.05})`;
+        g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+      }
+    } else if (kind === 'stone') {
+      g.fillStyle = '#33251a';
+      g.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 128) {
+        for (let x = 0; x < W; x += 128) {
+          const t = 0.04 + Math.random() * 0.07;
+          g.fillStyle = `rgba(${Math.random() < 0.5 ? '90,70,50' : '60,45,32'},${t})`;
+          g.fillRect(x + 3, y + 3, 122, 122);
+          g.strokeStyle = 'rgba(16,10,6,.65)';
+          g.lineWidth = 3;
+          g.strokeRect(x + 2, y + 2, 124, 124);
+        }
+      }
+      for (let i = 0; i < 18; i++) {
+        g.strokeStyle = 'rgba(10,7,4,.35)';
+        g.lineWidth = 1;
+        g.beginPath();
+        let x = Math.random() * W;
+        let y = Math.random() * H;
+        g.moveTo(x, y);
+        for (let s = 0; s < 6; s++) {
+          x += (Math.random() - 0.5) * 70;
+          y += (Math.random() - 0.5) * 70;
+          g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+      for (let i = 0; i < 1400; i++) {
+        g.fillStyle = `rgba(20,13,8,${Math.random() * 0.08})`;
+        g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+      }
+    } else {
+      g.fillStyle = '#181420';
+      g.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 96) {
+        for (let x = 0; x < W; x += 96) {
+          g.fillStyle = `rgba(${40 + Math.random() * 16},${34 + Math.random() * 12},${56 + Math.random() * 18},.35)`;
+          g.fillRect(x + 2, y + 2, 92, 92);
+          g.strokeStyle = 'rgba(6,5,10,.7)';
+          g.lineWidth = 2;
+          g.strokeRect(x + 1, y + 1, 94, 94);
+        }
+      }
+      g.strokeStyle = 'rgba(138,96,180,.12)';
+      g.lineWidth = 2;
+      for (let r = 40; r <= 200; r += 40) {
+        g.beginPath();
+        g.arc(256, 256, r, 0, Math.PI * 2);
+        g.stroke();
+      }
+      for (let i = 0; i < 10; i++) {
+        g.strokeStyle = 'rgba(160,40,50,.14)';
+        g.beginPath();
+        let x = Math.random() * W;
+        let y = Math.random() * H;
+        g.moveTo(x, y);
+        for (let s = 0; s < 4; s++) {
+          x += (Math.random() - 0.5) * 110;
+          y += (Math.random() - 0.5) * 110;
+          g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+      for (let i = 0; i < 1200; i++) {
+        g.fillStyle = `rgba(150,130,180,${Math.random() * 0.04})`;
+        g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+      }
+    }
+  });
+  const reps = { wood: [4.5, 3.4], metal: [12, 9], stone: [6, 4.5], dark: [6, 4.5] };
+  const r = reps[kind] || reps.wood;
+  tex.repeat.set(r[0], r[1]);
+  return tex;
+}
+
+function makePlasterTexture() {
+  const tex = canvasTexture(256, 256, (g, W, H) => {
+    g.fillStyle = '#b8b2a8';
+    g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 2600; i++) {
+      const v = Math.random();
+      g.fillStyle = v < 0.5 ? `rgba(40,34,28,${Math.random() * 0.09})` : `rgba(255,250,240,${Math.random() * 0.05})`;
+      g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+    }
+    for (let i = 0; i < 8; i++) {
+      g.strokeStyle = `rgba(50,40,30,${0.04 + Math.random() * 0.05})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      let x = Math.random() * W;
+      g.moveTo(x, 0);
+      for (let y = 0; y <= H; y += 32) g.lineTo(x + Math.sin(y / 20) * 3, y);
+      g.stroke();
+    }
+  });
+  tex.repeat.set(7, 4);
+  return tex;
+}
+
+function makePaintingTexture() {
+  return canvasTexture(512, 384, (g, W, H) => {
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#5a4a32');
+    grad.addColorStop(1, '#241c12');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(226,192,106,.35)';
+    g.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
+      g.beginPath();
+      g.arc(W * 0.28, H * 0.55, 30 + i * 17, 0, Math.PI * 2);
+      g.stroke();
+    }
+    g.strokeStyle = 'rgba(200,162,74,.5)';
+    g.beginPath();
+    g.moveTo(0, H * 0.72);
+    for (let x = 0; x <= W; x += 32) g.lineTo(x, H * 0.72 + Math.sin(x / 48) * 12);
+    g.stroke();
+    g.fillStyle = 'rgba(18,14,9,.55)';
+    g.fillRect(W * 0.58, H * 0.2, W * 0.32, H * 0.5);
+    g.strokeStyle = 'rgba(226,192,106,.55)';
+    g.strokeRect(W * 0.58, H * 0.2, W * 0.32, H * 0.5);
+    for (let i = 0; i < 6; i++) {
+      g.beginPath();
+      g.moveTo(W * 0.6, H * (0.26 + i * 0.07));
+      g.lineTo(W * 0.88, H * (0.26 + i * 0.07));
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(200,162,74,.6)';
+    g.beginPath();
+    g.arc(W * 0.18, H * 0.25, 8, 0, Math.PI * 2);
+    g.fill();
+  });
+}
+
+function makeBlueprintTexture() {
+  return canvasTexture(512, 512, (g, W, H) => {
+    g.fillStyle = '#1d3546';
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(170,214,240,.22)';
+    g.lineWidth = 1;
+    for (let i = 0; i <= W; i += 32) {
+      g.beginPath();
+      g.moveTo(i, 0);
+      g.lineTo(i, H);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(0, i);
+      g.lineTo(W, i);
+      g.stroke();
+    }
+    g.strokeStyle = 'rgba(200,230,255,.5)';
+    g.lineWidth = 2;
+    for (let i = 0; i <= W; i += 128) {
+      g.beginPath();
+      g.moveTo(i, 0);
+      g.lineTo(i, H);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(0, i);
+      g.lineTo(W, i);
+      g.stroke();
+    }
+    g.strokeStyle = 'rgba(210,238,255,.7)';
+    g.strokeRect(90, 130, 210, 150);
+    g.strokeRect(130, 170, 130, 70);
+    g.beginPath();
+    g.arc(360, 320, 70, 0, Math.PI * 2);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(380, 300);
+    g.lineTo(460, 240);
+    g.stroke();
+    g.strokeStyle = 'rgba(200,230,255,.35)';
+    for (let i = 0; i < 8; i++) {
+      g.beginPath();
+      g.moveTo(60, 360 + i * 10);
+      g.lineTo(200 + i * 18, 360 + i * 10);
+      g.stroke();
+    }
+  });
+}
+
 export async function init3D({ container, books, floors, shelfConfig = {}, onOpenBook }) {
   injectCss();
 
@@ -118,20 +398,20 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.85;
+  renderer.toneMappingExposure = 1.7;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;';
   root.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x171009);
-  scene.fog = new THREE.Fog(0x171009, 8, 34);
+  scene.fog = new THREE.Fog(0x171009, 12, 48);
 
-  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 60);
+  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 95);
   camera.rotation.order = 'YXZ';
   // 第一人称：WASD 移动 + 鼠标拖拽转视角
   const player = {
-    pos: new THREE.Vector3(0, 1.62, 5.2),
+    pos: new THREE.Vector3(0, 1.68, 9.1),
     yaw: 0, pitch: -0.03, tYaw: 0, tPitch: -0.03,
   };
   const keys = { w: false, a: false, s: false, d: false };
@@ -145,126 +425,222 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // ---------- 灯光 ----------
   const ambient = new THREE.AmbientLight(0x7a6a52, 2.2);
   scene.add(ambient);
-  scene.add(new THREE.HemisphereLight(0x9a8a6a, 0x3a2f22, 1.6));
+  const hemi = new THREE.HemisphereLight(0x9a8a6a, 0x3a2f22, 1.6);
+  scene.add(hemi);
 
   const key = new THREE.DirectionalLight(0xffe3b0, 2.2);
-  key.position.set(2.5, 5, 4.5);
+  key.position.set(4.5, 8.5, 7.5);
   scene.add(key);
-  const fillA = new THREE.PointLight(0xffcf9a, 1.6, 14, 2);
-  fillA.position.set(3.2, 2.8, 3.8);
-  scene.add(fillA);
-  const fillB = new THREE.PointLight(0x9fc2ff, 1.2, 14, 2);
-  fillB.position.set(-3.2, 2.8, 3.8);
-  scene.add(fillB);
-  // 书架灯：照亮书脊
-  for (const u of SHELF_UNITS.slice(0, 5)) {
-    const lamp = new THREE.PointLight(0xffc37a, 1.0, 7, 2);
-    lamp.position.set(u.x, 2.9, -2.4);
+
+  // 书架灯：照亮书脊（只保留 2 盏，控制灯数）
+  const shelfLights = [];
+  for (const u of SHELF_UNITS.slice(0, 2)) {
+    const lamp = new THREE.PointLight(0xffc37a, 0.95, 8, 2);
+    lamp.position.set(u.x, 3.3, u.z + 1.05);
     scene.add(lamp);
+    shelfLights.push(lamp);
   }
 
-  const spot = new THREE.SpotLight(0xffd9a0, 6.0, 0, 0.95, 0.55, 1.2);
-  spot.position.set(0, 5.6, 2.2);
-  spot.target.position.set(0, 0.8, -2.6);
+  const spot = new THREE.SpotLight(0xffd9a0, 5.4, 0, 0.62, 0.5, 1.15);
+  spot.position.set(CHANDELIER_POS.x, CHANDELIER_POS.y, CHANDELIER_POS.z);
+  spot.target.position.set(0, 0.6, CHANDELIER_POS.z);
   spot.castShadow = true;
   spot.shadow.mapSize.set(1024, 1024);
   spot.shadow.bias = -0.0005;
   scene.add(spot);
   scene.add(spot.target);
 
-  const sideL = new THREE.PointLight(0xffb066, 0.55, 8, 2);
-  sideL.position.set(-4.6, 2.6, -1.4);
-  scene.add(sideL);
-  const sideR = new THREE.PointLight(0x9fc2ff, 0.4, 8, 2);
-  sideR.position.set(4.6, 2.6, -1.4);
-  scene.add(sideR);
-
   // 楼层主题光（颜色随楼层变化）
-  const accent = new THREE.PointLight(0xffc37a, 0.9, 16, 2);
-  accent.position.set(0, 4.6, 2.0);
+  const accent = new THREE.PointLight(0xffc37a, 0.9, 20, 2);
+  accent.position.set(0, 6.4, 2.4);
   scene.add(accent);
+
+  // 壁灯 / 落地灯共 6 个补光灯（随楼层换色，固定灯数避免 shader 重编译）
+  const wallLights = [];
+  for (const [sx, sz] of SCONCE_POS) {
+    const l = new THREE.PointLight(0xffb066, 1.05, 9, 2);
+    l.position.set(sx * (ROOM.sideX - 0.7), 3.65, sz);
+    scene.add(l);
+    wallLights.push(l);
+  }
+  for (const [fx, fz] of FLOOR_LAMP_POS) {
+    const l = new THREE.PointLight(0xffc37a, 1.25, 9, 2);
+    l.position.set(fx, 1.85, fz);
+    scene.add(l);
+    wallLights.push(l);
+  }
+  // 机密层警示灯（常态关闭，L4 脉冲）
+  const beaconLight = new THREE.PointLight(0xff2a2a, 0, 10, 2);
+  beaconLight.position.set(8.6, 2.6, 3.2);
+  scene.add(beaconLight);
 
   // ---------- 房间 ----------
   const woodDark = new THREE.MeshStandardMaterial({ color: 0x523a24, roughness: 0.82, metalness: 0.05 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.75, metalness: 0.06 });
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x342a20, roughness: 0.9 });
 
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(19, 14), new THREE.MeshStandardMaterial({ color: 0x4a3722, roughness: 0.92 }));
+  // 每层地面材质：木纹 / 金属格栅 / 石纹 / 暗石（CanvasTexture 程序化）
+  const floorTexCache = {};
+  const floorMats = {};
+  const floorKind = { all: 'wood', L1: 'wood', L2: 'metal', L3: 'stone', L4: 'dark' };
+  for (const fid of Object.keys(floorKind)) {
+    const kind = floorKind[fid];
+    if (!floorTexCache[kind]) floorTexCache[kind] = makeFloorTexture(kind);
+    floorMats[fid] = new THREE.MeshStandardMaterial({
+      map: floorTexCache[kind],
+      roughness: kind === 'metal' ? 0.42 : kind === 'dark' ? 0.78 : 0.9,
+      metalness: kind === 'metal' ? 0.38 : 0.04,
+    });
+  }
+
+  // 每层墙面材质：同一张灰泥贴图，颜色/粗糙度/金属度不同
+  const plasterTex = makePlasterTexture();
+  const wallHex = { all: 0x342a20, L1: 0x3f3021, L2: 0x2b3740, L3: 0x3a2c1e, L4: 0x2a2436 };
+  const wallMats = {};
+  for (const fid of Object.keys(wallHex)) {
+    wallMats[fid] = new THREE.MeshStandardMaterial({
+      color: wallHex[fid], map: plasterTex,
+      roughness: fid === 'L2' ? 0.6 : 0.92,
+      metalness: fid === 'L2' ? 0.28 : 0.03,
+    });
+  }
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), floorMats.all);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const rug = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 4.2), new THREE.MeshStandardMaterial({ color: 0x5a3520, roughness: 0.95 }));
+  const rugMat = new THREE.MeshStandardMaterial({ color: 0x5a3520, roughness: 0.95 });
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 6.3), rugMat);
   rug.rotation.x = -Math.PI / 2;
-  rug.position.set(0.2, 0.012, 0.2);
+  rug.position.set(0.5, 0.012, 2.8);
   rug.receiveShadow = true;
   scene.add(rug);
 
-  const backWall = new THREE.Mesh(new THREE.PlaneGeometry(19, 6.5), wallMat);
-  backWall.position.set(0, 3.25, -4.6);
+  const wallMeshes = [];
+  const backWall = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.h), wallMats.all);
+  backWall.position.set(0, ROOM.h / 2, ROOM.backZ);
   backWall.receiveShadow = true;
   scene.add(backWall);
+  wallMeshes.push(backWall);
   for (const sx of [-1, 1]) {
-    const side = new THREE.Mesh(new THREE.PlaneGeometry(14, 6.5), wallMat);
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.d, ROOM.h), wallMats.all);
     side.rotation.y = sx * Math.PI / 2;
-    side.position.set(sx * 9.5, 3.25, 0);
+    side.position.set(sx * ROOM.sideX, ROOM.h / 2, 0);
+    side.receiveShadow = true;
     scene.add(side);
+    wallMeshes.push(side);
   }
-  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(19, 14), new THREE.MeshStandardMaterial({ color: 0x241c16, roughness: 1 }));
+  const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x241c16, roughness: 1 });
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), ceilingMat);
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 6.5;
+  ceiling.position.y = ROOM.h;
   scene.add(ceiling);
 
+  // 踢脚线
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x2a2118, roughness: 0.7, metalness: 0.15 });
+  const baseBack = new THREE.Mesh(new THREE.BoxGeometry(ROOM.w, 0.22, 0.12), trimMat);
+  baseBack.position.set(0, 0.11, ROOM.backZ + 0.06);
+  scene.add(baseBack);
+  for (const sx of [-1, 1]) {
+    const baseSide = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 17.3), trimMat);
+    baseSide.position.set(sx * (ROOM.sideX - 0.06), 0.11, 1.8);
+    scene.add(baseSide);
+  }
+
+  // 墙面挂画（共用一张程序化画布，边框随楼层换色）
+  const paintingTex = makePaintingTexture();
+  const paintingFrameMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.4, metalness: 0.6 });
+  const paintingMat = new THREE.MeshStandardMaterial({ map: paintingTex, color: 0xd8c090, roughness: 0.85 });
+  function addPainting(x, y, z, rotY, w, h) {
+    const g = new THREE.Group();
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, h + 0.2, 0.08), paintingFrameMat);
+    g.add(frame);
+    const canvas = new THREE.Mesh(new THREE.PlaneGeometry(w, h), paintingMat);
+    canvas.position.z = 0.05;
+    g.add(canvas);
+    g.position.set(x, y, z);
+    g.rotation.y = rotY;
+    scene.add(g);
+  }
+  addPainting(ROOM.sideX - 0.08, 4.6, -0.4, -Math.PI / 2, 1.5, 1.05);
+  addPainting(-ROOM.sideX + 0.08, 4.9, 2.6, Math.PI / 2, 1.25, 0.9);
+  addPainting(0, 5.7, ROOM.backZ + 0.04, 0, 1.7, 1.15);
+
   // ---------- 书架 ----------
+  // 共享几何：立柱 / 层板 / 檐口 / 铜边
+  const shelfPostGeo = new THREE.BoxGeometry(0.1, 3.3, 0.52);
+  const shelfBoardGeo = new THREE.BoxGeometry(3.1, 0.06, 0.48);
+  const shelfTopGeo = new THREE.BoxGeometry(3.2, 0.09, 0.54);
+  const shelfPlinthGeo = new THREE.BoxGeometry(3.2, 0.14, 0.56);
+  const shelfBackGeo = new THREE.BoxGeometry(3.1, 3.0, 0.03);
+  const shelfCapGeo = new THREE.BoxGeometry(0.18, 0.14, 0.58);
+  const shelfFluteGeo = new THREE.BoxGeometry(0.045, 2.9, 0.04);
+  const shelfCorniceGeo = new THREE.BoxGeometry(3.42, 0.13, 0.64);
+  const shelfCorniceTopGeo = new THREE.BoxGeometry(3.54, 0.07, 0.7);
+  const shelfEdgeGeo = new THREE.BoxGeometry(3.12, 0.018, 0.018);
+  const shelfEdgeMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.35, metalness: 0.7 });
+  const shelfRedMat = new THREE.LineBasicMaterial({ color: 0x8a2626, transparent: true, opacity: 0.5 });
+
   function createShelf(unit) {
     const g = new THREE.Group();
-    const postGeo = new THREE.BoxGeometry(0.09, 3.3, 0.52);
     for (const px of [-1.52, 1.52]) {
-      const post = new THREE.Mesh(postGeo, wood);
+      const post = new THREE.Mesh(shelfPostGeo, wood);
       post.position.set(px, 1.65, 0);
       post.castShadow = true;
       g.add(post);
+      // 立柱细节：上下柱头 + 正面凹槽
+      for (const cy of [0.18, 3.16]) {
+        const cap = new THREE.Mesh(shelfCapGeo, woodDark);
+        cap.position.set(px, cy, 0);
+        g.add(cap);
+      }
+      const flute = new THREE.Mesh(shelfFluteGeo, woodDark);
+      flute.position.set(px, 1.68, 0.265);
+      g.add(flute);
     }
-    const boardGeo = new THREE.BoxGeometry(3.1, 0.06, 0.48);
     for (const by of BOARD_Y) {
-      const board = new THREE.Mesh(boardGeo, wood);
+      const board = new THREE.Mesh(shelfBoardGeo, wood);
       board.position.set(0, by, 0);
       board.castShadow = true;
       board.receiveShadow = true;
       g.add(board);
+      // 层板铜边
+      const edge = new THREE.Mesh(shelfEdgeGeo, shelfEdgeMat);
+      edge.position.set(0, by + 0.038, 0.238);
+      g.add(edge);
     }
-    const top = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.09, 0.54), wood);
+    const top = new THREE.Mesh(shelfTopGeo, wood);
     top.position.set(0, 3.3, 0);
     top.castShadow = true;
     g.add(top);
-    const plinth = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.14, 0.56), woodDark);
+    const plinth = new THREE.Mesh(shelfPlinthGeo, woodDark);
     plinth.position.set(0, 0.07, 0);
     g.add(plinth);
-    const backPanel = new THREE.Mesh(new THREE.BoxGeometry(3.1, 3.0, 0.03), woodDark);
+    const backPanel = new THREE.Mesh(shelfBackGeo, woodDark);
     backPanel.position.set(0, 1.6, -0.23);
     g.add(backPanel);
-    // 层板黄铜沿
-    const brass = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.35, metalness: 0.7 });
-    for (const by of BOARD_Y) {
-      const edge = new THREE.Mesh(new THREE.BoxGeometry(3.12, 0.015, 0.015), brass);
-      edge.position.set(0, by + 0.035, 0.235);
-      g.add(edge);
-    }
+    // 顶部檐口 + 压顶
+    const cornice = new THREE.Mesh(shelfCorniceGeo, woodDark);
+    cornice.position.set(0, 3.4, 0);
+    cornice.castShadow = true;
+    g.add(cornice);
+    const corniceTop = new THREE.Mesh(shelfCorniceTopGeo, shelfEdgeMat);
+    corniceTop.position.set(0, 3.5, 0);
+    g.add(corniceTop);
     // 红线：书架层板上的细红丝（关系网氛围）
-    const redMat = new THREE.LineBasicMaterial({ color: 0x8a2626, transparent: true, opacity: 0.55 });
     for (const by of BOARD_Y) {
       const lg = new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(-1.52, by + 0.065, 0.245),
         new THREE.Vector3(1.52, by + 0.065, 0.245),
       ]);
-      g.add(new THREE.Line(lg, redMat));
+      g.add(new THREE.Line(lg, shelfRedMat));
     }
     for (let i = 0; i < BOARD_Y.length - 1; i++) {
       const lg = new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(-1.46, BOARD_Y[i] + 0.065, 0.245),
         new THREE.Vector3(1.46, BOARD_Y[i + 1] + 0.065, 0.245),
       ]);
-      g.add(new THREE.Line(lg, redMat));
+      g.add(new THREE.Line(lg, shelfRedMat));
     }
     g.position.set(unit.x, 0, unit.z);
     scene.add(g);
@@ -343,7 +719,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     knob.position.set(1.2, 1.38 + k * 0.12, 0.21);
     elevator.add(knob);
   }
-  elevator.position.set(-8.6, 0, -0.6);
+  elevator.position.set(-12.8, 0, -0.6);
   elevator.rotation.y = Math.PI / 2;
   scene.add(elevator);
 
@@ -463,13 +839,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     orbitDots.push(dot);
   }
 
-  starTable.position.set(0.4, 0, 0.6);
+  starTable.position.set(0.4, 0, 0.9);
   scene.add(starTable);
 
   // ---------- 散落的域外残页（不在书里） ----------
   const fragPapers = [];
   const fragMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.9, emissive: 0x8a6320, emissiveIntensity: 0.22, side: THREE.DoubleSide });
-  [[-5.9, 0.02, 3.1, -0.5], [6.4, 0.02, -3.2, 0.7]].forEach(([x, y, z, rz]) => {
+  [[-8.8, 0.02, 5.2, -0.5], [9.6, 0.02, -3.8, 0.7]].forEach(([x, y, z, rz]) => {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.46), fragMat);
     p.rotation.x = -Math.PI / 2;
     p.rotation.z = rz;
@@ -500,13 +876,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       cabinet.add(label);
     }
   }
-  cabinet.position.set(8.2, 0, 1.0);
+  cabinet.position.set(10.5, 0, 2.4);
   cabinet.rotation.y = -0.35;
   scene.add(cabinet);
 
   // ---------- 可互动道具：台灯 / 放大镜 / 抽屉 / 隐藏书 ----------
   const lampLight = new THREE.PointLight(0xffc873, 1.6, 7, 1.5);
-  lampLight.position.set(2.45, 1.3, 2.55);
+  lampLight.position.set(2.6, 1.32, 2.6);
   scene.add(lampLight);
   const lampGroup = new THREE.Group();
   const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.05, 20), brassDark);
@@ -522,7 +898,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   lampShade.position.y = 0.84;
   lampShade.rotation.x = Math.PI;
   lampGroup.add(lampShade);
-  lampGroup.position.set(2.45, 0, 2.55);
+  lampGroup.position.set(2.6, 0, 2.6);
   scene.add(lampGroup);
   let lampOn = true;
   function toggleLamp() {
@@ -544,15 +920,16 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   zoomHandle.position.set(0.16, -0.2, 0);
   zoomHandle.rotation.z = -0.9;
   zoomGroup.add(zoomHandle);
-  zoomGroup.position.set(8.2, 2.12, 1.05);
+  zoomGroup.position.set(10.5, 2.17, 2.45);
   zoomGroup.rotation.x = -0.7;
+  zoomGroup.rotation.y = -0.35;
   scene.add(zoomGroup);
 
   const hiddenBook = new THREE.Mesh(
     new THREE.BoxGeometry(0.24, 0.62, 0.42),
     new THREE.MeshStandardMaterial({ color: 0x120f0c, emissive: 0x6a1a1a, emissiveIntensity: 0.35, roughness: 0.85 })
   );
-  hiddenBook.position.set(0.4, 0.35, 4.2);
+  hiddenBook.position.set(0.6, 0.35, 7.4);
   hiddenBook.rotation.y = 0.18;
   hiddenBook.visible = false;
   scene.add(hiddenBook);
@@ -561,12 +938,27 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const propGroups = {};
   const propMats = {
     paper: new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.9 }),
+    parchment: new THREE.MeshStandardMaterial({ color: 0xd8c49a, roughness: 0.95, side: THREE.DoubleSide }),
     blue: new THREE.MeshStandardMaterial({ color: 0x7fb6d6, roughness: 0.6 }),
     ledger: new THREE.MeshStandardMaterial({ color: 0x3a4a34, roughness: 0.8 }),
     wax: new THREE.MeshStandardMaterial({ color: 0xd8c89e, roughness: 0.5 }),
     flame: new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffa040, emissiveIntensity: 1.3 }),
-    drape: new THREE.MeshStandardMaterial({ color: 0x2a2238, roughness: 1 }),
+    violetFlame: new THREE.MeshStandardMaterial({ color: 0xd8c8ff, emissive: 0x9a6aff, emissiveIntensity: 1.2 }),
+    drape: new THREE.MeshStandardMaterial({ color: 0x241c33, roughness: 1, side: THREE.DoubleSide }),
+    iron: new THREE.MeshStandardMaterial({ color: 0x2c2a33, roughness: 0.52, metalness: 0.6 }),
+    steel: new THREE.MeshStandardMaterial({ color: 0x77858f, roughness: 0.36, metalness: 0.75 }),
+    steelShade: new THREE.MeshStandardMaterial({ color: 0x8fa4b2, roughness: 0.4, metalness: 0.6, emissive: 0x1d4a66, emissiveIntensity: 0.3, side: THREE.DoubleSide }),
+    carpet: new THREE.MeshStandardMaterial({ color: 0x461b18, roughness: 1 }),
+    redSeal: new THREE.MeshStandardMaterial({ color: 0x7a1a1a, roughness: 0.48 }),
+    redGlow: new THREE.MeshStandardMaterial({ color: 0xff4040, emissive: 0xff1010, emissiveIntensity: 1.4 }),
+    glass: new THREE.MeshPhysicalMaterial({ color: 0xbfe0f0, transparent: true, opacity: 0.24, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide }),
   };
+  const shadeWarmMat = new THREE.MeshStandardMaterial({ color: 0xe8c07a, emissive: 0xffa040, emissiveIntensity: 0.8, side: THREE.DoubleSide, roughness: 0.5 });
+  const shadeCoolMat = new THREE.MeshStandardMaterial({ color: 0xa8cff0, emissive: 0x3a7ab0, emissiveIntensity: 0.85, side: THREE.DoubleSide, roughness: 0.45 });
+  const shadeAmberMat = new THREE.MeshStandardMaterial({ color: 0xd8a85a, emissive: 0xff8a30, emissiveIntensity: 0.85, side: THREE.DoubleSide, roughness: 0.5 });
+  const shadeRedMat = new THREE.MeshStandardMaterial({ color: 0xc05a5a, emissive: 0xff2020, emissiveIntensity: 1.0, side: THREE.DoubleSide, roughness: 0.55 });
+  const blueprintMat = new THREE.MeshStandardMaterial({ map: makeBlueprintTexture(), roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide });
+
   function makePropGroup(name) {
     const g = new THREE.Group();
     g.name = name;
@@ -574,70 +966,509 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     scene.add(g);
     return g;
   }
-  // L1：旧纸堆
+
+  // 共享几何缓存：避免重复创建相同尺寸的几何体
+  const geoCache = new Map();
+  function boxG(w, h, d) {
+    const k = `b${w}|${h}|${d}`;
+    let g = geoCache.get(k);
+    if (!g) { g = new THREE.BoxGeometry(w, h, d); geoCache.set(k, g); }
+    return g;
+  }
+  function cylG(rt, rb, h, seg = 12, open = false) {
+    const k = `c${rt}|${rb}|${h}|${seg}|${open ? 1 : 0}`;
+    let g = geoCache.get(k);
+    if (!g) { g = new THREE.CylinderGeometry(rt, rb, h, seg, 1, open); geoCache.set(k, g); }
+    return g;
+  }
+  function coneG(r, h, seg = 16) {
+    const k = `k${r}|${h}|${seg}`;
+    let g = geoCache.get(k);
+    if (!g) { g = new THREE.ConeGeometry(r, h, seg, 1, true); geoCache.set(k, g); }
+    return g;
+  }
+  function torusG(r, t, seg = 8, tSeg = 32) {
+    const k = `t${r}|${t}|${seg}|${tSeg}`;
+    let g = geoCache.get(k);
+    if (!g) { g = new THREE.TorusGeometry(r, t, seg, tSeg); geoCache.set(k, g); }
+    return g;
+  }
+  function sphereG(r, seg = 10) {
+    const k = `s${r}|${seg}`;
+    let g = geoCache.get(k);
+    if (!g) { g = new THREE.SphereGeometry(r, seg, seg); geoCache.set(k, g); }
+    return g;
+  }
+  function planeG(w, h) {
+    const k = `p${w}|${h}`;
+    let g = geoCache.get(k);
+    if (!g) { g = new THREE.PlaneGeometry(w, h); geoCache.set(k, g); }
+    return g;
+  }
+  function circleG(r, seg = 24) {
+    const k = `o${r}|${seg}`;
+    let g = geoCache.get(k);
+    if (!g) { g = new THREE.CircleGeometry(r, seg); geoCache.set(k, g); }
+    return g;
+  }
+  function put(parent, geo, mat, x, y, z, shadow = false) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    if (shadow) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
+    parent.add(m);
+    return m;
+  }
+
+  function addTable(parent, x, z, w, d, topMat, legMat) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    parent.add(g);
+    put(g, boxG(w, 0.1, d), topMat, 0, 0.76, 0, true);
+    for (const lx of [-w / 2 + 0.14, w / 2 - 0.14]) {
+      for (const lz of [-d / 2 + 0.14, d / 2 - 0.14]) {
+        put(g, boxG(0.1, 0.72, 0.1), legMat, lx, 0.36, lz, true);
+      }
+    }
+    return g;
+  }
+
+  function addChair(parent, x, z, rotY, mat) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    g.rotation.y = rotY;
+    parent.add(g);
+    put(g, boxG(0.5, 0.08, 0.5), mat, 0, 0.44, 0, true);
+    for (const lx of [-0.2, 0.2]) {
+      for (const lz of [-0.2, 0.2]) put(g, boxG(0.06, 0.44, 0.06), mat, lx, 0.22, lz);
+    }
+    put(g, boxG(0.5, 0.6, 0.06), mat, 0, 0.76, -0.22, true);
+    return g;
+  }
+
+  // 壁灯（灯体随层切换，真实光源已固定在场中）
+  function addSconce(parent, side, z, fixtureMat, shadeMat) {
+    const wx = side * (ROOM.sideX - 0.12);
+    put(parent, boxG(0.06, 0.36, 0.08), fixtureMat, wx, 3.45, z);
+    put(parent, boxG(0.34, 0.05, 0.05), fixtureMat, wx - side * 0.16, 3.55, z);
+    const shade = put(parent, cylG(0.1, 0.2, 0.24, 12, true), shadeMat, wx - side * 0.38, 3.66, z);
+    shade.rotation.z = side * 0.18;
+    put(parent, sphereG(0.05, 8), shadeMat, wx - side * 0.38, 3.72, z);
+  }
+  function buildSconces(parent, fixtureMat, shadeMat) {
+    for (const [side, z] of SCONCE_POS) addSconce(parent, side, z, fixtureMat, shadeMat);
+  }
+
+  function addFloorLamp(parent, x, z, fixtureMat, shadeMat, kind) {
+    put(parent, cylG(0.22, 0.26, 0.06, 16), fixtureMat, x, 0.03, z, true);
+    put(parent, cylG(0.035, 0.035, 1.5, 8), fixtureMat, x, 0.78, z, true);
+    if (kind === 'drum') {
+      put(parent, cylG(0.3, 0.26, 0.34, 16, true), shadeMat, x, 1.62, z);
+    } else if (kind === 'cage') {
+      put(parent, cylG(0.28, 0.24, 0.4, 12, true), shadeMat, x, 1.62, z);
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2;
+        put(parent, cylG(0.012, 0.012, 0.46, 6), fixtureMat, x + Math.cos(a) * 0.25, 1.62, z + Math.sin(a) * 0.25);
+      }
+    } else {
+      put(parent, coneG(0.28, 0.34, 16), shadeMat, x, 1.66, z);
+    }
+    put(parent, sphereG(0.09, 10), shadeMat, x, 1.56, z);
+  }
+
+  // 主吊灯：每层不同造型，共用同一盏真实 SpotLight（避免灯数波动导致 shader 重编译）
+  const volumeCones = [];
+  const beacons = [];
+  function buildChandelier(parent, style) {
+    const ch = new THREE.Group();
+    ch.position.set(CHANDELIER_POS.x, CHANDELIER_POS.y, CHANDELIER_POS.z);
+    parent.add(ch);
+    let coneColor = 0xffc37a;
+    let coneOpacity = 0.065;
+    const rodMat = style === 'L2' ? propMats.steel : style === 'L4' ? propMats.iron : brassDark;
+    const rodLen = ROOM.h - CHANDELIER_POS.y;
+    put(ch, cylG(0.05, 0.05, rodLen, 8), rodMat, 0, rodLen / 2, 0);
+    if (style === 'L2') {
+      // 金属方框 + 工业灯罩
+      for (const dx of [-0.8, 0.8]) put(ch, boxG(0.07, 0.07, 1.7), propMats.steel, dx, -0.16, 0);
+      for (const dz of [-0.8, 0.8]) put(ch, boxG(1.7, 0.07, 0.07), propMats.steel, 0, -0.16, dz);
+      put(ch, cylG(0.78, 0.42, 0.42, 16, true), propMats.steelShade, 0, -0.03, 0);
+      put(ch, sphereG(0.16, 12), shadeCoolMat, 0, -0.18, 0);
+      coneColor = 0x8fc4ff;
+      coneOpacity = 0.06;
+    } else if (style === 'L4') {
+      // 铁环 + 黑烛 + 悬链
+      const ring = put(ch, torusG(0.9, 0.045, 8, 36), propMats.iron, 0, 0, 0);
+      ring.rotation.x = Math.PI / 2;
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const link = put(ch, torusG(0.055, 0.014, 6, 10), propMats.iron, Math.cos(a) * 0.95, -0.1, Math.sin(a) * 0.95);
+        link.rotation.x = i % 2 ? Math.PI / 2 : 0;
+      }
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const r = 0.72;
+        put(ch, cylG(0.04, 0.05, 0.34, 8), propMats.iron, Math.cos(a) * r, 0.22, Math.sin(a) * r);
+        put(ch, sphereG(0.045, 8), propMats.violetFlame, Math.cos(a) * r, 0.44, Math.sin(a) * r);
+      }
+      coneColor = 0x8a6aff;
+      coneOpacity = 0.075;
+    } else {
+      // L1 / L3 / 大厅：黄铜环 + 蜡烛
+      const ring = put(ch, torusG(style === 'L3' ? 0.95 : 1.0, 0.04, 8, 40), brassMat, 0, 0, 0);
+      ring.rotation.x = Math.PI / 2;
+      put(ch, sphereG(0.17, 12), brassMat, 0, -0.05, 0);
+      if (style === 'L3') {
+        put(ch, boxG(1.9, 0.06, 0.06), woodDark, 0, 0, 0);
+        put(ch, boxG(0.06, 0.06, 1.9), woodDark, 0, 0, 0);
+      }
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const r = style === 'L3' ? 0.82 : 0.86;
+        put(ch, cylG(0.035, 0.035, 0.34, 8), propMats.wax, Math.cos(a) * r, 0.22, Math.sin(a) * r);
+        put(ch, sphereG(0.045, 8), propMats.flame, Math.cos(a) * r, 0.44, Math.sin(a) * r);
+      }
+      coneColor = style === 'L3' ? 0xffb066 : 0xffc37a;
+      coneOpacity = style === 'L3' ? 0.065 : 0.07;
+    }
+    // 体积光锥：Additive + 低透明度 + 不写深度
+    const coneH = CHANDELIER_POS.y - 0.6;
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(2.25, coneH, 28, 1, true),
+      new THREE.MeshBasicMaterial({
+        color: coneColor, transparent: true, opacity: coneOpacity,
+        depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+      })
+    );
+    cone.position.y = -coneH / 2;
+    cone.rotation.z = 0.04;
+    ch.add(cone);
+    volumeCones.push({ mesh: cone, base: coneOpacity, phase: volumeCones.length * 1.6, spin: style === 'L4' ? 0.05 : 0.03 });
+    return ch;
+  }
+
+  // ===== L1 旧纸层 =====
   const p1 = makePropGroup('prop-L1');
-  for (let i = 0; i < 4; i++) {
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.07, 0.46), propMats.paper);
-    box.position.set(-2.6 + (i % 2) * 0.06, 0.04 + i * 0.07, 2.1 + (i % 2) * 0.05);
-    box.rotation.y = (i - 1.5) * 0.08;
-    box.castShadow = true;
-    p1.add(box);
+  buildChandelier(p1, 'L1');
+  buildSconces(p1, brassDark, shadeWarmMat);
+  addFloorLamp(p1, FLOOR_LAMP_POS[0][0], FLOOR_LAMP_POS[0][1], brassDark, shadeWarmMat, 'cone');
+  addFloorLamp(p1, FLOOR_LAMP_POS[1][0], FLOOR_LAMP_POS[1][1], brassDark, shadeWarmMat, 'cone');
+  // 旧纸堆
+  for (const [sx, sz] of [[-9.6, 0.6], [-8.9, 1.2], [8.4, -1.2]]) {
+    for (let i = 0; i < 5; i++) {
+      const box = put(p1, boxG(0.64, 0.08, 0.48), propMats.paper, sx + (i % 3 - 1) * 0.05, 0.05 + i * 0.075, sz + (i % 2 - 0.5) * 0.06, true);
+      box.rotation.y = (i - 2) * 0.06;
+    }
   }
-  // L2：蓝图卷
+  // 卷轴
+  for (let i = 0; i < 3; i++) {
+    const roll = put(p1, cylG(0.08, 0.08, 1.3, 12), propMats.parchment, -10.7 + i * 0.18, 0.1 + i * 0.14, 4.6 - i * 0.12, true);
+    roll.rotation.z = Math.PI / 2;
+    roll.rotation.y = 0.18 * i;
+  }
+  // 长木桌 + 两把椅子
+  const t1 = addTable(p1, -3.4, 5.0, 4.2, 1.3, wood, woodDark);
+  addChair(p1, -5.95, 5.0, -Math.PI / 2, woodDark);
+  addChair(p1, -0.85, 5.0, Math.PI / 2, woodDark);
+  put(t1, boxG(0.6, 0.06, 0.44), propMats.paper, -0.8, 0.84, 0);
+  put(t1, boxG(0.55, 0.05, 0.4), propMats.paper, -0.74, 0.89, 0.03);
+  // 放大镜桌
+  const t2 = addTable(p1, 4.4, 3.4, 1.9, 0.9, wood, woodDark);
+  const mag = new THREE.Group();
+  mag.position.set(0.1, 0.88, 0.05);
+  mag.rotation.x = -1.0;
+  t2.add(mag);
+  put(mag, torusG(0.15, 0.014, 8, 24), brassMat, 0, 0, 0);
+  put(mag, circleG(0.135, 24), propMats.glass, 0, 0, 0.006);
+  put(mag, cylG(0.012, 0.016, 0.3, 8), brassDark, 0, -0.3, 0);
+  // 长凳
+  const bench = new THREE.Group();
+  bench.position.set(9.2, 0, 6.4);
+  p1.add(bench);
+  put(bench, boxG(2.4, 0.08, 0.5), wood, 0, 0.45, 0, true);
+  for (const lx of [-1.0, 1.0]) put(bench, boxG(0.1, 0.45, 0.44), woodDark, lx, 0.22, 0);
+
+  // ===== L2 蓝图工坊 =====
   const p2 = makePropGroup('prop-L2');
+  buildChandelier(p2, 'L2');
+  buildSconces(p2, propMats.steel, shadeCoolMat);
+  addFloorLamp(p2, FLOOR_LAMP_POS[0][0], FLOOR_LAMP_POS[0][1], propMats.steel, shadeCoolMat, 'drum');
+  addFloorLamp(p2, FLOOR_LAMP_POS[1][0], FLOOR_LAMP_POS[1][1], propMats.steel, shadeCoolMat, 'drum');
+  // 蓝图桌 + 图纸
+  const bt = addTable(p2, 3.2, 4.8, 2.6, 1.4, propMats.steel, propMats.steel);
+  const sheet = put(bt, planeG(2.2, 1.15), blueprintMat, 0, 0.825, 0, true);
+  sheet.rotation.x = -Math.PI / 2;
   for (let i = 0; i < 3; i++) {
-    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.25, 12), propMats.blue);
-    roll.position.set(2.3 + i * 0.2, 0.63, 2.0 - i * 0.12);
-    roll.rotation.z = 0.28;
-    roll.rotation.x = 0.1 * i;
-    p2.add(roll);
+    const roll = put(bt, cylG(0.08, 0.08, 1.1, 12), propMats.blue, -0.7 + i * 0.3, 0.92, 0.5);
+    roll.rotation.z = Math.PI / 2;
+    roll.rotation.y = 0.1 * i;
   }
-  // L3：账本与数据板
+  // 工具墙：扳手 / 尺规 / 齿轮
+  const tw = new THREE.Group();
+  tw.position.set(ROOM.sideX - 0.14, 2.8, -0.6);
+  tw.rotation.y = -Math.PI / 2;
+  p2.add(tw);
+  put(tw, boxG(2.6, 1.8, 0.1), woodDark, 0, 0, 0, true);
+  put(tw, boxG(2.7, 0.08, 0.14), propMats.steel, 0, 0.94, 0);
+  const wrench = new THREE.Group();
+  wrench.position.set(-0.7, 0.15, 0.08);
+  wrench.rotation.z = 0.55;
+  tw.add(wrench);
+  put(wrench, boxG(0.08, 0.8, 0.035), propMats.steel, 0, 0, 0);
+  put(wrench, boxG(0.22, 0.1, 0.035), propMats.steel, 0, 0.42, 0);
+  put(wrench, boxG(0.22, 0.1, 0.035), propMats.steel, 0, -0.42, 0);
+  const ruler = put(tw, boxG(1.6, 0.14, 0.035), propMats.steel, 0.5, -0.55, 0.08);
+  ruler.rotation.z = -0.1;
+  for (let i = 0; i < 8; i++) put(tw, boxG(0.02, i % 2 ? 0.06 : 0.09, 0.045), propMats.iron, -0.23 + i * 0.2, -0.5, 0.095);
+  const gear = put(tw, torusG(0.2, 0.045, 8, 20), propMats.steel, 0.55, 0.35, 0.09);
+  gear.rotation.z = 0.3;
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + 0.3;
+    const spoke = put(tw, boxG(0.34, 0.03, 0.03), propMats.steel, 0.55, 0.35, 0.09);
+    spoke.rotation.z = a;
+  }
+  // 梯子
+  const ladder = new THREE.Group();
+  ladder.position.set(11.8, 1.6, 4.6);
+  ladder.rotation.y = -0.3;
+  ladder.rotation.z = -0.16;
+  p2.add(ladder);
+  for (const lx of [-0.34, 0.34]) put(ladder, boxG(0.08, 3.2, 0.08), propMats.steel, lx, 0, 0, true);
+  for (let i = 0; i < 7; i++) put(ladder, boxG(0.76, 0.05, 0.05), propMats.steel, 0, -1.4 + i * 0.46, 0);
+  // 钢架
+  const scaffold = new THREE.Group();
+  scaffold.position.set(-11.6, 0, -1.0);
+  p2.add(scaffold);
+  for (const sx of [-0.8, 0.8]) put(scaffold, boxG(0.1, 3.2, 0.1), propMats.steel, sx, 1.6, 0, true);
+  for (const sy of [0.3, 1.6, 3.05]) put(scaffold, boxG(1.8, 0.08, 0.08), propMats.steel, 0, sy, 0);
+  put(scaffold, boxG(1.9, 0.08, 0.7), woodDark, 0, 1.62, 0.1, true);
+  // 工作台 + 工具箱 / 管件
+  const wb = addTable(p2, -10.6, 2.4, 2.2, 1.0, propMats.steel, propMats.steel);
+  put(wb, boxG(0.7, 0.4, 0.4), propMats.iron, -0.5, 0.99, 0, true);
+  put(wb, boxG(0.18, 0.12, 0.3), propMats.steel, 0.4, 1.04, 0);
+  for (let i = 0; i < 3; i++) {
+    const pipe = put(wb, cylG(0.06, 0.06, 0.8, 10), propMats.steel, 0.5, 0.88, -0.25 + i * 0.18);
+    pipe.rotation.z = Math.PI / 2;
+  }
+
+  // ===== L3 账房 =====
   const p3 = makePropGroup('prop-L3');
-  for (let i = 0; i < 3; i++) {
-    const led = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 0.5), propMats.ledger);
-    led.position.set(-2.4, 0.05 + i * 0.1, 1.8);
-    led.rotation.y = 0.1 * i;
-    p3.add(led);
+  buildChandelier(p3, 'L3');
+  buildSconces(p3, brassDark, shadeAmberMat);
+  addFloorLamp(p3, FLOOR_LAMP_POS[0][0], FLOOR_LAMP_POS[0][1], brassDark, shadeAmberMat, 'cone');
+  addFloorLamp(p3, FLOOR_LAMP_POS[1][0], FLOOR_LAMP_POS[1][1], brassDark, shadeAmberMat, 'cone');
+  // 账桌 + 铜秤 + 算盘
+  const desk = addTable(p3, -3.4, 4.6, 3.2, 1.4, wood, woodDark);
+  const scale = new THREE.Group();
+  scale.position.set(-0.8, 0.82, 0);
+  desk.add(scale);
+  put(scale, cylG(0.22, 0.28, 0.06, 16), brassDark, 0, 0.03, 0, true);
+  put(scale, cylG(0.03, 0.03, 0.7, 8), brassMat, 0, 0.38, 0);
+  put(scale, boxG(0.9, 0.035, 0.035), brassMat, 0, 0.72, 0);
+  for (const side of [-1, 1]) {
+    put(scale, cylG(0.008, 0.008, 0.18, 6), brassDark, side * 0.42, 0.62, 0);
+    put(scale, cylG(0.12, 0.14, 0.03, 16), brassMat, side * 0.42, 0.52, 0);
   }
-  const board = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.05), woodDark);
-  board.position.set(2.6, 1.5, 1.4);
-  board.rotation.y = -0.3;
-  p3.add(board);
-  const boardFrame = new THREE.Mesh(new THREE.BoxGeometry(1.46, 0.96, 0.02), new THREE.MeshStandardMaterial({ color: 0xc8a24a, metalness: 0.5, roughness: 0.4 }));
-  boardFrame.position.set(2.58, 1.5, 1.36);
-  boardFrame.rotation.y = -0.3;
-  p3.add(boardFrame);
-  // L4：帷幕与封蜡烛
+  const abacus = new THREE.Group();
+  abacus.position.set(1.0, 0.92, 0);
+  abacus.rotation.x = -0.45;
+  desk.add(abacus);
+  put(abacus, boxG(0.92, 0.6, 0.06), woodDark, 0, 0, 0, true);
+  for (let row = 0; row < 5; row++) {
+    const ry = 0.2 - row * 0.1;
+    put(abacus, boxG(0.78, 0.018, 0.018), brassMat, 0, ry, 0.05);
+    for (let b = 0; b < 7; b++) {
+      put(abacus, sphereG(0.035, 8), brassMat, -0.33 + b * 0.11, ry, 0.07);
+    }
+  }
+  // 桌上报表 / 账本（让切层后第一眼能看到账房元素）
+  for (const [rx2, rz2] of [[0.15, 0.36], [0.45, -0.34]]) {
+    for (let i = 0; i < 4; i++) {
+      const paperPile = put(desk, boxG(0.5, 0.055, 0.36), propMats.paper, rx2, 0.86 + i * 0.055, rz2);
+      paperPile.rotation.y = (i % 2 - 0.5) * 0.1;
+    }
+  }
+  put(desk, boxG(0.48, 0.12, 0.36), propMats.ledger, 0.2, 0.91, -0.42);
+  // 账本架
+  const rack = new THREE.Group();
+  rack.position.set(10.8, 0, -3.6);
+  p3.add(rack);
+  for (const rx of [-0.85, 0.85]) put(rack, boxG(0.08, 2.5, 0.5), woodDark, rx, 1.25, 0, true);
+  for (const ry of [0.45, 1.05, 1.65, 2.25]) put(rack, boxG(1.8, 0.06, 0.48), wood, 0, ry, 0, true);
+  for (let row = 0; row < 4; row++) {
+    for (let i = 0; i < 4; i++) {
+      put(rack, boxG(0.34, 0.12, 0.38), propMats.ledger, -0.62 + i * 0.42, 0.53 + row * 0.6, 0);
+    }
+  }
+  // 报表堆
+  for (const [sx, sz] of [[-10.8, 1.0], [-9.9, 1.6]]) {
+    for (let i = 0; i < 6; i++) {
+      const pile = put(p3, boxG(0.72, 0.07, 0.52), propMats.paper, sx, 0.05 + i * 0.075, sz, true);
+      pile.rotation.y = (i % 3 - 1) * 0.06;
+    }
+  }
+  // 保险柜
+  const safe = new THREE.Group();
+  safe.position.set(-11.8, 0, 5.2);
+  p3.add(safe);
+  put(safe, boxG(0.9, 1.15, 0.8), propMats.iron, 0, 0.58, 0, true);
+  put(safe, boxG(0.74, 0.96, 0.06), propMats.steel, 0, 0.6, 0.42);
+  const dial = put(safe, cylG(0.13, 0.13, 0.05, 16), brassMat, 0, 0.72, 0.47);
+  dial.rotation.x = Math.PI / 2;
+  put(safe, boxG(0.04, 0.3, 0.04), brassMat, 0.34, 0.7, 0.47);
+  // 厚重地毯
+  const carpet = put(p3, planeG(8.0, 5.2), propMats.carpet, 1.2, 0.028, 3.8);
+  carpet.rotation.x = -Math.PI / 2;
+  carpet.receiveShadow = true;
+  for (const cy of [-2.5, 2.5]) put(p3, boxG(7.9, 0.014, 0.12), propMats.wax, 1.2, 0.032, 3.8 + cy);
+  for (const cx of [-3.9, 3.9]) put(p3, boxG(0.12, 0.014, 5.1), propMats.wax, 1.2 + cx, 0.032, 3.8);
+  // 铜钱 / 硬币堆
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 3; j++) {
+      const coin = put(p3, cylG(0.07, 0.07, 0.02, 12), brassMat, 9.6 + i * 0.18, 0.02 + j * 0.025, -1.4);
+    }
+  }
+
+  // ===== L4 机密地库 =====
   const p4 = makePropGroup('prop-L4');
-  const drape = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.6), propMats.drape);
-  drape.position.set(0, 2.2, -3.9);
-  p4.add(drape);
-  for (let i = 0; i < 2; i++) {
-    const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.55, 12), propMats.wax);
-    candle.position.set(-1.6 + i * 3.2, 0.55, 1.2);
-    p4.add(candle);
-    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 10), propMats.flame);
-    flame.position.set(-1.6 + i * 3.2, 0.86, 1.2);
-    p4.add(flame);
+  buildChandelier(p4, 'L4');
+  buildSconces(p4, propMats.iron, shadeRedMat);
+  addFloorLamp(p4, FLOOR_LAMP_POS[0][0], FLOOR_LAMP_POS[0][1], propMats.iron, shadeCoolMat, 'cage');
+  addFloorLamp(p4, FLOOR_LAMP_POS[1][0], FLOOR_LAMP_POS[1][1], propMats.iron, shadeCoolMat, 'cage');
+  // 帷幕
+  for (const dx of [-4.2, 0, 4.2]) {
+    const panel = put(p4, planeG(3.0, 5.9), propMats.drape, dx, 4.0, ROOM.backZ + 0.18);
+    panel.rotation.y = 0;
   }
+  put(p4, boxG(12.6, 0.2, 0.18), propMats.iron, 0, 6.98, ROOM.backZ + 0.2);
+  const sideDrape = put(p4, planeG(3.2, 5.2), propMats.drape, -ROOM.sideX + 0.16, 3.6, 1.4);
+  sideDrape.rotation.y = Math.PI / 2;
+  // 封蜡桌 + 封蜡文件
+  const wt = addTable(p4, 3.0, 4.8, 2.0, 1.0, woodDark, propMats.iron);
+  for (let i = 0; i < 3; i++) {
+    const doc = put(wt, planeG(0.52, 0.38), propMats.parchment, -0.5 + i * 0.5, 0.82, -0.1 + (i % 2) * 0.2);
+    doc.rotation.x = -Math.PI / 2;
+    doc.rotation.z = (i - 1) * 0.12;
+    put(wt, sphereG(0.06, 8), propMats.redSeal, -0.5 + i * 0.5, 0.845, -0.1 + (i % 2) * 0.2);
+  }
+  // 锁链
+  function addChain(parent, x, y, z, links) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    parent.add(g);
+    for (let i = 0; i < links; i++) {
+      const link = put(g, torusG(0.07, 0.018, 6, 10), propMats.iron, 0, -i * 0.13, 0);
+      link.rotation.x = i % 2 ? Math.PI / 2 : 0;
+    }
+    return g;
+  }
+  addChain(p4, -12.4, 4.6, 0.8, 12);
+  addChain(p4, 12.4, 4.6, -3.2, 12);
+  // 铁柜
+  const ic = new THREE.Group();
+  ic.position.set(11.2, 0, -2.8);
+  p4.add(ic);
+  put(ic, boxG(1.6, 2.2, 0.75), propMats.iron, 0, 1.1, 0, true);
+  for (const dx of [-0.4, 0.4]) put(ic, boxG(0.75, 1.9, 0.06), propMats.steel, dx, 1.1, 0.4);
+  const lock = put(ic, torusG(0.1, 0.02, 6, 14), propMats.redGlow, 0, 1.1, 0.45);
+  lock.rotation.y = 0;
+  // 烛台（围着仪式红环）
+  for (const [cx, cz, ch2] of [[-2.6, 6.1, 1.2], [-0.4, 6.3, 1.0], [-2.0, 5.2, 1.35]]) {
+    const stand = new THREE.Group();
+    stand.position.set(cx, 0, cz);
+    p4.add(stand);
+    put(stand, cylG(0.18, 0.24, 0.06, 14), propMats.iron, 0, 0.03, 0, true);
+    put(stand, cylG(0.035, 0.035, ch2, 8), propMats.iron, 0, ch2 / 2 + 0.06, 0);
+    put(stand, cylG(0.1, 0.1, 0.08, 12), brassDark, 0, ch2 + 0.08, 0);
+    put(stand, cylG(0.05, 0.05, 0.32, 8), propMats.wax, 0, ch2 + 0.26, 0);
+    put(stand, sphereG(0.04, 8), propMats.violetFlame, 0, ch2 + 0.46, 0);
+  }
+  // 散落残页
+  const fragSpots = [[1.4, 5.7, 0.5], [2.3, 5.2, -0.3], [3.1, 6.1, 1.1], [0.8, 6.2, -0.8], [4.0, 5.4, 0.2], [-1.1, 6.8, 0.9], [-3.4, 6.4, -0.4]];
+  for (const [fx, fz, rz] of fragSpots) {
+    const f = put(p4, planeG(0.36, 0.48), propMats.parchment, fx, 0.022, fz);
+    f.rotation.x = -Math.PI / 2;
+    f.rotation.z = rz;
+  }
+  // 仪式红环 + 红线
+  const ritual = put(p4, torusG(1.4, 0.025, 8, 48), propMats.redGlow, -1.4, 0.04, 6.0);
+  ritual.rotation.x = Math.PI / 2;
+  const redLineMat = new THREE.LineBasicMaterial({ color: 0xff2a2a, transparent: true, opacity: 0.55 });
+  const redPts = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    redPts.push(new THREE.Vector3(-1.4 + Math.cos(a) * 1.9, 0.045, 6.0 + Math.sin(a) * 1.9));
+    redPts.push(new THREE.Vector3(-1.4 + Math.cos(a + 0.5) * 0.5, 0.045, 6.0 + Math.sin(a + 0.5) * 0.5));
+  }
+  p4.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(redPts), redLineMat));
+  // 红线警戒灯
+  const beacon = new THREE.Group();
+  beacon.position.set(8.6, 0, 3.2);
+  p4.add(beacon);
+  put(beacon, cylG(0.06, 0.09, 2.4, 8), propMats.iron, 0, 1.2, 0, true);
+  const beaconHead = put(beacon, sphereG(0.16, 12), propMats.redGlow, 0, 2.55, 0);
+  beacons.push({ mesh: beaconHead });
+  // 铁箱
+  for (const [bx, bz] of [[-11.8, -0.6], [-11.1, -1.3]]) {
+    const crate = put(p4, boxG(0.8, 0.7, 0.8), propMats.iron, bx, 0.35, bz, true);
+    crate.rotation.y = 0.12;
+  }
+
   propGroups.L1 = p1;
   propGroups.L2 = p2;
   propGroups.L3 = p3;
   propGroups.L4 = p4;
 
-  // ---------- 尘埃 ----------
-  const dustCount = 320;
-  const dustGeo = new THREE.BufferGeometry();
-  const positions = new Float32Array(dustCount * 3);
-  for (let i = 0; i < dustCount; i++) {
-    positions[i * 3] = (Math.random() - 0.5) * 17;
-    positions[i * 3 + 1] = Math.random() * 5.4;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 8;
+  // 大厅吊灯（仅 all 层显示）
+  const hallPendant = new THREE.Group();
+  scene.add(hallPendant);
+  buildChandelier(hallPendant, 'L1');
+
+  // ---------- 双层尘埃：近处大颗粒（500）+ 远处细尘（1200） ----------
+  function buildDust(count, size, speed, opacity, color) {
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    const vel = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const j = i * 3;
+      pos[j] = (Math.random() - 0.5) * 27.6;
+      pos[j + 1] = 0.06 + Math.random() * 9.1;
+      pos[j + 2] = -6.6 + Math.random() * 16.6;
+      vel[j] = (Math.random() - 0.5) * speed;
+      vel[j + 1] = (Math.random() - 0.35) * speed;
+      vel[j + 2] = (Math.random() - 0.5) * speed;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+      color, size, transparent: true, opacity, depthWrite: false, sizeAttenuation: true,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    scene.add(pts);
+    return { points: pts, geo, vel, count };
   }
-  dustGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0xd9c8a8, size: 0.022, transparent: true, opacity: 0.28, depthWrite: false }));
-  scene.add(dust);
+  const dustNear = buildDust(500, 0.045, 0.06, 0.34, 0xffe0b0);
+  const dustFar = buildDust(1200, 0.016, 0.16, 0.18, 0xd9c8a8);
+
+  function updateDust(layer, dt) {
+    const arr = layer.geo.attributes.position.array;
+    const vel = layer.vel;
+    for (let i = 0; i < layer.count; i++) {
+      const j = i * 3;
+      arr[j] += vel[j] * dt;
+      arr[j + 1] += vel[j + 1] * dt;
+      arr[j + 2] += vel[j + 2] * dt;
+      if (arr[j + 1] > 9.2) arr[j + 1] = 0.06;
+      else if (arr[j + 1] < 0.04) arr[j + 1] = 9.2;
+      if (arr[j] > 13.8) arr[j] = -13.8;
+      else if (arr[j] < -13.8) arr[j] = 13.8;
+      if (arr[j + 2] > 10.0) arr[j + 2] = -6.6;
+      else if (arr[j + 2] < -6.6) arr[j + 2] = 10.0;
+    }
+    layer.geo.attributes.position.needsUpdate = true;
+  }
 
   // ---------- 物理（Rapier） ----------
   let world = null;
@@ -645,8 +1476,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     await RAPIER.init();
     world = new RAPIER.World({ x: 0, y: -4.2, z: 0 });
     world.timestep = 1 / 60;
-    const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 0));
-    world.createCollider(RAPIER.ColliderDesc.cuboid(9, 0.5, 6.5).setFriction(0.9), ground);
+    const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 1.2));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(14.25, 0.5, 10.5).setFriction(0.9), ground);
     for (const u of SHELF_UNITS) {
       for (const by of BOARD_Y) {
         const rb = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(u.x, by, u.z));
@@ -718,40 +1549,126 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // 楼层氛围：越高层，雾越浓、光越暗、尘埃越少（但保证可读）
   const ATMOS = {
-    all: { near: 8, far: 34, bg: 0x171009, amb: 2.2, spot: 4.8, dir: 2.2, dust: 0.30 },
-    L1: { near: 7, far: 28, bg: 0x1a130b, amb: 2.4, spot: 5.2, dir: 2.4, dust: 0.32 },
-    L2: { near: 6.5, far: 24, bg: 0x111820, amb: 2.1, spot: 4.8, dir: 2.1, dust: 0.24 },
-    L3: { near: 5.8, far: 20, bg: 0x1a140c, amb: 1.9, spot: 4.4, dir: 1.9, dust: 0.20 },
-    L4: { near: 5.0, far: 18, bg: 0x0e0d14, amb: 1.6, spot: 3.6, dir: 1.4, dust: 0.12 },
+    all: { near: 12, far: 48, bg: 0x171009, amb: 2.2, spot: 5.4, dir: 2.2, dust: 0.38 },
+    L1: { near: 10.5, far: 42, bg: 0x1a130b, amb: 2.5, spot: 6.0, dir: 2.4, dust: 0.42 },
+    L2: { near: 9.5, far: 38, bg: 0x0e1620, amb: 2.1, spot: 5.4, dir: 2.1, dust: 0.36 },
+    L3: { near: 8.5, far: 34, bg: 0x1a140c, amb: 1.9, spot: 4.8, dir: 1.9, dust: 0.30 },
+    L4: { near: 7.0, far: 28, bg: 0x0b0910, amb: 1.5, spot: 3.8, dir: 1.4, dust: 0.24 },
   };
-  // 楼层主题：书架材质与主题光（越高层越冷、越神秘）
+  // 楼层主题：书架 / 墙面 / 地面 / 尘埃 / 灯光色温（越高层越冷、越神秘）
   const THEME = {
-    all: { shelf: 0x6b4a2a, shelfDark: 0x523a24, accent: 0xffc37a, acc: 0.9 },
-    L1: { shelf: 0x6b4a2a, shelfDark: 0x523a24, accent: 0xffc37a, acc: 1.0 },
-    L2: { shelf: 0x5b6b74, shelfDark: 0x44525a, accent: 0x7fb6d6, acc: 1.0 },
-    L3: { shelf: 0x6b5230, shelfDark: 0x4f3a22, accent: 0xffd27a, acc: 1.0 },
-    L4: { shelf: 0x4a3a52, shelfDark: 0x362a3e, accent: 0xa98cff, acc: 0.9 },
+    all: {
+      shelf: 0x6b4a2a, shelfDark: 0x523a24, metal: 0.08, rough: 0.75,
+      shelfAccent: 0x8a6a2f, shelfMetal: 0.7, shelfRough: 0.35,
+      accent: 0xffc37a, acc: 0.9, trim: 0x2a2118, ceiling: 0x241c16, rug: 0x5a3520,
+      painting: 0x8a6a2f, paintingCanvas: 0xd8c090,
+      dustNear: 0xffe0b0, dustFar: 0xd9c8a8,
+      key: 0xffe3b0, hemiSky: 0x9a8a6a, hemiGround: 0x3a2f22,
+      sideL: 0xffb066, sideR: 0x9fc2ff, accentLight: 0xffc37a,
+      spot: 0xffd2a0, wallLamp: 0xffb066, floorLamp: 0xffc37a,
+      wallInt: 1.05, floorInt: 1.25, exposure: 1.7,
+    },
+    L1: {
+      shelf: 0x6b4a2a, shelfDark: 0x523a24, metal: 0.1, rough: 0.72,
+      shelfAccent: 0x8a6a2f, shelfMetal: 0.7, shelfRough: 0.35,
+      accent: 0xffc37a, acc: 1.0, trim: 0x2c2218, ceiling: 0x2a2118, rug: 0x5e3a24,
+      painting: 0x8a6a2f, paintingCanvas: 0xd8c090,
+      dustNear: 0xffe0b0, dustFar: 0xe0cfa8,
+      key: 0xffdfb0, hemiSky: 0xa08a68, hemiGround: 0x3a2f22,
+      sideL: 0xffb066, sideR: 0xffcf9a, accentLight: 0xffc37a,
+      spot: 0xffcf9a, wallLamp: 0xffb066, floorLamp: 0xffc37a,
+      wallInt: 1.05, floorInt: 1.25, exposure: 1.75,
+    },
+    L2: {
+      shelf: 0x5b6b74, shelfDark: 0x44525a, metal: 0.68, rough: 0.35,
+      shelfAccent: 0x7b8a94, shelfMetal: 0.8, shelfRough: 0.3,
+      accent: 0x7fb6d6, acc: 1.0, trim: 0x20262a, ceiling: 0x1a2228, rug: 0x2c3a44,
+      painting: 0x5a7a8a, paintingCanvas: 0xbcd8e8,
+      dustNear: 0xa8c8e0, dustFar: 0xc0d8e8,
+      key: 0xcfe6ff, hemiSky: 0x8aa8c0, hemiGround: 0x2a3a44,
+      sideL: 0x7fb6d6, sideR: 0x9fc2ff, accentLight: 0x7fb6d6,
+      spot: 0xaad4ff, wallLamp: 0x9fc2ff, floorLamp: 0x7fb6d6,
+      wallInt: 1.0, floorInt: 1.15, exposure: 1.65,
+    },
+    L3: {
+      shelf: 0x6b5230, shelfDark: 0x4f3a22, metal: 0.12, rough: 0.7,
+      shelfAccent: 0x9a7a3a, shelfMetal: 0.72, shelfRough: 0.34,
+      accent: 0xffd27a, acc: 1.0, trim: 0x241a10, ceiling: 0x221a10, rug: 0x4a2418,
+      painting: 0x8a6a2f, paintingCanvas: 0xd8b878,
+      dustNear: 0xffd9a0, dustFar: 0xd8c090,
+      key: 0xffd8a0, hemiSky: 0xa08060, hemiGround: 0x3a2818,
+      sideL: 0xffc070, sideR: 0xffb066, accentLight: 0xffd27a,
+      spot: 0xffc070, wallLamp: 0xffb066, floorLamp: 0xffc37a,
+      wallInt: 1.1, floorInt: 1.25, exposure: 1.72,
+    },
+    L4: {
+      shelf: 0x4a3a52, shelfDark: 0x362a3e, metal: 0.55, rough: 0.5,
+      shelfAccent: 0x6a5a7a, shelfMetal: 0.62, shelfRough: 0.45,
+      accent: 0xa98cff, acc: 0.9, trim: 0x1c1826, ceiling: 0x171320, rug: 0x2e1f2a,
+      painting: 0x4a3a5a, paintingCanvas: 0x9a88b8,
+      dustNear: 0xc8b0ff, dustFar: 0x9a88b8,
+      key: 0x9a88c8, hemiSky: 0x6a5a88, hemiGround: 0x1a1424,
+      sideL: 0xff4040, sideR: 0x9a7aff, accentLight: 0xa98cff,
+      spot: 0xb48cff, wallLamp: 0xff3030, floorLamp: 0x9a7aff,
+      wallInt: 1.3, floorInt: 1.15, exposure: 1.6,
+    },
   };
   function applyAtmos(fid) {
     const a = ATMOS[fid] || ATMOS.all;
+    const th = THEME[fid] || THEME.all;
     scene.fog.near = a.near;
     scene.fog.far = a.far;
+    scene.fog.color.setHex(a.bg);
     scene.background.setHex(a.bg);
     ambient.intensity = a.amb;
     spot.intensity = a.spot;
+    spot.color.setHex(th.spot);
     key.intensity = a.dir;
-    dust.material.opacity = a.dust;
-    const th = THEME[fid] || THEME.all;
-    wood.color.setHex(th.shelf);
-    woodDark.color.setHex(th.shelfDark);
-    accent.color.setHex(th.accent);
+    key.color.setHex(th.key);
+    hemi.color.setHex(th.hemiSky);
+    hemi.groundColor.setHex(th.hemiGround);
+    accent.color.setHex(th.accentLight);
     accent.intensity = th.acc;
+    renderer.toneMappingExposure = th.exposure;
+
+    floor.material = floorMats[fid] || floorMats.all;
+    for (const w of wallMeshes) w.material = wallMats[fid] || wallMats.all;
+    trimMat.color.setHex(th.trim);
+    ceilingMat.color.setHex(th.ceiling);
+    rugMat.color.setHex(th.rug);
+    paintingFrameMat.color.setHex(th.painting);
+    paintingMat.color.setHex(th.paintingCanvas);
+
+    wood.color.setHex(th.shelf);
+    wood.metalness = th.metal;
+    wood.roughness = th.rough;
+    woodDark.color.setHex(th.shelfDark);
+    woodDark.metalness = th.metal * 0.9;
+    woodDark.roughness = th.rough + 0.08;
+    shelfEdgeMat.color.setHex(th.shelfAccent);
+    shelfEdgeMat.metalness = th.shelfMetal;
+    shelfEdgeMat.roughness = th.shelfRough;
+    for (const l of shelfLights) l.color.setHex(th.spot);
+
+    dustNear.points.material.color.setHex(th.dustNear);
+    dustNear.points.material.opacity = a.dust;
+    dustFar.points.material.color.setHex(th.dustFar);
+    dustFar.points.material.opacity = a.dust * 0.55;
+
+    for (let i = 0; i < wallLights.length; i++) {
+      const isFloorLamp = i >= 4;
+      wallLights[i].color.setHex(isFloorLamp ? th.floorLamp : th.wallLamp);
+      wallLights[i].intensity = isFloorLamp ? th.floorInt : th.wallInt;
+    }
+    beaconLight.intensity = 0;
+
     for (const id of Object.keys(propGroups)) propGroups[id].visible = fid === id;
+    hallPendant.visible = fid === 'all';
   }
 
   let currentFloor = 'all';
   function floorWelcome(fid) {
-    if (fid === 'all') return '全馆大厅：九排书架都在，慢慢看。';
+    if (fid === 'all') return '全馆大厅：所有书架都在，慢慢看。';
     const f = floors.find((x) => x.id === fid);
     return f ? `${f.name} · ${f.librarian}：${f.welcome}` : '';
   }
@@ -763,13 +1680,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
     const idx = floors.findIndex((f) => f.id === fid);
     if (fid === 'all') {
-      player.pos.set(0, 1.62, 5.2);
+      player.pos.set(0, 1.68, 9.1);
       player.tYaw = 0;
       player.tPitch = -0.03;
     } else {
-      player.pos.set([-1.9, 0, 1.9, 0.4][idx] ?? 0, 1.62, [3.3, 3.7, 3.7, 3.1][idx] ?? 3.5);
-      player.tYaw = [0.30, 0, -0.30, 0][idx] ?? 0;
-      player.tPitch = -0.03;
+      player.pos.set([-1.2, 1.2, -1.4, 0.6][idx] ?? 0, 1.68, [8.1, 8.0, 8.1, 8.2][idx] ?? 8.1);
+      player.tYaw = [0.16, -0.14, 0.18, -0.06][idx] ?? 0;
+      player.tPitch = -0.02;
     }
     if (!silent) toast(floorWelcome(fid));
   }
@@ -983,10 +1900,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     traveling = true;
     hint.style.opacity = '0';
     const startPos = camera.position.clone();
-    const doorLook = new THREE.Vector3(-8.45, 1.45, -0.6);
-    const doorFront = new THREE.Vector3(-6.9, 1.55, -0.6);
-    const insidePos = new THREE.Vector3(-8.9, 1.5, -0.6);
-    const insideLook = new THREE.Vector3(-9.4, 1.45, -0.6);
+    const doorLook = new THREE.Vector3(-12.6, 1.45, -0.6);
+    const doorFront = new THREE.Vector3(-11.2, 1.55, -0.6);
+    const insidePos = new THREE.Vector3(-13.05, 1.5, -0.6);
+    const insideLook = new THREE.Vector3(-13.6, 1.45, -0.6);
 
     // 1. 飞到电梯门前
     await tween(900, (e) => {
@@ -1051,7 +1968,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   function movePlayer(dt) {
     if (traveling || taking) return;
     if (document.body.classList.contains('reading') || document.body.classList.contains('grid')) return;
-    const speed = 3.0;
+    const speed = 4.2;
     let fx = 0;
     let fz = 0;
     if (keys.w) fz -= 1;
@@ -1066,8 +1983,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const sin = Math.sin(player.yaw);
     const wx = fx * cos + fz * sin;
     const wz = -fx * sin + fz * cos;
-    player.pos.x = Math.max(-8.4, Math.min(8.4, player.pos.x + wx * speed * dt));
-    player.pos.z = Math.max(-2.25, Math.min(6.2, player.pos.z + wz * speed * dt));
+    player.pos.x = Math.max(-ROOM.minX, Math.min(ROOM.minX, player.pos.x + wx * speed * dt));
+    player.pos.z = Math.max(ROOM.minZ, Math.min(ROOM.maxZ, player.pos.z + wz * speed * dt));
   }
 
   let elapsed = 0;
@@ -1103,7 +2020,17 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       }
     }
 
-    dust.rotation.y = Math.sin(elapsed * 0.06) * 0.03;
+    updateDust(dustNear, dt);
+    updateDust(dustFar, dt);
+    for (let i = 0; i < volumeCones.length; i++) {
+      const v = volumeCones[i];
+      v.mesh.rotation.y += dt * v.spin;
+      v.mesh.material.opacity = v.base * (0.82 + 0.18 * Math.sin(elapsed * 0.7 + v.phase));
+    }
+    for (let i = 0; i < beacons.length; i++) {
+      beacons[i].mesh.rotation.y += dt * 1.6;
+    }
+    beaconLight.intensity = currentFloor === 'L4' ? 1.5 + Math.sin(elapsed * 5.0) * 0.9 : 0;
     orb.scale.setScalar(1 + Math.sin(elapsed * 0.9) * 0.05);
     for (let d = 0; d < starDots.length; d++) {
       starDots[d].material.emissiveIntensity = 0.6 + 0.35 * Math.sin(elapsed * 1.3 + d);
