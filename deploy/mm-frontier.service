@@ -1,0 +1,12 @@
+[Unit]
+Description=Machine Memory · fetch new arXiv papers into the frontier shelf
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/machine-memory
+ExecStart=/usr/bin/node tools/fetch-arxiv.mjs --max 30
+TimeoutStartSec=120
+Nice=10

@@ -244,6 +244,23 @@ ok('时间轴卡片可开章');
 await page.locator('.reader-float-close').first().click();
 await page.waitForTimeout(2000);
 
+// 3c. 前沿书架（arXiv 定时入库）
+await page.getByRole('button', { name: '前沿书架' }).click();
+await page.waitForSelector('.fr-card, .fr-empty', { timeout: 10000 });
+const frCards = await page.locator('.fr-card').count();
+const frChips = await page.locator('.fr-chips button').count();
+frCards >= 1 ? ok('前沿书架入库条目', String(frCards)) : bad('前沿书架入库条目', String(frCards));
+frChips >= 2 ? ok('前沿书架领域筛选', String(frChips)) : bad('前沿书架领域筛选', String(frChips));
+if (frCards >= 1) {
+  const firstLink = await page.locator('.fr-card h3 a').first().getAttribute('href');
+  firstLink && firstLink.startsWith('https://arxiv.org/abs/') ? ok('前沿条目指向 arXiv 原文') : bad('前沿条目链接', String(firstLink));
+  await page.locator('.fr-chips button').nth(1).click();
+  await page.waitForTimeout(500);
+  const filtered = await page.locator('.fr-card').count();
+  const activeChip = await page.locator('.fr-chips button.on').innerText();
+  (filtered >= 1 && !activeChip.startsWith('全部')) ? ok('前沿书架筛选生效', activeChip) : bad('前沿书架筛选生效', `${activeChip}/${filtered}`);
+}
+
 // 4. 书架视图 / 总览
 await page.getByRole('button', { name: '书架视图' }).click();
 await page.waitForSelector('.unit', { timeout: 8000 });

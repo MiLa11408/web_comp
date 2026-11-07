@@ -1,0 +1,11 @@
+[Unit]
+Description=Machine Memory · daily arXiv ingestion at 04:17
+
+[Timer]
+OnCalendar=*-*-* 04:17:00
+RandomizedDelaySec=600
+Persistent=true
+Unit=mm-frontier.service
+
+[Install]
+WantedBy=timers.target

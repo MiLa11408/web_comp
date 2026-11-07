@@ -350,6 +350,30 @@
   .si-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6b5a3a, var(--gold)); }
   .size-scale { color: #7d6e55; font-size: 11px; line-height: 1.7; margin-top: 10px; border-left: 2px solid #4a3a24; padding-left: 9px; }
 
+  /* 前沿书架：arXiv 新纸入库 */
+  .fr-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 16px; }
+  .fr-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fr-chips button { background: #1f1812; border: 1px solid #4a3a24; color: #b09a72; padding: 5px 11px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .fr-chips button:hover { border-color: #8a6320; color: #d8c39a; }
+  .fr-chips button.on { background: #3a2b16; border-color: var(--gold); color: #f0d68a; }
+  .fr-updated { margin-left: auto; color: #7d6e55; font-size: 11px; letter-spacing: 1px; }
+  .fr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
+  .fr-card { background: linear-gradient(160deg, #211a13, #191310); border: 1px solid var(--line); border-left: 3px solid #6b5a3a; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .fr-card:hover { border-left-color: var(--gold); }
+  .fr-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: #8a7a5c; }
+  .fr-field { border: 1px solid #5a4526; color: #cbb892; padding: 1px 7px; letter-spacing: 1px; }
+  .fr-card h3 { margin: 0; font-size: 14.5px; line-height: 1.55; color: #eadbb8; font-weight: 500; }
+  .fr-card h3 a { color: inherit; text-decoration: none; }
+  .fr-card h3 a:hover { color: var(--gold); }
+  .fr-authors { color: #8a7a5c; font-size: 11.5px; line-height: 1.6; font-style: italic; }
+  .fr-summary { color: #b09a72; font-size: 12px; line-height: 1.75; font-family: "Consolas", "Microsoft YaHei", monospace; }
+  .fr-card details summary { color: #8a7a5c; font-size: 11.5px; cursor: pointer; outline: none; }
+  .fr-card details summary:hover { color: var(--gold); }
+  .fr-actions { display: flex; gap: 8px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
+  .fr-actions a, .fr-actions button { background: none; border: 1px solid #5a4526; color: #cbb892; padding: 4px 10px; font-size: 11.5px; cursor: pointer; text-decoration: none; font-family: inherit; }
+  .fr-actions a:hover, .fr-actions button:hover { border-color: var(--gold); color: var(--gold); }
+  .fr-empty { border: 1px dashed #4a3a24; padding: 26px; text-align: center; color: #8a7a5c; font-size: 13px; line-height: 1.9; }
+
   /* ---------- 新手引导 ---------- */
   #guide { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 82; width: min(540px, 92vw); background: #1d1712; border: 1px solid var(--gold); box-shadow: 0 22px 60px rgba(0,0,0,.75); padding: 15px 20px 13px; animation: gateRise .35s ease both; }
   #guide .g-step { color: #8a7a5c; font-size: 11px; letter-spacing: 3px; }
@@ -704,6 +728,7 @@
     <button class="back" onclick="enterRail()">书轨</button>
     <button class="back" onclick="mmShowStar()">星图</button>
     <button class="back" onclick="enterTimeline()">时间轴</button>
+    <button class="back" onclick="enterFrontier()">前沿书架</button>
     <button class="back" onclick="mmStartTour()">导览</button>
   </div>
   <div class="nav-group"><span class="ng-label">档案与玩法</span>
@@ -1489,6 +1514,82 @@ async function showForks() {
 }
 window.showForks = showForks;
 
+// ---------- 前沿书架 · arXiv 定时入库 ----------
+let FRONTIER_CACHE = null;
+let FRONTIER_PROMISE = null;
+let frontierField = '全部';
+
+async function ensureFrontier() {
+  if (FRONTIER_CACHE) return FRONTIER_CACHE;
+  if (!FRONTIER_PROMISE) {
+    FRONTIER_PROMISE = fetch('api/frontier')
+      .then((r) => r.json())
+      .then((d) => d && Array.isArray(d.items) ? d : { items: [] })
+      .catch(() => ({ items: [] }))
+      .finally(() => { FRONTIER_PROMISE = null; });
+    FRONTIER_CACHE = await FRONTIER_PROMISE;
+    return FRONTIER_CACHE;
+  }
+  return FRONTIER_PROMISE;
+}
+
+function mmFrontierFilter(f) {
+  frontierField = f;
+  showFrontier(true);
+}
+window.mmFrontierFilter = mmFrontierFilter;
+
+function mmFrontierSearch(k) {
+  const q = document.getElementById('q');
+  if (q) q.value = k;
+  doSearch();
+}
+window.mmFrontierSearch = mmFrontierSearch;
+
+async function showFrontier(keep) {
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  if (!keep) app.innerHTML = '<div class="empty">正在登记新到馆的纸页……</div>';
+  const d = await ensureFrontier();
+  const items = d.items || [];
+  const fields = ['全部', ...new Set(items.map((x) => x.field))];
+  const list = frontierField === '全部' ? items : items.filter((x) => x.field === frontierField);
+  const updated = d.updated ? new Date(d.updated).toLocaleString('zh-CN', { hour12: false }) : '尚未入库';
+  const cards = list.map((x) => `
+    <article class="fr-card">
+      <div class="fr-top">
+        <span class="fr-field">${esc(x.field || '交叉')}</span>
+        <span>${esc(x.published || '')}</span>
+        <span>${esc((x.cats || []).join(' · '))}</span>
+      </div>
+      <h3><a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a></h3>
+      <div class="fr-authors">${esc((x.authors || []).join('、') || '作者未列出')}</div>
+      <div class="fr-summary">${esc(String(x.summary || '').slice(0, 150))}…</div>
+      ${String(x.summary || '').length > 150 ? `<details><summary>读完整摘要（英文原文）</summary><div class="fr-summary">${esc(x.summary)}</div></details>` : ''}
+      <div class="fr-actions">
+        <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">arXiv 原文 ↗</a>
+        <button data-k="${esc(x.field === '通用智能' ? '智能体' : (x.field || ''))}" onclick="mmFrontierSearch(this.dataset.k)">馆内找同方向的旧书 →</button>
+      </div>
+    </article>`).join('');
+  app.innerHTML = `
+  <div class="rail-view frontier-view">
+    <div class="rail-head"><span>前沿书架 · arXiv 新纸入库</span>
+      <span class="head-links"><a onclick="enterTimeline()">时间轴 →</a> · <a onclick="enterRail()">书轨 →</a></span>
+    </div>
+    <div class="rail-sub">${esc(d.note || '这里只登记新到的论文，不改写、不评价。')}</div>
+    <div class="fr-toolbar">
+      <div class="fr-chips">${fields.map((f) => `<button class="${f === frontierField ? 'on' : ''}" onclick="mmFrontierFilter('${esc(f)}')">${esc(f)}${f === '全部' ? ` · ${items.length}` : ''}</button>`).join('')}</div>
+      <span class="fr-updated">${esc(d.source || 'arXiv')} · 入库 ${esc(updated)}</span>
+    </div>
+    ${list.length ? `<div class="fr-grid">${cards}</div>` : '<div class="fr-empty">这一栏还没有新纸。<br>同学，库房每天凌晨会再去 arXiv 取一次；也可以先回书架读已编目的旧书。</div>'}
+    <div class="size-scale">前沿书架与馆藏分开：馆藏是已核验、已写成的 384 章；这里是未经本馆核验的原始预印本，只提供标题、作者、摘要与原文链接。看到值得追的题目，再去「卡片目录」找它的来路。</div>
+  </div>`;
+}
+window.showFrontier = showFrontier;
+
+function enterFrontier() { fadeSwap(() => showFrontier()); }
+window.enterFrontier = enterFrontier;
+
 function mmForkMain(id) {
   const it = collectItem('fork', id);
   if (!it) return;
@@ -1764,7 +1865,8 @@ async function showAbout() {
         <span class="about-fact"><b>12</b>页躁动书页</span>
         <span class="about-fact"><b>6</b>条历史分岔</span>
         <span class="about-fact"><b>6</b>个可玩演示</span>
-        <span class="about-fact"><b>13</b>条星图连线</span>
+        <span class="about-fact"><b>30</b>条星图连线</span>
+        <span class="about-fact"><b>每日</b>前沿入库</span>
       </div>
     </div>
     <div class="about-grid">

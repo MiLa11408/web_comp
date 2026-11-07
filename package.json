@@ -11,6 +11,7 @@
     "start": "node server/src/index.js",
     "verify": "node tools/verify.mjs",
     "verify:links": "node tools/verify.mjs --links",
+    "fetch:arxiv": "node tools/fetch-arxiv.mjs --max 24",
     "test:e2e": "node tests/e2e.mjs"
   },
   "dependencies": {

@@ -170,7 +170,19 @@ SERVER_HOST=root@<IP> SSH_KEY=/e/下载download/1.pem ./deploy/deploy.sh
 
 ## 7. 备份与恢复
 
-只需备份 `.data/app.db`（WAL 模式下同时备份 `app.db-wal`、`app.db-shm`）：
+**自动备份（推荐）**：`deploy/backup.sh` 用 SQLite 的 `VACUUM INTO` 生成一致性快照（WAL 模式下不能直接拷 `.db`），连同 `content/` 打包到 `/opt/mm-backups/`，保留 14 天。
+
+```bash
+sudo chmod +x /opt/machine-memory/deploy/backup.sh
+sudo cp /opt/machine-memory/deploy/mm-backup.service /opt/machine-memory/deploy/mm-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mm-backup.timer
+sudo systemctl list-timers mm-backup.timer      # 确认下次触发时间
+sudo systemctl start mm-backup.service          # 立刻跑一次
+ls -lh /opt/mm-backups
+```
+
+**手动备份**（停机法，仍可用）：
 
 ```bash
 sudo systemctl stop machine-memory
@@ -178,7 +190,34 @@ sudo tar czf /root/machine-memory-$(date +%F).tgz -C /opt/machine-memory .data
 sudo systemctl start machine-memory
 ```
 
-内容（`content/`）随 git 版本管理，不入备份。
+**恢复**：
+
+```bash
+sudo systemctl stop machine-memory
+sudo tar xzf /opt/mm-backups/backup-YYYYmmdd-HHMMSS.tar.gz -C /tmp
+sudo cp /tmp/app-*.db /opt/machine-memory/.data/app.db
+sudo rm -f /opt/machine-memory/.data/app.db-wal /opt/machine-memory/.data/app.db-shm
+sudo chown ubuntu:ubuntu /opt/machine-memory/.data/app.db
+sudo systemctl start machine-memory
+```
+
+## 7.1 前沿书架定时入库
+
+「前沿书架」的数据来自 `content/frontier.json`，由 `tools/fetch-arxiv.mjs` 从 arXiv API 拉取 cs.AI / cs.CL / cs.CV / cs.LG 最新投稿。
+
+```bash
+# 手动入库一次
+cd /opt/machine-memory && npm run fetch:arxiv
+
+# 每天 04:17 自动入库
+sudo cp deploy/mm-frontier.service deploy/mm-frontier.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mm-frontier.timer
+sudo systemctl list-timers mm-frontier.timer
+journalctl -u mm-frontier.service -n 30 --no-pager   # 看最近一次结果
+```
+
+拉取失败时会保留上一次的 `frontier.json`，不会把库清空；服务器无外网时可改为本地生成后 `scp` 上去。
 
 ## 8. 常见问题
 
