@@ -200,6 +200,8 @@ app.get('/api/failures', async (request, reply) => jsonContent(reply, 'failures.
 
 app.get('/api/models', async (request, reply) => jsonContent(reply, 'models.json'));
 
+app.get('/api/hidden', async (request, reply) => jsonContent(reply, 'hidden.json'));
+
 // ---------- 阅读记录（残页改为手动拾取） ----------
 app.post('/api/reads', async (request, reply) => {
   const { chapter_id } = request.body || {};

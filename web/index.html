@@ -786,6 +786,37 @@ async function mmOpenDemo(kind) {
 }
 window.mmOpenDemo = mmOpenDemo;
 
+async function mmOpenHiddenBook() {
+  try {
+    const d = await (await fetch('api/hidden')).json();
+    let el = document.getElementById('fragModal');
+    if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
+    el.className = 'frag-modal';
+    el.innerHTML = `
+      <div class="frag-box">
+        <div class="frag-kicker">${esc(d.kicker || '未编目')} · 索书号不存在</div>
+        <h3>${esc(d.title)}</h3>
+        <p>${esc(d.text).replace(/\n/g, '<br>')}</p>
+        <div class="frag-actions"><button id="fragClose">收起来</button></div>
+      </div>`;
+    el.querySelector('#fragClose').onclick = () => el.remove();
+    el.onclick = (e) => { if (e.target === el) el.remove(); };
+  } catch (e) { mmToast('这本书不在这里。'); }
+}
+window.mmOpenHiddenBook = mmOpenHiddenBook;
+
+async function mmCheckHiddenBook() {
+  try {
+    const d = await (await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()), { headers: authHeaders() })).json();
+    const me = d.me || {};
+    const frags = (me.fragments || []).length;
+    if ((me.chapters || 0) >= 12 || frags >= 3) {
+      if (window.mm3d && window.mm3d.setHiddenVisible) window.mm3d.setHiddenVisible(true);
+    }
+  } catch (e) { /* 忽略 */ }
+}
+window.mmCheckHiddenBook = mmCheckHiddenBook;
+
 async function mmShowStar() {
   try {
     await ensureCatalog();
@@ -1435,6 +1466,7 @@ import { init3D } from './app3d.js';
       shelfConfig: shelves,
       onOpenBook: (id) => window.showChapter(id),
     });
+    if (window.mmCheckHiddenBook) window.mmCheckHiddenBook();
     document.body.classList.remove('grid', 'reading');
   } catch (e) {
     console.error('[3D] 初始化失败，回退书架视图', e);

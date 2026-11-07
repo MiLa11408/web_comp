@@ -250,6 +250,22 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       edge.position.set(0, by + 0.035, 0.235);
       g.add(edge);
     }
+    // 红线：书架层板上的细红丝（关系网氛围）
+    const redMat = new THREE.LineBasicMaterial({ color: 0x8a2626, transparent: true, opacity: 0.55 });
+    for (const by of BOARD_Y) {
+      const lg = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-1.52, by + 0.065, 0.245),
+        new THREE.Vector3(1.52, by + 0.065, 0.245),
+      ]);
+      g.add(new THREE.Line(lg, redMat));
+    }
+    for (let i = 0; i < BOARD_Y.length - 1; i++) {
+      const lg = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-1.46, BOARD_Y[i] + 0.065, 0.245),
+        new THREE.Vector3(1.46, BOARD_Y[i + 1] + 0.065, 0.245),
+      ]);
+      g.add(new THREE.Line(lg, redMat));
+    }
     g.position.set(unit.x, 0, unit.z);
     scene.add(g);
     return g;
@@ -470,11 +486,15 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   cabinet.add(cabBody);
   const drawerMat = new THREE.MeshStandardMaterial({ color: 0x45301c, roughness: 0.6 });
   const drawGeo = new THREE.BoxGeometry(0.62, 0.34, 0.04);
+  const cabinetDrawers = [];
   for (let r = 0; r < 3; r++) {
     for (let col = 0; col < 2; col++) {
       const dr = new THREE.Mesh(drawGeo, drawerMat);
       dr.position.set(-0.34 + col * 0.68, 0.55 + r * 0.42, 0.29);
+      dr.userData.closedZ = 0.29;
+      dr.userData.open = false;
       cabinet.add(dr);
+      cabinetDrawers.push(dr);
       const label = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 0.01), new THREE.MeshStandardMaterial({ color: 0xc8a24a, metalness: 0.5, roughness: 0.4 }));
       label.position.set(-0.34 + col * 0.68, 0.58 + r * 0.42, 0.315);
       cabinet.add(label);
@@ -483,6 +503,59 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   cabinet.position.set(8.2, 0, 1.0);
   cabinet.rotation.y = -0.35;
   scene.add(cabinet);
+
+  // ---------- 可互动道具：台灯 / 放大镜 / 抽屉 / 隐藏书 ----------
+  const lampLight = new THREE.PointLight(0xffc873, 1.6, 7, 1.5);
+  lampLight.position.set(2.45, 1.3, 2.55);
+  scene.add(lampLight);
+  const lampGroup = new THREE.Group();
+  const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.05, 20), brassDark);
+  lampBase.position.y = 0.025;
+  lampGroup.add(lampBase);
+  const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.72, 10), brassMat);
+  lampPole.position.y = 0.38;
+  lampGroup.add(lampPole);
+  const lampShade = new THREE.Mesh(
+    new THREE.ConeGeometry(0.17, 0.2, 20, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0xd8b45a, emissive: 0xffc873, emissiveIntensity: 0.55, side: THREE.DoubleSide, roughness: 0.5 })
+  );
+  lampShade.position.y = 0.84;
+  lampShade.rotation.x = Math.PI;
+  lampGroup.add(lampShade);
+  lampGroup.position.set(2.45, 0, 2.55);
+  scene.add(lampGroup);
+  let lampOn = true;
+  function toggleLamp() {
+    lampOn = !lampOn;
+    lampLight.intensity = lampOn ? 1.6 : 0;
+    lampShade.material.emissiveIntensity = lampOn ? 0.55 : 0.05;
+    toast(lampOn ? '台灯亮了。' : '台灯灭了，书脊上的烫金字看不清了。');
+    if (window.mmAudioPlay) window.mmAudioPlay('step');
+  }
+
+  const zoomGroup = new THREE.Group();
+  const lensRing = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.012, 10, 32), brassMat);
+  const lensGlass = new THREE.Mesh(
+    new THREE.CircleGeometry(0.12, 32),
+    new THREE.MeshPhysicalMaterial({ color: 0xbfe0f0, transparent: true, opacity: 0.22, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide })
+  );
+  zoomGroup.add(lensRing, lensGlass);
+  const zoomHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.26, 10), brassDark);
+  zoomHandle.position.set(0.16, -0.2, 0);
+  zoomHandle.rotation.z = -0.9;
+  zoomGroup.add(zoomHandle);
+  zoomGroup.position.set(8.2, 2.12, 1.05);
+  zoomGroup.rotation.x = -0.7;
+  scene.add(zoomGroup);
+
+  const hiddenBook = new THREE.Mesh(
+    new THREE.BoxGeometry(0.24, 0.62, 0.42),
+    new THREE.MeshStandardMaterial({ color: 0x120f0c, emissive: 0x6a1a1a, emissiveIntensity: 0.35, roughness: 0.85 })
+  );
+  hiddenBook.position.set(0.4, 0.35, 4.2);
+  hiddenBook.rotation.y = 0.18;
+  hiddenBook.visible = false;
+  scene.add(hiddenBook);
 
   // ---------- 各层专属陈设（切层显示） ----------
   const propGroups = {};
@@ -763,7 +836,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const hitElev = raycaster.intersectObject(elevator, true);
     const hitStar = raycaster.intersectObject(starTable, true);
     const hitFrag = raycaster.intersectObjects(fragPapers, false);
-    el.style.cursor = (hits.length || hitElev.length || hitStar.length || hitFrag.length) ? 'pointer' : 'grab';
+    const hitLamp = raycaster.intersectObject(lampGroup, true);
+    const hitZoom = raycaster.intersectObject(zoomGroup, true);
+    const hitDrawer = raycaster.intersectObjects(cabinetDrawers, false);
+    const hitHidden = hiddenBook.visible && raycaster.intersectObject(hiddenBook, false).length > 0;
+    el.style.cursor = (hits.length || hitElev.length || hitStar.length || hitFrag.length || hitLamp.length || hitZoom.length || hitDrawer.length || hitHidden) ? 'pointer' : 'grab';
   }
 
   function pick(x, y) {
@@ -783,6 +860,32 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const fragHits = raycaster.intersectObjects(fragPapers, false);
     if (fragHits.length) {
       if (window.mmPickSceneFragment) window.mmPickSceneFragment();
+      return;
+    }
+    if (hiddenBook.visible) {
+      const hb = raycaster.intersectObject(hiddenBook, false);
+      if (hb.length) {
+        if (window.mmOpenHiddenBook) window.mmOpenHiddenBook();
+        return;
+      }
+    }
+    const lampHits = raycaster.intersectObject(lampGroup, true);
+    if (lampHits.length) {
+      toggleLamp();
+      return;
+    }
+    const zoomHits = raycaster.intersectObject(zoomGroup, true);
+    if (zoomHits.length) {
+      toast('你举起放大镜，书脊上的烫金小字清楚了一点。');
+      return;
+    }
+    const drawerHits = raycaster.intersectObjects(cabinetDrawers, false);
+    if (drawerHits.length) {
+      const dr = drawerHits[0].object;
+      dr.userData.open = !dr.userData.open;
+      dr.position.z = dr.userData.open ? dr.userData.closedZ + 0.2 : dr.userData.closedZ;
+      toast(dr.userData.open ? '抽屉拉开了：里面是一叠空白索引卡。' : '抽屉合上了。');
+      if (window.mmAudioPlay) window.mmAudioPlay('step');
       return;
     }
     const hits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);
@@ -1021,6 +1124,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   return {
     reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups, shelfUnits: SHELF_UNITS,
+    setHiddenVisible: (v) => { hiddenBook.visible = !!v; },
     getFloor: () => currentFloor,
     toastFloor: () => toast(floorWelcome(currentFloor)),
   };
