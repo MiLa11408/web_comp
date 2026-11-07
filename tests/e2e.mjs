@@ -59,6 +59,17 @@ const tourGone = await page.locator('#tourCard').count();
 const tourStill = await page.evaluate(() => window.mm3d && window.mm3d.isTouring && window.mm3d.isTouring());
 (!tourGone && !tourStill) ? ok('导览结束清理') : bad('导览结束清理', `card=${tourGone} touring=${tourStill}`);
 
+// 后排可达：从书架组间空隙直走，应能进到两排之间
+await page.evaluate(() => window.mm3d.reset());
+await page.waitForTimeout(600);
+await page.keyboard.down('w');
+await page.waitForTimeout(16000);
+await page.keyboard.up('w');
+const zAisle = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
+zAisle < -2.6 ? ok('可从空隙走到两排书架之间', `z=${zAisle}`) : bad('后排可达', `z=${zAisle}`);
+await page.evaluate(() => window.mm3d.reset());
+await page.waitForTimeout(700);
+
 // 星图（3D）
 await page.getByRole('button', { name: '星图' }).click();
 await page.waitForSelector('#mm-star-overlay', { timeout: 12000 });

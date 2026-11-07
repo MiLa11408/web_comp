@@ -10,7 +10,7 @@ const DECAY = ['完好', '轻残', '中残', '高残'];
 const ROOM = {
   w: 28.5, d: 21, h: 9.75,
   backZ: -6.9, sideX: 14.25,
-  minX: 12.6, minZ: -1.5, maxZ: 9.4,
+  minX: 12.6, minZ: -4.45, maxZ: 9.4,
 };
 const CHANDELIER_POS = { x: 0, y: 4.8, z: 1.8 };
 const SCONCE_POS = [[-1, -2.6], [1, -2.6], [-1, 3.4], [1, 3.4]];
@@ -694,6 +694,15 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const boardsPerUnit = Math.min(BOARD_Y.length, Math.max(1, Number(shelfConfig.boardsPerUnit) || 2));
   const perUnit = booksPerBoard * boardsPerUnit;
   const SHELF_UNITS = layoutShelves(books.length, perUnit);
+  // 书架碰撞体：允许从书架组之间的空隙绕到后排，但不能穿书架走
+  const SHELF_BLOCKERS = SHELF_UNITS.map((u) => ({ x: u.x, z: u.z, hw: 1.55, hd: 0.35 }));
+  const PLAYER_RADIUS = 0.22;
+  function blockedAt(x, z) {
+    for (const b of SHELF_BLOCKERS) {
+      if (Math.abs(x - b.x) < b.hw + PLAYER_RADIUS && Math.abs(z - b.z) < b.hd + PLAYER_RADIUS) return true;
+    }
+    return false;
+  }
 
   // ---------- 灯光 ----------
   const ambient = new THREE.AmbientLight(0x7a6a52, 2.2);
@@ -1852,7 +1861,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // ---------- UI：提示 / 提示条 / 遮罩 / 电梯面板 ----------
   const hint = document.createElement('div');
   hint.className = 'mm-hint';
-  hint.textContent = 'WASD 移动 · 鼠标拖拽转视角 · 点击书取书 · 点击黄铜电梯或右下按钮选层';
+  hint.textContent = 'WASD 移动 · 鼠标拖拽转视角 · 点击书取书 · 从书架之间的空隙可绕到后排';
   root.appendChild(hint);
 
   const toastEl = document.createElement('div');
@@ -2416,8 +2425,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const sin = Math.sin(player.yaw);
     const wx = fx * cos + fz * sin;
     const wz = -fx * sin + fz * cos;
-    player.pos.x = Math.max(-ROOM.minX, Math.min(ROOM.minX, player.pos.x + wx * speed * dt));
-    player.pos.z = Math.max(ROOM.minZ, Math.min(ROOM.maxZ, player.pos.z + wz * speed * dt));
+    const oldX = player.pos.x;
+    const oldZ = player.pos.z;
+    const nx = Math.max(-ROOM.minX, Math.min(ROOM.minX, oldX + wx * speed * dt));
+    const nz = Math.max(ROOM.minZ, Math.min(ROOM.maxZ, oldZ + wz * speed * dt));
+    // 分轴滑动碰撞：贴着书架走，可从组间空隙绕到后排，但不能穿过书架
+    if (!blockedAt(nx, oldZ)) player.pos.x = nx;
+    if (!blockedAt(player.pos.x, nz)) player.pos.z = nz;
   }
 
   let elapsed = 0;
