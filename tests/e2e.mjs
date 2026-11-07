@@ -70,6 +70,14 @@ zAisle < -2.6 ? ok('可从空隙走到两排书架之间', `z=${zAisle}`) : bad(
 await page.evaluate(() => window.mm3d.reset());
 await page.waitForTimeout(700);
 
+// 3D 失窃展柜：9 件 + 可定位
+const stolenPlan = await page.evaluate(() => window.mm3d.getStolenPlan().length);
+stolenPlan === 9 ? ok('3D 失窃展柜 9 件', String(stolenPlan)) : bad('3D 失窃展柜数量', String(stolenPlan));
+const stolenFocus = await page.evaluate(() => window.mm3d.focusStolen('dartmouth-proposal'));
+stolenFocus ? ok('3D 展柜镜头定位') : bad('3D 展柜镜头定位');
+await page.evaluate(() => { window.mm3d.setFloor('all', true); window.mm3d.reset(); });
+await page.waitForTimeout(700);
+
 // 星图（3D）
 await page.getByRole('button', { name: '星图' }).click();
 await page.waitForSelector('#mm-star-overlay', { timeout: 12000 });
@@ -134,6 +142,13 @@ if (fragDrop) {
 }
 const fragCount = await page.locator('#fragCount').innerText();
 fragCount.startsWith('1/') ? ok('残页计数', fragCount) : bad('残页计数', fragCount);
+
+const stolenCardCount = await page.locator('.anomaly-card.stolen').count();
+if (stolenCardCount >= 1) {
+  const stolenText = await page.locator('.anomaly-card.stolen').first().innerText();
+  stolenText.includes('S-01') && stolenText.includes('展柜')
+    ? ok('缺页章节出现失窃页卡片') : bad('失窃页卡片内容', stolenText.slice(0, 40));
+} else bad('失窃页卡片', 'b1-c3 未渲染');
 
 const noteCount = await page.locator('.note').count();
 noteCount >= 1 ? ok('页边注渲染', String(noteCount)) : bad('页边注渲染', String(noteCount));
@@ -218,6 +233,28 @@ const fragChips = await page.locator('.frag-chip').count();
 statCards === 4 ? ok('借阅档案统计卡', String(statCards)) : bad('借阅档案统计卡', String(statCards));
 fragChips >= 8 ? ok('残页收集面板', String(fragChips)) : bad('残页收集面板', String(fragChips));
 
+// 5b2. 异常馆藏视图：失窃页 / 分岔 / 残页拼合板
+await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
+await page.getByRole('button', { name: '失窃页', exact: true }).click();
+await page.waitForSelector('.stolen-card', { timeout: 10000 });
+const stolenCards = await page.locator('.stolen-card').count();
+stolenCards === 9 ? ok('失窃页展柜 9 件', String(stolenCards)) : bad('失窃页展柜数量', String(stolenCards));
+await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
+await page.getByRole('button', { name: '分岔', exact: true }).click();
+await page.waitForSelector('.fork-card', { timeout: 10000 });
+const forkCards = await page.locator('.fork-card').count();
+forkCards === 6 ? ok('历史分岔 6 个岔路', String(forkCards)) : bad('历史分岔数量', String(forkCards));
+const forkChoose = await page.locator('.fork-card button', { hasText: '走假如' }).count();
+forkChoose === 6 ? ok('分岔「走假如」按钮', String(forkChoose)) : bad('分岔按钮', String(forkChoose));
+await page.evaluate(() => window.showFragmentMosaic());
+await page.waitForSelector('.frag-slot', { timeout: 10000 });
+const fragSlots = await page.locator('.frag-slot').count();
+fragSlots === 12 ? ok('残页拼合板 12 格', String(fragSlots)) : bad('残页拼合板格数', String(fragSlots));
+const fragPieces = await page.locator('.frag-piece').count();
+fragPieces >= 1 ? ok('拼合板可拖放碎片', String(fragPieces)) : bad('拼合板碎片', String(fragPieces));
+await page.locator('#fragClose').click();
+await page.waitForTimeout(400);
+
 // 5c. 楼层平面图
 await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
 await page.getByRole('button', { name: '楼层平面图' }).click();
@@ -248,6 +285,19 @@ const anno = await api.post(BASE + 'api/annotations', { ...auth, data: { chapter
 anno.status() === 201 ? ok('批注接口 201') : bad('批注接口', String(anno.status()));
 const prog = await api.post(BASE + 'api/progress', { ...auth, data: { chapter_id: 'b1-c1', state: 'done' } });
 prog.ok() ? ok('进度接口') : bad('进度接口', String(prog.status()));
+
+// 6b. 异常馆藏接口：分岔选择可写可读
+const forkPost = await api.post(BASE + 'api/collectibles', { ...auth, data: { kind: 'fork', item_id: 'fork-2017', action: 'choose', chapter_id: 'b5-c1' } });
+forkPost.status() === 201 ? ok('分岔写入 201') : bad('分岔写入', String(forkPost.status()));
+const collGet = await api.get(BASE + 'api/collectibles', auth);
+const collBody = await collGet.json();
+collBody.forks && collBody.forks['fork-2017'] === 'chosen'
+  ? ok('分岔状态可读回', collBody.forks['fork-2017'])
+  : bad('分岔状态读回', JSON.stringify(collBody.forks || {}));
+const stolenPost = await api.post(BASE + 'api/collectibles', { ...auth, data: { kind: 'stolen', item_id: 'attention-original', action: 'recover' } });
+stolenPost.status() === 201 ? ok('失窃页追回 201') : bad('失窃页追回', String(stolenPost.status()));
+const restlessPost = await api.post(BASE + 'api/collectibles', { ...auth, data: { kind: 'restless', item_id: 'tay', action: 'find', chapter_id: 'b11-c2' } });
+restlessPost.status() === 201 ? ok('躁动书页收容 201') : bad('躁动书页收容', String(restlessPost.status()));
 
 // 7. 性能：接口耗时与并发
 const cat = await api.get(BASE + 'api/catalog');

@@ -1,0 +1,138 @@
+{
+  "title": "躁动书页",
+  "subtitle": "失败博物馆里的失败并没有睡着。它们只是被装订得太紧。",
+  "items": [
+    {
+      "id": "lighthill",
+      "no": "F-01",
+      "title": "Lighthill 报告",
+      "year": "1973",
+      "book": "b2",
+      "findChapter": "b2-c6",
+      "chapter": "b2-c5",
+      "quote": "我不是失败，我是提前到场。",
+      "what": "英国政府委托的报告把 AI 判定为「只能玩玩具」，随后大幅削减经费。"
+    },
+    {
+      "id": "perceptrons",
+      "no": "F-02",
+      "title": "《Perceptrons》",
+      "year": "1969",
+      "book": "b3",
+      "findChapter": "b3-c2",
+      "chapter": "b3-c3",
+      "quote": "你们把异或当成墓碑，我只把它当成一道门。",
+      "what": "明斯基与 Papert 用异或问题指出单层感知机的局限，连接主义研究随之降温。"
+    },
+    {
+      "id": "winter1",
+      "no": "F-03",
+      "title": "第一次 AI 寒冬",
+      "year": "1974",
+      "book": "b2",
+      "findChapter": "b2-c1",
+      "chapter": "b2-c5",
+      "quote": "预算走了，问题还留在这儿。",
+      "what": "机器翻译与通用问题求解的承诺兑现不了，英美经费相继收缩。"
+    },
+    {
+      "id": "fifth-gen",
+      "no": "F-04",
+      "title": "第五代计算机",
+      "year": "1982",
+      "book": "b2",
+      "findChapter": "b2-c7",
+      "chapter": "b2-c6",
+      "quote": "我不是泡沫，我是被提前叫醒的下一代。",
+      "what": "日本以逻辑推理机为目标启动十年计划，1992 年结束时未达到商用预期。"
+    },
+    {
+      "id": "expert-bubble",
+      "no": "F-05",
+      "title": "专家系统泡沫",
+      "year": "1987",
+      "book": "b2",
+      "findChapter": "b2-c8",
+      "chapter": "b2-c6",
+      "quote": "规则没崩，是维护规则的人先崩了。",
+      "what": "规则库维护成本失控，硬件换代又抽走了专用 Lisp 机的市场，第二次寒冬到来。"
+    },
+    {
+      "id": "darpa-scc",
+      "no": "F-06",
+      "title": "DARPA 战略计算缩减",
+      "year": "1987",
+      "book": "b10",
+      "findChapter": "b10-c2",
+      "chapter": "b10-c1",
+      "quote": "演示结束那一刻，我就知道没人会来接我。",
+      "what": "战略计算计划在评估后收缩，许多演示系统没有转入部署。"
+    },
+    {
+      "id": "cyc",
+      "no": "F-07",
+      "title": "Cyc 常识库",
+      "year": "1984",
+      "book": "b2",
+      "findChapter": "b2-c3",
+      "chapter": "b2-c4",
+      "quote": "常识没有上限，所以我才像一场没有终点的加班。",
+      "what": "手工编码常识的长期项目始终未获得通用推理能力，规模与成本不断上升。"
+    },
+    {
+      "id": "tay",
+      "no": "F-08",
+      "title": "微软 Tay",
+      "year": "2016",
+      "book": "b11",
+      "findChapter": "b11-c2",
+      "chapter": "b11-c4",
+      "quote": "上线一天，我学会的不是语言，是偏见。",
+      "what": "上线不到一天就被用户教成输出仇恨言论，微软随即关停并道歉。"
+    },
+    {
+      "id": "amazon-hiring",
+      "no": "F-09",
+      "title": "Amazon 招聘算法",
+      "year": "2018",
+      "book": "b11",
+      "findChapter": "b11-c3",
+      "chapter": "b11-c1",
+      "quote": "我只是把历史又读了一遍，你们却说我歧视。",
+      "what": "路透报道内部招聘模型对女性候选人降权，项目被弃用。"
+    },
+    {
+      "id": "watson-oncology",
+      "no": "F-10",
+      "title": "Watson for Oncology",
+      "year": "2021",
+      "book": "b26",
+      "findChapter": "b26-c7",
+      "chapter": "b26-c8",
+      "quote": "在医疗里，「差不多」不是及格线。",
+      "what": "内部文件与报道质疑其治疗建议质量，相关产品未能按最初承诺铺开。"
+    },
+    {
+      "id": "zillow-offers",
+      "no": "F-11",
+      "title": "Zillow Offers",
+      "year": "2021",
+      "book": "b27",
+      "findChapter": "b27-c6",
+      "chapter": "b27-c5",
+      "quote": "我会定价，但我不该替你们承担库存。",
+      "what": "算法定价买房未能覆盖库存风险，项目关闭并计提大额损失。"
+    },
+    {
+      "id": "nyt-openai",
+      "no": "F-12",
+      "title": "NYT 诉 OpenAI",
+      "year": "2023",
+      "book": "b11",
+      "findChapter": "b11-c7",
+      "chapter": "b11-c6",
+      "quote": "我还没输，我只是被写进了诉状。",
+      "what": "《纽约时报》就训练数据与输出替代问题起诉 OpenAI 与微软，版权争议进入法庭。"
+    }
+  ]
+}

@@ -20,7 +20,7 @@
   .search { padding: 14px 30px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .search input { flex: 1 1 320px; min-width: 0; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; font-size: 14px; outline: none; }
   .search input:focus { border-color: var(--gold); }
-  .search button { background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; cursor: pointer; font-size: 13px; }
+  .search button { position: relative; z-index: 22; background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; cursor: pointer; font-size: 13px; }
   #app { padding: 10px 30px 60px; }
   body.reading .search { display: none; }
   body.reading #app { padding: 10px 18px 40px; }
@@ -389,6 +389,116 @@
     .plan-svg { min-width: 520px; }
     .chapter-card { padding: 10px 11px; }
   }
+
+  /* ---------- 异常馆藏：失窃页 / 躁动书页 / 历史分岔 ---------- */
+  .collect-line { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; color: #e2c06a; font-size: 12px; letter-spacing: 1px; margin: 10px 0 12px; padding: 8px 10px; border: 1px dashed #8a6320; background: rgba(200,162,74,.06); font-family: "Consolas", "Microsoft YaHei", monospace; }
+  .anomaly-card { position: relative; background: #f4ead1; color: #3b3020; padding: 9px 11px 10px; margin-bottom: 10px; border-left: 3px solid #8a6320; box-shadow: 0 4px 12px rgba(0,0,0,.3); cursor: pointer; font-family: "KaiTi", "STKaiti", serif; font-size: 12.5px; line-height: 1.7; overflow-wrap: anywhere; transform: rotate(-.2deg); }
+  .anomaly-card.restless { border-left-color: #7a5a4a; background: #efe2c8; }
+  .anomaly-card.restored { opacity: .9; }
+  .anomaly-card .an-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-family: "Consolas", "Microsoft YaHei", monospace; font-size: 10.5px; letter-spacing: 1px; color: #8a6d33; border-bottom: 1px dashed #c9b98f; padding-bottom: 4px; margin-bottom: 5px; }
+  .anomaly-card b { display: block; color: #5a451f; font-family: "Songti SC", "SimSun", serif; font-size: 13.5px; margin-bottom: 3px; }
+  .anomaly-card .an-text { color: #4a3a24; }
+  .anomaly-card .an-state { color: #8a6d33; font-weight: 600; letter-spacing: 1px; }
+  .anomaly-card .an-quote { color: #6b4f1d; border-top: 1px dashed #c9b98f; margin-top: 5px; padding-top: 5px; }
+  .anomaly-card .an-actions { margin-top: 7px; }
+  .anomaly-card .an-actions button, .stolen-card .sc-btn { background: #2c241a; color: #e2c06a; border: 1px solid #8a6320; padding: 5px 11px; cursor: pointer; font-size: 12px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .anomaly-card .an-actions button:hover, .stolen-card .sc-btn:hover { border-color: var(--gold); }
+  .an-small { border-left: 2px solid #7a5a4a; color: #9a8a6f; font-size: 11.5px; line-height: 1.6; padding: 3px 0 3px 8px; margin: 0 0 9px; cursor: pointer; overflow-wrap: anywhere; }
+  .an-small:hover { color: #cbb892; }
+  .rc-link { color: #8a6320; cursor: pointer; border-bottom: 1px dotted #8a6320; }
+  .stolen-note { color: #cbb892; font-size: 12px; border-left: 3px solid #8a6320; background: rgba(90,69,31,.12); padding: 8px 11px; margin-bottom: 14px; line-height: 1.7; }
+  .stolen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .stolen-grid.gallery { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .stolen-chip { background: #211a13; border: 1px solid #4a3a24; padding: 8px 10px; font-size: 12px; color: #cbb892; cursor: pointer; min-width: 0; overflow-wrap: anywhere; line-height: 1.5; }
+  .stolen-chip b { color: #8a7a5c; font-family: monospace; font-size: 11px; margin-right: 5px; }
+  .stolen-chip i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
+  .stolen-chip.got { border-color: var(--gold); background: #241c14; color: var(--ink); }
+  .stolen-chip.got b { color: var(--gold); }
+  .stolen-card { background: linear-gradient(160deg, #221a13, #191310); border: 1px solid #4a3a24; border-top: 3px solid #8a6320; padding: 11px 13px 12px; min-width: 0; overflow-wrap: anywhere; }
+  .stolen-card.got { border-color: #8a6320; box-shadow: inset 0 0 0 1px rgba(200,162,74,.18); }
+  .stolen-card .sc-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-family: "Consolas", monospace; font-size: 11px; color: #8a7a5c; }
+  .stolen-card .sc-head b { color: var(--gold); font-size: 13px; }
+  .stolen-card h3 { margin: 6px 0; color: var(--ink); font-family: "Songti SC", "SimSun", serif; font-size: 15px; line-height: 1.5; }
+  .stolen-card .sc-what { margin: 0 0 6px; color: #b9a778; font-size: 12px; line-height: 1.7; }
+  .stolen-card .sc-missing { margin: 0 0 9px; color: #8a7a5c; font-size: 11.5px; line-height: 1.7; border-left: 2px dashed #4a3a24; padding-left: 8px; }
+  .stolen-card .sc-quote { margin: 0 0 8px; padding: 8px 10px; background: rgba(200,162,74,.08); color: #e2c06a; font-family: "KaiTi", "STKaiti", serif; font-size: 12.5px; line-height: 1.75; }
+  .stolen-card .sc-done { color: #9ec27a; font-size: 12px; letter-spacing: 2px; }
+  .restless-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  .chip { background: #211a13; border: 1px solid #4a3a24; padding: 8px 10px; font-size: 12px; color: #b9a778; min-width: 0; line-height: 1.5; overflow-wrap: anywhere; }
+  .chip b { color: #8a7a5c; font-family: monospace; font-size: 11px; margin-right: 5px; }
+  .chip i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
+  .restless-chip.found { border-color: #7a5a4a; color: #d8c89e; cursor: pointer; }
+  .restless-chip.found b { color: #c08a5a; }
+  .restless-chip.restored { border-color: var(--gold); background: #241c14; color: var(--ink); cursor: pointer; }
+  .restless-chip.restored b { color: var(--gold); }
+  .fork-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .fork-card { background: #1d1712; border: 1px solid #4a3a24; border-top: 3px solid #5a4a6a; padding: 11px 13px 12px; display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+  .fork-card.chosen { border-color: #8a6320; border-top-color: var(--gold); background: #221a13; }
+  .fork-card .fk-year { color: #b09a72; font-family: "Consolas", monospace; font-size: 11px; letter-spacing: 2px; }
+  .fork-card h3 { margin: 4px 0 7px; color: var(--gold); font-family: "Songti SC", "SimSun", serif; font-size: 15px; line-height: 1.55; }
+  .fork-card .fk-premise { margin: 0 0 10px; color: #b9a778; font-size: 12px; line-height: 1.75; flex: 1 1 auto; }
+  .fk-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .fk-actions button, .stat-mini { background: #2c241a; color: var(--gold); border: 1px solid #8a6320; padding: 6px 12px; cursor: pointer; font-size: 12px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .fk-actions button.ghost { background: transparent; color: #b9a778; border-color: #5a4526; }
+  .fk-done { color: #9ec27a; font-size: 11.5px; letter-spacing: 2px; }
+  .fork-branch { margin-top: 11px; padding: 9px 10px; background: #f4ead1; color: #4a3a24; border-left: 3px solid #8a6320; font-family: "KaiTi", "STKaiti", serif; font-size: 12.5px; line-height: 1.8; }
+  .fork-branch .fb-kicker { color: #8a6d33; font-size: 10.5px; letter-spacing: 2px; margin-bottom: 3px; font-family: "Consolas", monospace; }
+  .fork-chip { background: #211a13; border: 1px solid #4a3a24; padding: 8px 10px; font-size: 12px; color: #b9a778; cursor: pointer; min-width: 0; overflow-wrap: anywhere; }
+  .fork-chip b { color: #8a7a5c; font-family: monospace; font-size: 11px; margin-right: 5px; }
+  .fork-chip i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
+  .fork-chip.chosen { border-color: var(--gold); background: #241c14; color: var(--ink); }
+  .fork-chip.chosen b { color: var(--gold); }
+  .stat-mini { margin-left: 8px; padding: 4px 10px; font-size: 11.5px; letter-spacing: 1px; vertical-align: middle; }
+
+  /* ---------- 残页拼合板 ---------- */
+  .frag-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 0 12px; }
+  .frag-slot { min-height: 74px; border: 1px dashed #b9a778; background: rgba(90,69,31,.06); padding: 5px 6px; color: #8a7a5c; font-size: 11px; line-height: 1.45; display: flex; flex-direction: column; justify-content: center; gap: 2px; cursor: pointer; min-width: 0; overflow: hidden; }
+  .frag-slot b { color: #8a6d33; font-family: monospace; font-size: 10.5px; }
+  .frag-slot span { color: #6b5a3a; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frag-slot small { color: #9a8a6f; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frag-slot.missing { border-style: dotted; color: #9a8a6f; cursor: default; }
+  .frag-slot.open { border-color: #8a6320; background: #f8efd9; }
+  .frag-slot.filled { border-style: solid; border-color: #8a6320; background: #f8efd9; box-shadow: inset 0 0 0 1px rgba(200,162,74,.35); cursor: default; }
+  .frag-slot.shake { animation: fragShake .4s ease; }
+  @keyframes fragShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+  .frag-pieces { display: flex; flex-wrap: wrap; gap: 6px; max-height: 230px; overflow-y: auto; padding: 2px; margin-bottom: 8px; }
+  .frag-piece { flex: 0 1 230px; min-width: 0; background: #f6edda; border: 1px solid #b9a778; padding: 6px 8px; cursor: pointer; font-size: 11.5px; color: #5a451f; overflow-wrap: anywhere; line-height: 1.5; }
+  .frag-piece:hover { border-color: #8a6320; }
+  .frag-piece.selected { outline: 2px solid #8a6320; background: #fff4d8; }
+  .frag-piece b { display: block; color: #8a6d33; font-family: "Consolas", monospace; font-size: 10.5px; }
+  .frag-piece span { display: block; color: #5a451f; font-size: 12px; }
+  .frag-piece small { display: block; color: #8a7a5c; font-size: 10.5px; }
+  .mosaic-tip { color: #8a7a5c; font-size: 11.5px; margin: 0 0 8px; }
+  .frag-allplaced { color: #8a7a5c; font-size: 11.5px; }
+  .frag-hints { margin: 8px 0 10px; padding: 8px 10px; border-left: 3px solid #8a6320; background: rgba(90,69,31,.1); font-size: 12px; color: #5a451f; line-height: 1.75; }
+  .frag-hints .hint-line { overflow-wrap: anywhere; }
+  .frag-hints .hint-kicker { color: #8a6d33; font-size: 10.5px; letter-spacing: 2px; font-family: "Consolas", monospace; margin-bottom: 3px; }
+  .frag-stages { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 7px; margin: 10px 0; }
+  .frag-stage { background: #211a13; border: 1px solid #4a3a24; padding: 8px 10px; color: #8a7a5c; font-size: 11.5px; line-height: 1.55; min-width: 0; overflow-wrap: anywhere; }
+  .frag-stage.active { border-color: #8a6320; color: #cbb892; }
+  .frag-stage .fs-head { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; margin-bottom: 4px; }
+  .frag-stage .fs-head b { color: #8a7a5c; font-family: monospace; font-size: 10.5px; }
+  .frag-stage.active .fs-head b, .frag-stage.active .fs-head span { color: var(--gold); }
+  .frag-stage .fs-head span { color: #9a8a6f; font-size: 12px; }
+  .frag-stage p { margin: 0 0 6px; }
+  .frag-stage .fs-btn { background: #2c241a; color: var(--gold); border: 1px solid #8a6320; padding: 4px 10px; cursor: pointer; font-size: 11.5px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .frag-stage .fs-note, .frag-stage .fs-lock { color: #7d6e55; font-size: 10.5px; letter-spacing: 1px; }
+  .frag-stage.active .fs-note { color: #cbb892; }
+  .night-visit { margin: 10px 0; padding: 10px 12px; background: #211a13; border: 1px solid #8a6320; color: #cbb892; font-size: 12px; line-height: 1.75; font-family: "KaiTi", "STKaiti", serif; overflow-wrap: anywhere; }
+  .night-visit .nv-kicker { color: var(--gold); font-size: 10.5px; letter-spacing: 2px; font-family: "Consolas", monospace; margin-bottom: 4px; }
+  .night-visit ul { margin: 4px 0 6px; padding-left: 18px; }
+  .night-visit .nv-foot { color: #7d6e55; font-size: 11px; }
+
+  @media (max-width: 700px) {
+    .stolen-grid, .restless-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .stolen-grid.gallery, .fork-grid, .frag-stages { grid-template-columns: 1fr; }
+    .frag-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .frag-piece { flex-basis: 100%; }
+    .frag-box { padding: 18px 15px; }
+    .anomaly-card { font-size: 12px; }
+    .stolen-card h3, .fork-card h3 { font-size: 14px; }
+    .stat-mini { margin-left: 0; margin-top: 5px; display: inline-block; }
+  }
 </style>
 </head>
 <body>
@@ -486,6 +596,8 @@
   <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
   <button class="back" style="margin:0" onclick="enterPlan()">楼层平面图</button>
   <button class="back" style="margin:0" onclick="mmStartTour()">导览</button>
+  <button class="back" style="margin:0" onclick="enterForks()">分岔</button>
+  <button class="back" style="margin:0" onclick="enterStolen()">失窃页</button>
   <button class="back" style="margin:0" onclick="enterRail()">线索</button>
   <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
   <button class="back" style="margin:0" onclick="enterStats()">借阅档案</button>
@@ -811,33 +923,575 @@ async function mmPickSceneFragment() {
 }
 window.mmPickSceneFragment = mmPickSceneFragment;
 
-async function showFragmentMosaic() {
-  const data = await loadFragmentData();
-  const stats = await (await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()), { headers: authHeaders() })).json();
-  const mine = (stats.me && stats.me.fragments) || [];
-  const items = (data.fragments || []).slice().sort((a, b) => a.order - b.order);
+// ---------- 异常馆藏：失窃页 / 躁动书页 / 历史分岔 ----------
+const COLLECT = {
+  stolen: [], restless: [], forks: [],
+  states: { stolen: {}, restless: {}, forks: {} },
+  meta: { stolen: {}, restless: {}, forks: {} },
+  loaded: false,
+};
+let collectPromise = null;
+
+function syncCollect3D() {
+  if (window.mm3d && typeof window.mm3d.setCollectibleStates === 'function') {
+    try { window.mm3d.setCollectibleStates({ stolen: COLLECT.states.stolen }); } catch (e) { console.warn('[collect] 3D 状态同步失败', e); }
+  }
+}
+window.mmSyncCollect3D = syncCollect3D;
+
+async function loadCollectData() {
+  if (COLLECT.loaded) return COLLECT;
+  if (collectPromise) return collectPromise;
+  collectPromise = (async () => {
+    const rid = encodeURIComponent(readerKey());
+    const opts = { headers: authHeaders() };
+    const [st, rs, fk, cs] = await Promise.all([
+      fetch('api/stolen', opts).then((r) => r.json()),
+      fetch('api/restless', opts).then((r) => r.json()),
+      fetch('api/forks', opts).then((r) => r.json()),
+      fetch('api/collectibles?reader_id=' + rid, opts).then((r) => r.json()).catch(() => ({})),
+    ]);
+    COLLECT.stolen = (st && st.items) || [];
+    COLLECT.restless = (rs && rs.items) || [];
+    COLLECT.forks = (fk && fk.items) || [];
+    COLLECT.meta.stolen = st || {};
+    COLLECT.meta.restless = rs || {};
+    COLLECT.meta.forks = fk || {};
+    COLLECT.states.stolen = (cs && cs.stolen) || {};
+    COLLECT.states.restless = (cs && cs.restless) || {};
+    COLLECT.states.forks = (cs && cs.forks) || {};
+    COLLECT.loaded = true;
+    syncCollect3D();
+    return COLLECT;
+  })().catch((e) => {
+    console.warn('[collect] 加载失败', e);
+    return COLLECT;
+  });
+  const out = await collectPromise;
+  collectPromise = null;
+  return out;
+}
+window.loadCollectData = loadCollectData;
+
+async function mmCollectPost(kind, item, action, chapter) {
+  try {
+    const r = await fetch('api/collectibles', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ reader_id: readerKey(), kind, item_id: item, action, chapter_id: chapter || '' }),
+    });
+    let d = {};
+    try { d = await r.json(); } catch (e) { d = {}; }
+    if (!r.ok) { mmToast((d.error && d.error.message) || '馆藏柜没有响应。'); return false; }
+    const key = kind === 'fork' ? 'forks' : kind;
+    if (COLLECT.states[key]) COLLECT.states[key][item] = d.state || action;
+    if (kind === 'stolen') syncCollect3D();
+    return true;
+  } catch (e) { mmToast('连不上馆藏柜，稍后再试。'); return false; }
+}
+
+function collectItem(kind, id) {
+  const list = kind === 'fork' ? COLLECT.forks : (COLLECT[kind] || []);
+  return list.find((x) => x.id === id) || null;
+}
+
+function collectStateOf(kind, id) {
+  const key = kind === 'fork' ? 'forks' : kind;
+  return (COLLECT.states[key] || {})[id] || '';
+}
+
+function chapterNoOf(id) {
+  const m = String(id || '').match(/-c(\d+)/);
+  return m ? Number(m[1]) : 0;
+}
+
+function chapterLabelOf(id) {
+  const book = String(id || '').split('-')[0];
+  const n = chapterNoOf(id);
+  return `《${bookNames[book] || book}》第 ${n || '?'} 章`;
+}
+
+function fragmentHintLine(f) {
+  const where = f.chapter ? chapterLabelOf(f.chapter) : `${f.floor || '展厅'} 展厅地板`;
+  return `第 ${f.order} 张 · 在 ${where} 附近`;
+}
+
+function collectCounts() {
+  const stolenGot = COLLECT.stolen.filter((x) => collectStateOf('stolen', x.id) === 'recovered').length;
+  const rsFound = COLLECT.restless.filter((x) => {
+    const s = collectStateOf('restless', x.id);
+    return s === 'found' || s === 'restored';
+  }).length;
+  const rsRestored = COLLECT.restless.filter((x) => collectStateOf('restless', x.id) === 'restored').length;
+  const forkChosen = COLLECT.forks.filter((x) => collectStateOf('fork', x.id) === 'chosen').length;
+  return {
+    stolenGot, rsFound, rsRestored, forkChosen,
+    stolenTotal: COLLECT.stolen.length || 9,
+    restlessTotal: COLLECT.restless.length || 12,
+    forkTotal: COLLECT.forks.length || 6,
+  };
+}
+
+function collectAnomalyHtml(m) {
+  const parts = [];
+  const st = COLLECT.stolen.find((x) => x.chapter === m.id);
+  if (st) {
+    const got = collectStateOf('stolen', st.id) === 'recovered';
+    parts.push(`
+      <div class="anomaly-card stolen" onclick="mmOpenStolen('${esc(st.id)}')">
+        <div class="an-head"><span>失窃页 · ${esc(st.no)}</span><span>${esc(st.floor)}</span></div>
+        <b>${esc(st.title)}</b>
+        ${got
+          ? `<div class="an-state">已追回</div><div class="an-quote">「${esc(st.quote)}」</div>`
+          : `<div class="an-text">${esc(st.missing)}</div>
+            <div class="an-actions"><button onclick="event.stopPropagation();mmGoStolen('${esc(st.id)}')">去展柜 →</button></div>`}
+      </div>`);
+  }
+  const sameBook = COLLECT.restless.filter((x) => x.book === m.book);
+  for (const it of sameBook) {
+    const state = collectStateOf('restless', it.id);
+    const id = esc(it.id);
+    if (state === 'restored') {
+      if (m.id === it.findChapter || m.id === it.chapter) {
+        parts.push(`
+          <div class="anomaly-card restless restored" data-restless="${id}" onclick="mmOpenRestless('${id}')">
+            <div class="an-head"><span>躁动书页 · ${esc(it.no)}</span><span>已归位</span></div>
+            <b>${esc(it.title)}</b>
+            <div class="an-state">已归位</div>
+          </div>`);
+      }
+      continue;
+    }
+    if (state === 'found') {
+      if (m.id === it.chapter) {
+        parts.push(`
+          <div class="anomaly-card restless" data-restless="${id}" onclick="mmOpenRestless('${id}')">
+            <div class="an-head"><span>躁动书页 · ${esc(it.no)}</span><span>${esc(it.title)}</span></div>
+            <div class="an-text">它想回到这一章。</div>
+            <div class="an-actions"><button onclick="event.stopPropagation();mmRestoreRestless('${id}')">安抚并归位</button></div>
+          </div>`);
+      }
+      continue;
+    }
+    if (m.id === it.findChapter) {
+      parts.push(`
+        <div class="anomaly-card restless" data-restless="${id}" onclick="mmOpenRestless('${id}')">
+          <div class="an-head"><span>书脊里有东西在翻页 · ${esc(it.no)}</span><span>${esc(it.year)}</span></div>
+          <b>${esc(it.title)}</b>
+          <div class="an-actions"><button onclick="event.stopPropagation();mmFindRestless('${id}')">按住它（收容）</button></div>
+        </div>`);
+    } else {
+      parts.push(`<div class="an-small" onclick="mmOpenRestless('${id}')">这一册里夹着一张躁动书页（${esc(it.no)}）</div>`);
+    }
+  }
+  return parts.join('');
+}
+
+async function refreshAnomalyCards() {
+  const box = document.getElementById('anomalyBox');
+  if (!box || !window.__mmChapterMeta) return;
+  await loadCollectData();
+  box.innerHTML = collectAnomalyHtml(window.__mmChapterMeta);
+}
+
+function receptionResultHtml(m) {
+  const feature = (m.features || []).find((f) => String(f).startsWith('stolen:'));
+  if (!feature) return '已收编';
+  const raw = String(feature).slice('stolen:'.length);
+  const item = COLLECT.stolen.find((x) => x.id === raw);
+  if (!item) return '已收编 · 缺一页';
+  if (collectStateOf('stolen', item.id) === 'recovered') return '已补页';
+  return `缺一页 · <span class="rc-link" onclick="mmGoStolen('${esc(item.id)}')">去展柜 ${esc(item.no)}</span>`;
+}
+
+function mmRefreshReception() {
+  const el = document.getElementById('receptionResult');
+  if (!el || !window.__mmChapterMeta) return;
+  el.innerHTML = receptionResultHtml(window.__mmChapterMeta);
+}
+
+async function mmFindRestless(id) {
+  const it = collectItem('restless', id);
+  if (!it) return;
+  const ok = await mmCollectPost('restless', id, 'find', it.findChapter);
+  if (!ok) return;
+  mmToast('书页安静下来了，先收容。');
+  const card = document.querySelector(`.anomaly-card[data-restless="${id}"]`);
+  if (card) {
+    card.innerHTML = `
+      <div class="an-head"><span>躁动书页 · ${esc(it.no)}</span><span>已收容</span></div>
+      <b>${esc(it.title)}</b>
+      <div class="an-state">已收容，去 ${esc(chapterLabelOf(it.chapter))} 归位</div>`;
+  }
+}
+
+async function mmRestoreRestless(id) {
+  const it = collectItem('restless', id);
+  if (!it) return;
+  const ok = await mmCollectPost('restless', id, 'restore', it.chapter);
+  if (!ok) return;
+  mmToast('安抚章已盖下');
+  await refreshAnomalyCards();
+}
+
+function mmOpenRestless(id) {
+  const it = collectItem('restless', id);
+  if (!it) return;
+  let el = document.getElementById('fragModal');
+  if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
+  el.className = 'frag-modal';
+  const state = collectStateOf('restless', it.id);
+  const stateTxt = state === 'restored' ? '已归位' : (state === 'found' ? '已收容' : '未收容');
+  el.innerHTML = `
+    <div class="frag-box">
+      <div class="frag-kicker">躁动书页 · ${esc(it.no)} · ${stateTxt}</div>
+      <h3>${esc(it.title)}</h3>
+      <p>${esc(it.what)}</p>
+      <div class="frag-line">「${esc(it.quote)}」</div>
+      <p style="color:#8a7a5c;font-size:12px">${esc(it.year)} · 收容于 ${esc(chapterLabelOf(it.findChapter))} · 归位于 ${esc(chapterLabelOf(it.chapter))}</p>
+      <div class="frag-actions"><button id="fragClose">收起来</button></div>
+    </div>`;
+  el.querySelector('#fragClose').onclick = () => el.remove();
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+}
+window.mmOpenRestless = mmOpenRestless;
+
+function mmOpenStolen(id) {
+  const it = collectItem('stolen', id);
+  if (!it) return;
+  const got = collectStateOf('stolen', it.id) === 'recovered';
   let el = document.getElementById('fragModal');
   if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
   el.className = 'frag-modal';
   el.innerHTML = `
-    <div class="frag-box" style="width:min(720px,94vw)">
-      <div class="frag-kicker">另一条时间线 · 拼合</div>
-      <h3>已收集的残页 · ${mine.length}/${items.length}</h3>
-      <p style="font-size:12px;color:#8a7a5c">按残页编号顺序拼接。缺页的地方只能空着。</p>
-      ${items.map((f) => mine.includes(f.id)
-        ? `<div class="mosaic-row"><b>${esc(f.id)}</b><strong>${esc(f.title)}</strong><span>${esc(f.text.slice(0, 90))}…</span></div>`
-        : `<div class="mosaic-row missing"><b>${esc(f.id)}</b><span>（缺页）</span></div>`).join('')}
-      <div class="frag-line">拼到这里就断了。剩下的不在馆里，也不在任何一本书里。</div>
-      ${mine.length === items.length ? `
+    <div class="frag-box">
+      <div class="frag-kicker">失窃页 · ${esc(it.no)} · ${got ? '已追回' : '未追回'}</div>
+      <h3>${esc(it.title)}</h3>
+      <p>${esc(it.what)}</p>
+      ${got
+        ? `<div class="frag-line">「${esc(it.quote)}」</div>`
+        : `<p style="color:#6b5a3a">${esc(it.missing)}</p>`}
+      <p style="color:#8a7a5c;font-size:12px">${esc(it.year)} · ${esc(it.floor)} 展柜 · 原属 ${esc(chapterLabelOf(it.chapter))}</p>
+      <p style="color:#8a7a5c;font-size:12px">${esc(it.return)}</p>
+      <div class="frag-actions">
+        ${got ? '<span class="sc-done">已追回</span>' : `<button onclick="mmRecoverStolen('${esc(it.id)}')">追回这一页</button>`}
+        <button class="ghost" onclick="mmGoStolen('${esc(it.id)}')">去展柜 →</button>
+        <button id="fragClose" class="ghost">收起来</button>
+      </div>
+    </div>`;
+  el.querySelector('#fragClose').onclick = () => el.remove();
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+}
+window.mmOpenStolen = mmOpenStolen;
+
+async function mmRecoverStolen(id) {
+  const it = collectItem('stolen', id);
+  if (!it) return;
+  const ok = await mmCollectPost('stolen', id, 'recover', it.chapter);
+  if (!ok) return;
+  mmToast('这一页追回来了。');
+  await mmRefreshCollectSurfaces();
+  if (document.getElementById('fragModal')) mmOpenStolen(id);
+}
+
+function mmGoStolen(id) {
+  if (window.mm3d && typeof window.mm3d.focusStolen === 'function') {
+    try { window.mm3d.focusStolen(id); } catch (e) { console.warn('[collect] 聚焦展柜失败', e); }
+    enter3D();
+    // 回到房间时 reset() 会复位镜头，等黑场淡出后再聚焦一次
+    setTimeout(() => {
+      try { if (window.mm3d && window.mm3d.focusStolen) window.mm3d.focusStolen(id); } catch (e) { /* 忽略 */ }
+    }, 560);
+  } else {
+    enterStolen();
+  }
+}
+window.mmGoStolen = mmGoStolen;
+
+async function mmRefreshCollectSurfaces() {
+  if (document.body.classList.contains('reading')) {
+    await refreshAnomalyCards();
+    mmRefreshReception();
+    return;
+  }
+  if (app.querySelector('.stolen-view')) { await showStolenGallery(); return; }
+  if (app.querySelector('.stats-view')) { await showStats(); return; }
+  if (app.querySelector('.fork-grid')) { await showForks(); return; }
+}
+
+function collectStatsHtml() {
+  const c = collectCounts();
+  const stolenChips = COLLECT.stolen.map((it) => {
+    const got = collectStateOf('stolen', it.id) === 'recovered';
+    return `<div class="stolen-chip ${got ? 'got' : ''}" onclick="mmOpenStolen('${esc(it.id)}')">
+      <b>${esc(it.no)}</b>${esc(it.title)}
+      <i>${got ? `已追回 · ${esc(it.floor)} 展柜` : `${esc(it.floor)} 展柜 · 未追回`}</i>
+    </div>`;
+  }).join('');
+  const restlessChips = COLLECT.restless.map((it) => {
+    const state = collectStateOf('restless', it.id);
+    const cls = state === 'restored' ? 'restored' : (state === 'found' ? 'found' : '');
+    const status = state === 'restored' ? '已归位' : (state === 'found' ? '已收容' : '未发现');
+    const click = state ? ` onclick="mmOpenRestless('${esc(it.id)}')"` : '';
+    return `<div class="chip restless-chip ${cls}"${click}>
+      <b>${esc(it.no)}</b>${esc(it.title)}
+      <i>${status}</i>
+    </div>`;
+  }).join('');
+  const forkChips = COLLECT.forks.map((it) => {
+    const chosen = collectStateOf('fork', it.id) === 'chosen';
+    return `<div class="fork-chip ${chosen ? 'chosen' : ''}" onclick="enterForks()">
+      <b>${esc(it.year)}</b>${esc(it.title)}
+      <i>${chosen ? '已走过' : '未选择'}</i>
+    </div>`;
+  }).join('');
+  return `
+    <div class="collect-line">失窃 ${c.stolenGot}/${c.stolenTotal} · 躁动 ${c.rsFound}/${c.restlessTotal} · 分岔 ${c.forkChosen}/${c.forkTotal}</div>
+    <section class="stat-sec">
+      <h3>失窃页 · ${c.stolenGot}/${c.stolenTotal}<button class="stat-mini" onclick="enterStolen()">打开展柜</button></h3>
+      <div class="stolen-grid">${stolenChips || '<div class="rail-hint">展柜暂时空着。</div>'}</div>
+    </section>
+    <section class="stat-sec">
+      <h3>躁动书页 · ${c.rsFound}/${c.restlessTotal} 已发现、${c.rsRestored}/${c.restlessTotal} 已归位</h3>
+      <div class="restless-grid">${restlessChips || '<div class="rail-hint">这一册里没有躁动书页。</div>'}</div>
+    </section>
+    <section class="stat-sec">
+      <h3>历史分岔 · ${c.forkChosen}/${c.forkTotal}<button class="stat-mini" onclick="enterForks()">进入分岔</button></h3>
+      <div class="stolen-grid">${forkChips || '<div class="rail-hint">地图上还没有岔路。</div>'}</div>
+    </section>`;
+}
+
+async function showStolenGallery() {
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在打开失窃页展柜……</div>';
+  await loadCollectData();
+  const c = collectCounts();
+  const meta = COLLECT.meta.stolen || {};
+  const cards = COLLECT.stolen.map((it) => {
+    const got = collectStateOf('stolen', it.id) === 'recovered';
+    return `
+      <article class="stolen-card ${got ? 'got' : ''}" data-stolen-card="${esc(it.id)}">
+        <div class="sc-head"><b>${esc(it.no)}</b><span>${esc(it.floor)} 展柜</span></div>
+        <h3>${esc(it.title)}</h3>
+        <p class="sc-what">${esc(it.what)}</p>
+        <p class="sc-missing">${esc(it.missing)}</p>
+        ${got
+          ? `<div class="sc-quote">「${esc(it.quote)}」</div><div class="sc-done">已追回</div>`
+          : `<button class="sc-btn" onclick="mmRecoverStolen('${esc(it.id)}')">追回这一页</button>`}
+      </article>`;
+  }).join('');
+  app.innerHTML = `
+  <div class="rail-view stolen-view">
+    <div class="rail-head"><span>失窃页展柜 · ${c.stolenGot}/${c.stolenTotal}</span>
+      <span class="head-links"><a onclick="enterStats()">借阅档案 →</a> · <a onclick="enter3D()">3D 展厅 →</a></span>
+    </div>
+    <div class="rail-sub">${esc(meta.subtitle || '')}</div>
+    <div class="stolen-note">也可以去 3D 展厅，在各层找展柜。</div>
+    <div class="stolen-grid gallery">${cards}</div>
+  </div>`;
+}
+window.showStolenGallery = showStolenGallery;
+
+async function showForks() {
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在展开岔路地图……</div>';
+  await loadCollectData();
+  const c = collectCounts();
+  const meta = COLLECT.meta.forks || {};
+  const cards = COLLECT.forks.map((it) => {
+    const chosen = collectStateOf('fork', it.id) === 'chosen';
+    return `
+      <article class="fork-card ${chosen ? 'chosen' : ''}" data-fork="${esc(it.id)}">
+        <div class="fk-year">${esc(it.year)}</div>
+        <h3>${esc(it.title)}</h3>
+        <p class="fk-premise">${esc(it.premise)}</p>
+        <div class="fk-actions">
+          <button class="ghost" onclick="mmForkMain('${esc(it.id)}')">走主线</button>
+          ${chosen
+            ? '<span class="fk-done">已选择</span>'
+            : `<button onclick="mmChooseFork('${esc(it.id)}')">走假如</button>`}
+        </div>
+        ${chosen ? `<div class="fork-branch"><div class="fb-kicker">假如 · 推测</div>${esc(it.branch)}</div>` : ''}
+      </article>`;
+  }).join('');
+  app.innerHTML = `
+  <div class="rail-view fork-view">
+    <div class="rail-head"><span>历史分岔 · 推测</span>
+      <span class="head-links"><a onclick="enterStats()">借阅档案 →</a> · <a onclick="enterStolen()">失窃页 →</a></span>
+    </div>
+    <div class="rail-sub">${esc(meta.subtitle || '')}</div>
+    <div class="fork-grid">${cards}</div>
+    <div class="collect-line">已走完 ${c.forkChosen}/${c.forkTotal} 个岔路</div>
+    ${c.forkChosen >= c.forkTotal && c.forkTotal ? `
+      <div class="frag-unlock">
+        <div class="fu-kicker">另一条时间线</div>
+        <h4>${esc(meta.endTitle || '另一条时间线')}</h4>
+        <p>${esc(meta.endText || '')}</p>
+      </div>` : ''}
+  </div>`;
+}
+window.showForks = showForks;
+
+function mmForkMain(id) {
+  const it = collectItem('fork', id);
+  if (!it) return;
+  showChapter(it.chapter);
+}
+window.mmForkMain = mmForkMain;
+
+async function mmChooseFork(id) {
+  const it = collectItem('fork', id);
+  if (!it) return;
+  if (collectStateOf('fork', it.id) === 'chosen') return;
+  const ok = await mmCollectPost('fork', id, 'choose', it.chapter);
+  if (!ok) return;
+  mmToast('这条岔路已经走过。');
+  await showForks();
+}
+window.mmChooseFork = mmChooseFork;
+
+// ---------- 残页拼合板 ----------
+let fragMosaicCtx = null;
+
+function fragMosaicHtml() {
+  const ctx = fragMosaicCtx;
+  if (!ctx) return '';
+  const items = ctx.items;
+  const mine = ctx.mine;
+  const placed = ctx.placed;
+  const collected = items.filter((f) => mine.includes(f.id));
+  const hints = items.filter((f) => !mine.includes(f.id)).slice(0, 3);
+  const unplaced = collected.filter((f) => !placed[f.order]);
+  const pieceHtml = unplaced.map((f) => `
+    <div class="frag-piece ${ctx.selected === f.id ? 'selected' : ''}" onclick="mmFragSelect('${esc(f.id)}')">
+      <b>第 ${f.order} 张 · ${esc(f.id)}</b>
+      <span>${esc(f.title)}</span>
+      <small>${esc(String(f.text).slice(0, 40))}…</small>
+    </div>`).join('');
+  const slotHtml = items.map((f) => {
+    const placedId = placed[f.order];
+    if (placedId) {
+      const pf = items.find((x) => x.id === placedId) || f;
+      return `<div class="frag-slot filled" data-slot="${f.order}">
+        <b>第 ${f.order} 张</b><span>${esc(pf.title)}</span><small>${esc(String(pf.text).slice(0, 18))}…</small>
+      </div>`;
+    }
+    const got = mine.includes(f.id);
+    return `<div class="frag-slot ${got ? 'open' : 'missing'}" data-slot="${f.order}" onclick="mmFragPlace(${f.order})">
+      <b>第 ${f.order} 张</b><span>${got ? '待拼' : '缺页'}</span>
+    </div>`;
+  }).join('');
+  const stage = [
+    { n: 6, title: '夜访 L4', desc: '闭馆后，馆员会带你走一趟 L4 的旧纸堆。', extra: '<button class="fs-btn" onclick="mmNightVisit()">打开夜访备忘</button>' },
+    { n: 9, title: '地库钥匙', desc: '钥匙挂在展厅入口附近——那本不属于任何书架的黑书。', extra: '<div class="fs-note">去 3D 展厅入口附近找那本黑书。</div>' },
+    { n: 12, title: '蜡封馆员 · 结局批注', desc: '十二张拼完，L4 的门会为你留一条缝。批注在下面。', extra: '<div class="fs-note">已解锁 · 见下方蜡封批注。</div>' },
+  ].map((s) => {
+    const active = collected.length >= s.n;
+    return `<div class="frag-stage ${active ? 'active' : ''}">
+      <div class="fs-head"><b>${s.n}/12</b><span>${esc(s.title)}</span></div>
+      <p>${esc(s.desc)}</p>
+      ${active ? s.extra : '<i class="fs-lock">未解锁</i>'}
+    </div>`;
+  }).join('');
+  const hintHtml = hints.length
+    ? hints.map((f) => `<div class="hint-line">${esc(fragmentHintLine(f))}</div>`).join('')
+    : '<div class="hint-line">十二张都在这儿了，馆员没有更多线索。</div>';
+  return `
+    <div class="frag-kicker">另一条时间线 · 拼合板</div>
+    <h3>已收集的残页 · ${collected.length}/${items.length}</h3>
+    <div class="mosaic-tip">先点一张残页，再点编号相同的空位。拼错了，纸会自动弹开。</div>
+    <div class="frag-pieces">${pieceHtml || '<span class="frag-allplaced">能拼的都拼上去了。</span>'}</div>
+    <div class="frag-board">${slotHtml}</div>
+    <div class="frag-hints">
+      <div class="hint-kicker">馆员线索 · 未收集的前三张</div>
+      ${hintHtml}
+    </div>
+    <div class="frag-stages">${stage}</div>
+    <div class="frag-line">拼到这里就断了。剩下的不在馆里，也不在任何一本书里。</div>
+    ${collected.length === items.length ? `
       <div class="frag-unlock">
         <div class="fu-kicker">L4 · 未编目地库</div>
         <h4>蜡封馆员 · 结局批注</h4>
         <p>你把这十二张纸拼完了。它们确实指向另一条时间线，但那一页从来没有被写出来——不是被撕掉，是根本没写。别去找结局了，馆里没有；把纸片放回原处，它们属于没有发生的那一年。作为交换，L4 的门今晚为你留一条缝。</p>
       </div>` : ''}
-      <div class="frag-actions"><button id="fragClose">收起来</button></div>
-    </div>`;
+    <div class="frag-actions"><button id="fragClose">收起来</button></div>`;
+}
+
+function renderFragMosaic() {
+  const el = document.getElementById('fragModal');
+  if (!el || !fragMosaicCtx) return;
+  el.innerHTML = `<div class="frag-box" style="width:min(760px,94vw)">${fragMosaicHtml()}</div>`;
   el.querySelector('#fragClose').onclick = () => el.remove();
   el.onclick = (e) => { if (e.target === el) el.remove(); };
+}
+
+function mmFragSelect(id) {
+  if (!fragMosaicCtx) return;
+  fragMosaicCtx.selected = fragMosaicCtx.selected === id ? null : id;
+  renderFragMosaic();
+}
+window.mmFragSelect = mmFragSelect;
+
+function mmFragPlace(slot) {
+  const ctx = fragMosaicCtx;
+  if (!ctx) return;
+  if (ctx.placed[slot]) { mmToast('这一格已经拼好了。'); return; }
+  if (!ctx.selected) { mmToast('先选一张残页。'); return; }
+  const f = ctx.items.find((x) => x.id === ctx.selected);
+  if (!f) { ctx.selected = null; return; }
+  if (f.order !== slot) {
+    const el = document.querySelector(`.frag-slot[data-slot="${slot}"]`);
+    if (el) {
+      el.classList.add('shake');
+      setTimeout(() => el.classList.remove('shake'), 420);
+    }
+    mmToast('不对，这一页接不上');
+    return;
+  }
+  ctx.placed[slot] = f.id;
+  ctx.selected = null;
+  renderFragMosaic();
+  mmToast('接上了。');
+}
+window.mmFragPlace = mmFragPlace;
+
+function mmNightVisit() {
+  const el = document.getElementById('fragModal');
+  if (!el || !fragMosaicCtx) return;
+  const old = el.querySelector('.night-visit');
+  if (old) { old.remove(); return; }
+  const left = fragMosaicCtx.items.filter((f) => !fragMosaicCtx.mine.includes(f.id));
+  const panel = document.createElement('div');
+  panel.className = 'night-visit';
+  panel.innerHTML = `
+    <div class="nv-kicker">夜访 L4 · 馆员备忘</div>
+    <p>今晚还能走的书架：</p>
+    <ul>${left.length
+      ? left.map((f) => {
+        const place = f.chapter ? chapterLabelOf(f.chapter) : `${f.floor || '展厅'} 展厅地板`;
+        const floorTxt = f.chapter ? (bookFloors[String(f.chapter).split('-')[0]] || f.floor) : (f.floor || '展厅');
+        return `<li>第 ${f.order} 张 · ${esc(place)}（${esc(floorTxt)}）</li>`;
+      }).join('')
+      : '<li>没有剩余残页了。地库的门今晚不用开。</li>'}</ul>
+    <div class="nv-foot">若只剩三张以内，也可以直接去展厅地板找——那里不收编号。</div>`;
+  const actions = el.querySelector('.frag-actions');
+  if (actions && actions.parentNode) actions.parentNode.insertBefore(panel, actions);
+  else el.querySelector('.frag-box').appendChild(panel);
+}
+window.mmNightVisit = mmNightVisit;
+
+async function showFragmentMosaic() {
+  const data = await loadFragmentData();
+  const stats = await (await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()), { headers: authHeaders() })).json();
+  const mine = (stats.me && stats.me.fragments) || [];
+  const items = (data.fragments || []).slice().sort((a, b) => a.order - b.order);
+  fragMosaicCtx = { items, mine, placed: {}, selected: null };
+  let el = document.getElementById('fragModal');
+  if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
+  el.className = 'frag-modal';
+  renderFragMosaic();
 }
 
 const DEMO_MAP = {
@@ -934,6 +1588,7 @@ async function showStats() {
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在翻借阅台账……</div>';
   try {
+    await loadCollectData();
     const r = await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()), { headers: authHeaders() });
     const d = await r.json();
     const totals = d.totals || {};
@@ -985,6 +1640,7 @@ async function showStats() {
         <div class="frag-grid">${fragHtml}</div>
         ${myFrags.length >= 2 ? '<div style="margin-top:12px"><button class="gate-btn" style="flex:0 0 auto;display:inline-block;padding:7px 16px" onclick="showFragmentMosaic()">拼合已收集的残页 →</button></div>' : ''}
       </section>
+      ${collectStatsHtml()}
       <div class="rail-hintbar">残页不会自己送上门：留意书页之间掉出的纸片，也别漏了展厅地板上的那几张。</div>
     </div>`;
   } catch (e) {
@@ -1032,6 +1688,8 @@ function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() { fadeSwap(() => backToRoom()); }
 function enterRail() { fadeSwap(() => showRail()); }
 function enterTimeline() { fadeSwap(() => showTimeline()); }
+function enterForks() { fadeSwap(() => showForks()); }
+function enterStolen() { fadeSwap(() => showStolenGallery()); }
 
 // ---------- 楼层平面图 ----------
 function enterPlan() { fadeSwap(() => showPlan()); }
@@ -1832,7 +2490,9 @@ function downloadChapterCard(id) {
 async function showChapter(id) {
   document.body.classList.add('reading');
   const r = await (await fetch('api/chapters/' + id)).json();
+  await loadCollectData();
   const m = r.meta;
+  window.__mmChapterMeta = m;
   const { main, notes } = splitNotes(r.content);
   state.chapterMain = main;
   state.findMarks = []; state.global = [];
@@ -1840,7 +2500,6 @@ async function showChapter(id) {
   const callNo = `${bookCalls[m.book] || '?'}-${String(m.no || 0).padStart(2, '0')}`;
   const summary = String(m.summary || '').split(/[。．.]/)[0].trim();
   const purpose = summary.length > 46 ? summary.slice(0, 46) + '…' : summary;
-  const missing = (m.features || []).some((f) => String(f).startsWith('stolen:'));
   const fl = floorInfo[bookFloors[m.book]] || null;
   const roman = ['I', 'II', 'III', 'IV'][((fl ? fl.tier : 1) - 1)] || 'I';
   const decayTxt = ['完好', '轻残', '中残', '高残'][fl ? fl.decay : 0] || '完好';
@@ -1873,7 +2532,7 @@ async function showChapter(id) {
           <div>来访目的：<b>${esc(purpose || '——')}</b></div>
           <div>当值馆员：<b>${librarian}</b></div>
           <div>楼层：<b>${esc((fl && fl.name) || bookNames[m.book] || '—')} · 等级 ${roman} · ${decayTxt}</b></div>
-          <div>接待结果：<b>${missing ? '已收编 · 缺一页' : '已收编'}</b></div>
+          <div>接待结果：<b id="receptionResult">${receptionResultHtml(m)}</b></div>
           <div style="color:#8a6d33">馆员按语：<b>${esc(LIB_NOTE[bookFloors[m.book]] || '别把纸屑抖在地上。')}</b></div>
         </div>
         <h1>${esc(m.title)} <small style="color:#6b5a3a;font-size:15px">${esc(m.title_en || '')}</small></h1>
@@ -1895,6 +2554,7 @@ async function showChapter(id) {
           <div class="note-sign">—— ${librarian}</div>
         </div>`).join('') : '<div class="notes-empty">这一章暂时没有页边注</div>'}
       ${chapterCardHtml(cardData, callNo, m.id)}
+      <div id="anomalyBox">${collectAnomalyHtml(m)}</div>
       <div id="myNotes"></div>
     </aside>
   </div>
@@ -2096,7 +2756,10 @@ import { init3D } from './app3d.js';
       floors,
       shelfConfig: shelves,
       onOpenBook: (id) => window.showChapter(id),
+      onOpenStolen: (id) => window.mmOpenStolen(id),
     });
+    if (window.mmSyncCollect3D) window.mmSyncCollect3D();
+    if (window.loadCollectData) window.loadCollectData();
     if (window.mmCheckHiddenBook) window.mmCheckHiddenBook();
     document.body.classList.remove('grid', 'reading');
   } catch (e) {

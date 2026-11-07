@@ -28,6 +28,21 @@ if (existsSync(FRAGMENTS_FILE)) {
   FRAGMENTS_LIST.forEach((f) => { if (f.chapter) FRAGMENT_MAP[f.chapter] = f; });
 }
 
+// 异常馆藏：失窃页 / 躁动书页 / 历史分岔
+function loadCollection(name) {
+  const p = path.join(CONTENT_DIR, name);
+  if (!existsSync(p)) return [];
+  try { return JSON.parse(readFileSync(p, 'utf8')).items || []; } catch (e) { return []; }
+}
+const STOLEN_ITEMS = loadCollection('stolen.json');
+const RESTLESS_ITEMS = loadCollection('restless.json');
+const FORK_ITEMS = loadCollection('forks.json');
+const COLLECTION_MAP = {
+  stolen: new Map(STOLEN_ITEMS.map((x) => [x.id, x])),
+  restless: new Map(RESTLESS_ITEMS.map((x) => [x.id, x])),
+  fork: new Map(FORK_ITEMS.map((x) => [x.id, x])),
+};
+
 const app = Fastify({ logger: true });
 
 // ---------- 样章预览页（阶段 2 换 3D 界面） ----------
@@ -202,6 +217,12 @@ app.get('/api/models', async (request, reply) => jsonContent(reply, 'models.json
 
 app.get('/api/hidden', async (request, reply) => jsonContent(reply, 'hidden.json'));
 
+app.get('/api/stolen', async (request, reply) => jsonContent(reply, 'stolen.json'));
+
+app.get('/api/restless', async (request, reply) => jsonContent(reply, 'restless.json'));
+
+app.get('/api/forks', async (request, reply) => jsonContent(reply, 'forks.json'));
+
 // ---------- 阅读记录（残页改为手动拾取） ----------
 app.post('/api/reads', async (request, reply) => {
   const { chapter_id } = request.body || {};
@@ -226,6 +247,38 @@ app.post('/api/fragments/:id/pick', async (request, reply) => {
     .run(reader.id, f.id, f.chapter || 'scene', nowIso());
   const collected = db.prepare('SELECT COUNT(*) AS c FROM fragment_picks WHERE reader_id = ?').get(reader.id).c;
   return reply.code(201).send({ ok: true, isNew: !had, fragment: f, collected, total: IFLINE_DATA.total || FRAGMENTS_LIST.length });
+});
+
+// 异常馆藏状态：失窃页 / 躁动书页 / 历史分岔
+app.get('/api/collectibles', async (request) => {
+  const reader = resolveReader(request, request.query);
+  const empty = { stolen: {}, restless: {}, forks: {} };
+  if (!reader) return { ok: true, ...empty };
+  const rows = db.prepare('SELECT kind, item_id, state FROM collectibles WHERE reader_id = ?').all(reader.id);
+  const out = { stolen: {}, restless: {}, forks: {} };
+  for (const r of rows) {
+    const key = r.kind === 'fork' ? 'forks' : r.kind;
+    if (out[key]) out[key][r.item_id] = r.state;
+  }
+  return { ok: true, ...out };
+});
+
+app.post('/api/collectibles', async (request, reply) => {
+  const { kind, item_id, action, chapter_id } = request.body || {};
+  const reader = resolveReader(request, request.body);
+  if (!reader) return fail(reply, 400, 'BAD_REQUEST', '缺少有效的 reader_id');
+  const list = COLLECTION_MAP[kind];
+  if (!list) return fail(reply, 400, 'BAD_REQUEST', '未知的馆藏类型');
+  const item = list.get(item_id);
+  if (!item) return fail(reply, 404, 'NOT_FOUND', '没有这件馆藏');
+  const allowed = { stolen: ['recover'], restless: ['find', 'restore'], fork: ['choose'] }[kind];
+  if (!allowed.includes(action)) return fail(reply, 400, 'BAD_REQUEST', '未知的操作');
+  const state = { stolen: { recover: 'recovered' }, restless: { find: 'found', restore: 'restored' }, fork: { choose: 'chosen' } }[kind][action];
+  db.prepare(`INSERT INTO collectibles (reader_id, kind, item_id, state, chapter_id, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(reader_id, kind, item_id) DO UPDATE SET state = excluded.state, chapter_id = excluded.chapter_id, updated_at = excluded.updated_at`)
+    .run(reader.id, kind, item_id, state, String(chapter_id || item.chapter || ''), nowIso());
+  return reply.code(201).send({ ok: true, kind, item_id, state });
 });
 
 app.get('/api/stats', async (request) => {

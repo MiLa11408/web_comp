@@ -35,6 +35,19 @@ function layoutShelves(totalBooks, capacity, maxPerRow = 6) {
 const BOARD_Y = [0.6, 1.6, 2.6];
 const BOOK_H = 0.60;
 
+// 失窃页展柜数据：与 content/stolen.json 的 id / no / floor / x / z / year 保持一致
+const STOLEN_EXHIBITS = [
+  { id: 'dartmouth-proposal', no: 'S-01', floor: 'L1', x: -10.4, z: 3.2, year: '1955' },
+  { id: 'eu-ai-act-risk-tiers', no: 'S-02', floor: 'L4', x: -6.0, z: 7.0, year: '2024' },
+  { id: 'siri-2011-keynote', no: 'S-03', floor: 'L1', x: 10.4, z: 5.2, year: '2011' },
+  { id: 'casp13-results', no: 'S-04', floor: 'L3', x: -10.4, z: 2.4, year: '2018' },
+  { id: 'usco-ai-registration', no: 'S-05', floor: 'L3', x: 10.4, z: 4.6, year: '2023' },
+  { id: 'mark1-wiring', no: 'S-06', floor: 'L2', x: -10.4, z: 1.8, year: '1958' },
+  { id: 'casp14-results', no: 'S-07', floor: 'L2', x: 10.4, z: 3.6, year: '2020' },
+  { id: 'attention-original', no: 'S-08', floor: 'L2', x: -10.4, z: 5.6, year: '2017' },
+  { id: 'alphago-move-37', no: 'S-09', floor: 'L2', x: 10.4, z: 7.2, year: '2016' },
+];
+
 const CSS = `
 .mm-root { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
 body.reading .mm-root, body.grid .mm-root { display: none; }
@@ -652,7 +665,7 @@ function makeDecorTexture(kind) {
   });
 }
 
-export async function init3D({ container, books, floors, shelfConfig = {}, onOpenBook }) {
+export async function init3D({ container, books, floors, shelfConfig = {}, onOpenBook, onOpenStolen }) {
   injectCss();
 
   const root = document.createElement('div');
@@ -1341,6 +1354,111 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
     parent.add(m);
     return m;
+  }
+
+  // ---------- 失窃页展柜（9 件：细铜柱 + 倾斜阅读台 + 纸页 + 玻璃罩 + 标签牌） ----------
+  // 不参与 Rapier 物理；几何体与铜/玻璃/纸材质共用，只有标签纹理与标签材质逐件生成
+  const stolenGroup = new THREE.Group();
+  stolenGroup.name = 'stolenGroup';
+  scene.add(stolenGroup);
+
+  const stolenCopperMat = new THREE.MeshStandardMaterial({ color: 0x9a7a3a, roughness: 0.32, metalness: 0.8 });
+  const stolenGlassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xbfe0f0, transparent: true, opacity: 0.16, roughness: 0.05,
+    metalness: 0.15, side: THREE.DoubleSide, depthWrite: false,
+  });
+  const stolenPaperMat = new THREE.MeshStandardMaterial({ color: 0xd8ccb0, roughness: 0.92, side: THREE.DoubleSide });
+  const stolenPaperLitMat = new THREE.MeshStandardMaterial({
+    color: 0xf6ecd0, roughness: 0.82, emissive: 0x6a5220, emissiveIntensity: 0.35, side: THREE.DoubleSide,
+  });
+  const stolenGoldMat = new THREE.MeshStandardMaterial({
+    color: 0xd8b45a, roughness: 0.24, metalness: 0.88, emissive: 0x4a3308, emissiveIntensity: 0.4,
+  });
+  const stolenRedMat = new THREE.MeshStandardMaterial({
+    color: 0x5a1212, emissive: 0x8a1212, emissiveIntensity: 0.55, roughness: 0.55,
+  });
+
+  const stolenCaseGeo = {
+    base: cylG(0.13, 0.17, 0.05, 20),
+    post: cylG(0.026, 0.038, 0.82, 10),
+    desk: boxG(0.42, 0.035, 0.32),
+    glass: boxG(0.30, 0.12, 0.24),
+    paper: planeG(0.22, 0.29),
+    label: planeG(0.24, 0.12),
+    seal: cylG(0.045, 0.045, 0.012, 18),
+    ring: torusG(0.17, 0.014, 6, 32),
+  };
+
+  function stolenLabelTexture(item) {
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#1b1510';
+    g.fillRect(0, 0, 256, 128);
+    g.strokeStyle = 'rgba(200,162,74,.85)';
+    g.lineWidth = 3;
+    g.strokeRect(7, 7, 242, 114);
+    g.strokeStyle = 'rgba(200,162,74,.3)';
+    g.lineWidth = 1;
+    g.strokeRect(15, 15, 226, 98);
+    g.fillStyle = '#e6d9bd';
+    g.textAlign = 'left';
+    g.font = 'bold 42px monospace';
+    g.fillText(String(item.no || 'S-00'), 26, 70);
+    g.textAlign = 'right';
+    g.fillStyle = '#c8a24a';
+    g.font = 'bold 28px monospace';
+    g.fillText(String(item.year || ''), 230, 70);
+    g.textAlign = 'center';
+    g.fillStyle = 'rgba(230,217,189,.5)';
+    g.font = '15px "Songti SC", "SimSun", serif';
+    g.fillText('失 窃 页 · 档 案', 128, 104);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  }
+
+  const stolenCases = [];
+  for (const item of STOLEN_EXHIBITS) {
+    const g = new THREE.Group();
+    g.name = `stolen-${item.no || item.id}`;
+    g.userData.stolenId = item.id;
+    g.position.set(item.x, 0, item.z);
+    // 左侧展柜朝 +X、右侧展柜朝 -X，正面朝向大厅中线
+    g.rotation.y = item.x < 0 ? Math.PI / 2 : -Math.PI / 2;
+
+    put(g, stolenCaseGeo.base, stolenCopperMat, 0, 0.025, 0, true);
+    put(g, stolenCaseGeo.post, stolenCopperMat, 0, 0.46, 0, true);
+
+    // 倾斜阅读台：整体绕 X 轴抬起，台面朝向读者
+    const desk = new THREE.Group();
+    desk.position.set(0, 0.87, 0);
+    desk.rotation.x = 0.42;
+    g.add(desk);
+    put(desk, stolenCaseGeo.desk, stolenCopperMat, 0, 0.0175, 0, true);
+
+    const paper = put(desk, stolenCaseGeo.paper, stolenPaperMat, 0, 0.045, 0);
+    paper.rotation.x = -Math.PI / 2;
+
+    put(desk, stolenCaseGeo.glass, stolenGlassMat, 0, 0.092, 0);
+
+    // 追回后显示的镀金封条圆盘
+    const seal = put(desk, stolenCaseGeo.seal, stolenGoldMat, 0.045, 0.055, -0.015);
+    seal.visible = false;
+
+    put(g, stolenCaseGeo.label, new THREE.MeshStandardMaterial({
+      map: stolenLabelTexture(item), roughness: 0.68, metalness: 0.08,
+      emissive: 0x2a2010, emissiveIntensity: 0.18, side: THREE.DoubleSide,
+    }), 0, 0.66, 0.058);
+
+    // 未追回：底座一圈暗红呼吸光环
+    const ring = put(g, stolenCaseGeo.ring, stolenRedMat, 0, 0.062, 0);
+    ring.rotation.x = Math.PI / 2;
+
+    stolenGroup.add(g);
+    stolenCases.push({ item, group: g, paperMesh: paper, sealMesh: seal, ringMesh: ring, recovered: false });
   }
 
   function addTable(parent, x, z, w, d, topMat, legMat) {
@@ -2037,6 +2155,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     for (const it of bookItems) {
       it.mesh.visible = fid === 'all' || it.book.floor === fid;
     }
+    for (const c of stolenCases) {
+      c.group.visible = fid === 'all' || c.item.floor === fid;
+    }
     const idx = floors.findIndex((f) => f.id === fid);
     if (fid === 'all') {
       player.pos.set(0, 1.68, 9.1);
@@ -2130,7 +2251,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const hitZoom = raycaster.intersectObject(zoomGroup, true);
     const hitDrawer = raycaster.intersectObjects(cabinetDrawers, false);
     const hitHidden = hiddenBook.visible && raycaster.intersectObject(hiddenBook, false).length > 0;
-    el.style.cursor = (hits.length || hitElev.length || hitStar.length || hitFrag.length || hitLamp.length || hitZoom.length || hitDrawer.length || hitHidden) ? 'pointer' : 'grab';
+    const hitStolen = raycaster.intersectObjects(stolenCases.filter((c) => c.group.visible).map((c) => c.group), true);
+    el.style.cursor = (hits.length || hitElev.length || hitStar.length || hitFrag.length || hitLamp.length || hitZoom.length || hitDrawer.length || hitHidden || hitStolen.length) ? 'pointer' : 'grab';
   }
 
   function pick(x, y) {
@@ -2157,6 +2279,21 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       if (hb.length) {
         if (window.mmOpenHiddenBook) window.mmOpenHiddenBook();
         return;
+      }
+    }
+    // 失窃页展柜：残页/隐藏书之后、书之前
+    if (!taking) {
+      const stolenHits = raycaster.intersectObjects(
+        stolenCases.filter((c) => c.group.visible).map((c) => c.group), true
+      );
+      if (stolenHits.length) {
+        let obj = stolenHits[0].object;
+        while (obj && obj.userData.stolenId == null) obj = obj.parent;
+        const stolenId = obj && obj.userData.stolenId;
+        if (stolenId != null) {
+          if (typeof onOpenStolen === 'function') onOpenStolen(stolenId);
+          return;
+        }
       }
     }
     const lampHits = raycaster.intersectObject(lampGroup, true);
@@ -2499,6 +2636,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       beacons[i].mesh.rotation.y += dt * 1.6;
     }
     beaconLight.intensity = currentFloor === 'L4' ? 1.5 + Math.sin(elapsed * 5.0) * 0.9 : 0;
+    // 未追回展柜的暗红呼吸光环（共用材质，仅可见的环在脉动）
+    stolenRedMat.emissiveIntensity = 0.4 + 0.28 * Math.sin(elapsed * 1.7);
     orb.scale.setScalar(1 + Math.sin(elapsed * 0.9) * 0.05);
     for (let d = 0; d < starDots.length; d++) {
       starDots[d].material.emissiveIntensity = 0.6 + 0.35 * Math.sin(elapsed * 1.3 + d);
@@ -2535,6 +2674,46 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     };
   }
 
+  // ---------- 失窃页状态 / 定位（供 index.html 调用） ----------
+  function setCollectibleStates(states) {
+    const recoveredMap = (states && states.stolen) || {};
+    for (const c of stolenCases) {
+      const recovered = recoveredMap[c.item.id] === 'recovered';
+      c.recovered = recovered;
+      c.paperMesh.material = recovered ? stolenPaperLitMat : stolenPaperMat;
+      c.sealMesh.visible = recovered;
+      c.ringMesh.visible = !recovered;
+    }
+  }
+
+  function focusStolen(id) {
+    const found = stolenCases.find((c) => c.item.id === id);
+    if (!found) return false;
+    if (traveling || taking) return false;
+    if (tour) endTour();
+    if (found.item.floor !== currentFloor) setFloor(found.item.floor, true);
+    override = null;
+    for (const k in keys) keys[k] = false;
+    // 展柜正面朝大厅中线：局部 +Z 经 rotation.y 后的方向
+    const fx = Math.sin(found.group.rotation.y);
+    const fz = Math.cos(found.group.rotation.y);
+    const px = found.item.x + fx * 1.6;
+    const pz = found.item.z + fz * 1.6;
+    player.pos.set(px, 1.68, pz);
+    const dx = found.item.x - px;
+    const dz = found.item.z - pz;
+    player.tYaw = Math.atan2(-dx, -dz);
+    player.tPitch = Math.atan2(0.85 - player.pos.y, Math.hypot(dx, dz));
+    snapCamToPreset();
+    return true;
+  }
+
+  function getStolenPlan() {
+    return stolenCases.map((c) => ({
+      id: c.item.id, no: c.item.no, floor: c.item.floor, x: c.item.x, z: c.item.z,
+    }));
+  }
+
   return {
     reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups, shelfUnits: SHELF_UNITS,
     setHiddenVisible: (v) => { hiddenBook.visible = !!v; },
@@ -2545,6 +2724,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     endTour,
     isTouring,
     getPlan,
+    setCollectibleStates,
+    focusStolen,
+    getStolenPlan,
   };
 }
 

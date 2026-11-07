@@ -65,6 +65,15 @@ CREATE TABLE IF NOT EXISTS fragment_picks (
   created_at TEXT NOT NULL,
   PRIMARY KEY (reader_id, fragment_id)
 );
+CREATE TABLE IF NOT EXISTS collectibles (
+  reader_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('stolen','restless','fork')),
+  item_id TEXT NOT NULL,
+  state TEXT NOT NULL,
+  chapter_id TEXT,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (reader_id, kind, item_id)
+);
 `);
 
 export function nowIso() {
