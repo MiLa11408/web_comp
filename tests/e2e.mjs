@@ -42,6 +42,17 @@ await page.waitForTimeout(800);
 const mainVisible = await page.locator('#app').isVisible();
 mainVisible ? ok('主界面可见') : bad('主界面可见');
 
+// 星图
+await page.getByRole('button', { name: '星图' }).click();
+await page.waitForSelector('#mm-star-overlay', { timeout: 12000 });
+const starNodes = await page.locator('.mm-star-node').count();
+const starLegend = await page.locator('.mm-star-legend-item').count();
+starNodes >= 36 ? ok('星图节点数', String(starNodes)) : bad('星图节点数', String(starNodes));
+starLegend === 4 ? ok('星图四层图例', String(starLegend)) : bad('星图四层图例', String(starLegend));
+await page.keyboard.press('Escape');
+await page.waitForTimeout(400);
+(await page.locator('#mm-star-overlay').count()) === 0 ? ok('星图 Esc 关闭') : bad('星图 Esc 关闭');
+
 // 2. 铁路线视图
 await page.getByRole('button', { name: '铁路线' }).click();
 await page.waitForSelector('.rail-line', { timeout: 8000 });

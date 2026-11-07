@@ -50,6 +50,12 @@ app.get('/demos.js', async (request, reply) => {
   return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
 });
 
+app.get('/star.js', async (request, reply) => {
+  const p = path.join(ROOT, 'web', 'star.js');
+  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'star.js 缺失' } });
+  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
+});
+
 app.get('/vendor/*', async (request, reply) => {
   const rel = String(request.params['*'] || '');
   if (!rel || rel.includes('..')) return reply.code(400).send({ error: { code: 'BAD_REQUEST', message: '非法路径' } });

@@ -395,6 +395,7 @@
   <button class="back" style="margin:0" onclick="enterRail()">铁路线</button>
   <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
   <button class="back" style="margin:0" onclick="enterStats()">借阅档案</button>
+  <button class="back" style="margin:0" onclick="mmShowStar()">星图</button>
 </div>
 <div id="scene3d"></div>
 <div id="app"></div>
@@ -595,6 +596,15 @@ async function mmOpenDemo(kind) {
 }
 window.mmOpenDemo = mmOpenDemo;
 
+async function mmShowStar() {
+  try {
+    await ensureCatalog();
+    const mod = await import('./star.js');
+    mod.showStarMap();
+  } catch (e) { mmToast('星图加载失败，稍后再试。'); }
+}
+window.mmShowStar = mmShowStar;
+
 const GUIDE_STEPS = [
   'WASD 前后左右移动；按住鼠标左键拖动，转视角。',
   '把视线对准书架上的书，点击书脊，书会飞出来翻开。',
@@ -688,7 +698,8 @@ async function showStats() {
   }
 }
 
-function openBookFirst(id) {
+async function openBookFirst(id) {
+  if (!catalogCache.length) { try { await ensureCatalog(); } catch (e) { /* 忽略 */ } }
   const b = catalogCache.find((x) => x.id === id);
   if (!b || !b.chapters || !b.chapters.length) return;
   showChapter(b.chapters[0].id);
