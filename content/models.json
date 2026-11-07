@@ -1,0 +1,18 @@
+{
+  "title": "模型尺寸墙",
+  "subtitle": "参数不是能力的全部，但它是最容易被拿来比较的数字。未公开的模型就老实写「未公开」。",
+  "items": [
+    { "name": "GPT-1", "year": "2018", "params": "1.17 亿", "book": "b13", "note": "首次用「预训练 + 微调」把 Transformer 拉到通用语言任务上。" },
+    { "name": "GPT-2", "year": "2019", "params": "15 亿", "book": "b13", "note": "分阶段发布，首次让「模型会不会被滥用」变成公开发布策略问题。" },
+    { "name": "GPT-3", "year": "2020", "params": "1750 亿", "book": "b13", "note": "上下文学习成为卖点，少样本提示开始替代微调。" },
+    { "name": "ViT-L/16", "year": "2020", "params": "3.07 亿", "book": "b20", "note": "把图像切成 patch 直接喂 Transformer，视觉 backbone 换了一种写法。" },
+    { "name": "PaLM", "year": "2022", "params": "5400 亿", "book": "b5", "note": "密集模型规模的标志性数字，随后被混合专家架构分流。" },
+    { "name": "GPT-4", "year": "2023", "params": "未公开", "book": "b13", "note": "OpenAI 不再公布参数量，尺寸墙从此少了一格。" },
+    { "name": "Llama 2", "year": "2023", "params": "700 亿（最大）", "book": "b22", "note": "开源权重让「70B 能做到什么」成为社区可复现的基准。" },
+    { "name": "Claude 3", "year": "2024", "params": "未公开", "book": "b32", "note": "Anthropic 只公布能力档位，不公布参数。" },
+    { "name": "Gemini 1.5 Pro", "year": "2024", "params": "未公开", "book": "b32", "note": "卖点转向长上下文与多模态，而不是参数数字。" },
+    { "name": "Llama 3", "year": "2024", "params": "4050 亿（最大）", "book": "b22", "note": "开源阵营第一次把「400B 级」放到公开权重里。" },
+    { "name": "DeepSeek-V3", "year": "2024", "params": "6710 亿总参 / 370 亿激活", "book": "b22", "note": "混合专家架构把「总参数」与「每次推理激活参数」拆成两个数字。" },
+    { "name": "Qwen2.5-72B", "year": "2024", "params": "720 亿", "book": "b22", "note": "开源中文模型的常用尺寸档，生态与工具链同步铺开。" }
+  ]
+}

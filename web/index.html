@@ -234,6 +234,26 @@
   .tl-node b { color: var(--gold); font-family: monospace; font-size: 11px; margin-right: 6px; }
   .tl-node span { color: var(--ink); font-size: 12.5px; }
   .tl-node i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
+
+  /* ---------- 失败博物馆 / 模型尺寸墙 ---------- */
+  .museum, .sizes { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .museum h3, .sizes h3 { color: var(--gold); font-size: 14px; letter-spacing: 2px; margin: 0 0 4px; font-weight: 500; }
+  .museum .sec-sub, .sizes .sec-sub { color: #7d6e55; font-size: 11px; margin-bottom: 12px; line-height: 1.7; }
+  .fail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .fail-item { background: #1d1712; border: 1px solid var(--line); border-top: 3px solid #8a5a3a; padding: 10px 12px; cursor: pointer; }
+  .fail-item:hover { border-color: #b08a5a; }
+  .fi-head b { color: #d08a5a; font-family: monospace; font-size: 11px; margin-right: 8px; }
+  .fi-head span { color: var(--ink); font-size: 13px; }
+  .fail-item p { color: #a8977a; font-size: 12px; line-height: 1.65; margin: 6px 0; }
+  .fail-item i { color: #8a7a5c; font-size: 11px; font-style: normal; }
+  .size-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+  .size-item { background: #1d1712; border: 1px solid var(--line); padding: 9px 12px; cursor: pointer; }
+  .size-item:hover { border-color: var(--gold); }
+  .si-top { display: flex; align-items: baseline; gap: 10px; }
+  .si-name { color: var(--ink); font-size: 13px; }
+  .si-params { color: var(--gold); font-family: monospace; font-size: 12px; }
+  .si-year { color: #7d6e55; font-size: 11px; margin-left: auto; }
+  .size-note { color: #7d6e55; font-size: 11px; line-height: 1.6; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -468,7 +488,11 @@ async function showTimeline() {
   document.body.classList.add('grid');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在按年份整理卡片……</div>';
-  const catalog = await ensureCatalog();
+  const [catalog, fail, models] = await Promise.all([
+    ensureCatalog(),
+    fetch('api/failures').then((r) => r.json()).catch(() => ({ items: [] })),
+    fetch('api/models').then((r) => r.json()).catch(() => ({ items: [] })),
+  ]);
   const entries = [];
   catalog.forEach((b) => (b.chapters || []).forEach((c) => {
     const m = String(c.year || '').match(/\d{4}/);
@@ -499,6 +523,27 @@ async function showTimeline() {
           </div>`).join('')}</div>
       </section>`).join('')}
     <div class="rail-hintbar">时间轴只收有明确年份的章节；年份区间取起点年份。</div>
+    ${(fail.items || []).length ? `
+    <section class="museum">
+      <h3>失败博物馆 · ${fail.items.length} 件</h3>
+      <div class="sec-sub">${esc(fail.subtitle || '')}</div>
+      <div class="fail-grid">${fail.items.map((f) => `
+        <article class="fail-item" onclick="openBookFirst('${f.book}')" title="打开相关书目">
+          <div class="fi-head"><b>${esc(String(f.year))}</b><span>${esc(f.title)}</span></div>
+          <p>${esc(f.what)}</p>
+          <i>教训：${esc(f.lesson)}</i>
+        </article>`).join('')}</div>
+    </section>` : ''}
+    ${(models.items || []).length ? `
+    <section class="sizes">
+      <h3>模型尺寸墙 · ${models.items.length} 项</h3>
+      <div class="sec-sub">${esc(models.subtitle || '')}</div>
+      <div class="size-grid">${models.items.map((s) => `
+        <div class="size-item" onclick="openBookFirst('${s.book}')" title="打开相关书目">
+          <div class="si-top"><span class="si-name">${esc(s.name)}</span><span class="si-params">${esc(s.params)}</span><span class="si-year">${esc(String(s.year))}</span></div>
+          <div class="size-note">${esc(s.note)}</div>
+        </div>`).join('')}</div>
+    </section>` : ''}
   </div>`;
 }
 

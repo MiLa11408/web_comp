@@ -152,6 +152,10 @@ app.get('/api/shelves', async (request, reply) => jsonContent(reply, 'shelves.js
 
 app.get('/api/fragments', async (request, reply) => jsonContent(reply, 'fragments.json'));
 
+app.get('/api/failures', async (request, reply) => jsonContent(reply, 'failures.json'));
+
+app.get('/api/models', async (request, reply) => jsonContent(reply, 'models.json'));
+
 app.get('/api/chapters/:id', async (request, reply) => {
   const entry = ctx.chapters.get(request.params.id);
   if (!entry) return fail(reply, 404, 'NOT_FOUND', '没有这一章');
