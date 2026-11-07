@@ -71,10 +71,17 @@ const tourStill = await page.evaluate(() => window.mm3d && window.mm3d.isTouring
 await page.evaluate(() => window.mm3d.reset());
 await page.waitForTimeout(600);
 await page.keyboard.down('w');
-await page.waitForTimeout(16000);
+let aisleZ = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
+let stalled = 0;
+for (let i = 0; i < 36; i++) {
+  await page.waitForTimeout(600);
+  const z = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
+  if (z < -2.6) { aisleZ = z; break; }
+  if (Math.abs(z - aisleZ) < 0.02) { stalled += 1; if (stalled >= 4) break; } else stalled = 0;
+  aisleZ = z;
+}
 await page.keyboard.up('w');
-const zAisle = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
-zAisle < -2.6 ? ok('可从空隙走到两排书架之间', `z=${zAisle}`) : bad('后排可达', `z=${zAisle}`);
+aisleZ < -2.6 ? ok('可从空隙走到两排书架之间', `z=${aisleZ}`) : bad('后排可达', `z=${aisleZ}`);
 await page.evaluate(() => window.mm3d.reset());
 await page.waitForTimeout(700);
 
@@ -83,6 +90,13 @@ const stolenPlan = await page.evaluate(() => window.mm3d.getStolenPlan().length)
 stolenPlan === 9 ? ok('3D 失窃展柜 9 件', String(stolenPlan)) : bad('3D 失窃展柜数量', String(stolenPlan));
 const stolenFocus = await page.evaluate(() => window.mm3d.focusStolen('dartmouth-proposal'));
 stolenFocus ? ok('3D 展柜镜头定位') : bad('3D 展柜镜头定位');
+const lensState = await page.evaluate(() => {
+  window.mm3d.toggleLens(true);
+  const shown = document.querySelector('.mm-lens') && document.querySelector('.mm-lens').style.display;
+  window.mm3d.toggleLens(false);
+  return shown;
+});
+lensState === 'block' ? ok('3D 放大镜举起/放下') : bad('3D 放大镜举起/放下', String(lensState));
 await page.evaluate(() => { window.mm3d.setFloor('all', true); window.mm3d.reset(); });
 await page.waitForTimeout(700);
 
@@ -96,6 +110,15 @@ const starLegend = await page.locator('.mm-star3d-legend span').count();
 starNodes >= 36 ? ok('立体星图节点数', String(starNodes)) : bad('立体星图节点数', String(starNodes));
 starCanvas === 1 ? ok('星图 WebGL 画布') : bad('星图 WebGL 画布', String(starCanvas));
 starLegend === 4 ? ok('星图四层图例', String(starLegend)) : bad('星图四层图例', String(starLegend));
+// 星图文字版关系列表：WebGL 不可用 / 键盘读者也能读完关系
+await page.locator('.mm-star3d-listbtn').click();
+await page.waitForTimeout(400);
+const edgeRows = await page.locator('.mm-star-edge').count();
+const listShown = await page.locator('.mm-star3d-list.show').count();
+(listShown && edgeRows >= 20) ? ok('星图关系列表', `${edgeRows} 条`) : bad('星图关系列表', `shown=${listShown} edges=${edgeRows}`);
+await page.keyboard.press('Escape');
+await page.waitForTimeout(350);
+(await page.locator('#mm-star-overlay').count()) === 1 ? ok('关系列表 Esc 先收起') : bad('关系列表 Esc 先收起');
 await page.keyboard.press('Escape');
 await page.waitForTimeout(400);
 (await page.locator('#mm-star-overlay').count()) === 0 ? ok('星图 Esc 关闭') : bad('星图 Esc 关闭');
@@ -160,6 +183,14 @@ if (stolenCardCount >= 1) {
   const stolenText = await page.locator('.anomaly-card.stolen').first().innerText();
   stolenText.includes('S-01') && stolenText.includes('展柜')
     ? ok('缺页章节出现失窃页卡片') : bad('失窃页卡片内容', stolenText.slice(0, 40));
+  // 读完绑定：没读到章末时，追回按钮应替换为「去读这一章」
+  await page.locator('.anomaly-card.stolen').first().click();
+  await page.waitForSelector('#fragModal', { timeout: 6000 });
+  const gateText = await page.locator('#fragModal .frag-box').innerText();
+  (gateText.includes('线索未显形') && gateText.includes('去读这一章'))
+    ? ok('失窃页追回需先读到章末') : bad('失窃页追回门槛', gateText.slice(0, 50));
+  await page.locator('#fragModal #fragClose').click();
+  await page.waitForTimeout(250);
 } else bad('失窃页卡片', 'b1-c3 未渲染');
 
 const noteCount = await page.locator('.note').count();
@@ -204,6 +235,9 @@ const failCount = await page.locator('.fail-item').count();
 const sizeCount = await page.locator('.size-item').count();
 failCount >= 20 ? ok('失败博物馆条目', String(failCount)) : bad('失败博物馆条目', String(failCount));
 sizeCount >= 12 ? ok('模型尺寸墙条目', String(sizeCount)) : bad('模型尺寸墙条目', String(sizeCount));
+const sizeBars = await page.locator('.size-item .si-bar i').count();
+const sizeScale = await page.locator('.size-scale').innerText();
+(sizeBars === sizeCount && sizeScale.includes('倍')) ? ok('尺寸墙实体对比标尺', sizeScale.slice(0, 40)) : bad('尺寸墙实体对比标尺', `bars=${sizeBars}`);
 await page.locator('.tl-node').first().click();
 await page.waitForSelector('#reader', { timeout: 8000 });
 ok('时间轴卡片可开章');

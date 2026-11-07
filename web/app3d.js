@@ -87,6 +87,12 @@ body.reading .mm-root, body.grid .mm-root { display: none; }
   background: rgba(200,162,74,.3); border: 1px solid #c8a24a; transition: transform .08s linear; }
 .mm-joy-label { position: absolute; left: 20px; bottom: 148px; color: #8a7a5c; font-size: 11px; letter-spacing: 1px;
   background: rgba(18,14,11,.5); padding: 3px 7px; border: 1px solid #2c2116; display: none; z-index: 26; }
+.mm-lens { position: absolute; width: 190px; height: 190px; border-radius: 50%; border: 2px solid #c8a24a;
+  box-shadow: 0 0 0 4px #2c2116, 0 12px 34px rgba(0,0,0,.65), inset 0 0 22px rgba(0,0,0,.55); overflow: hidden;
+  pointer-events: none; display: none; z-index: 27; background: #0b0805; transform: translate(-50%, -50%); }
+.mm-lens canvas { width: 100%; height: 100%; display: block; }
+.mm-lens::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 34% 26%, rgba(255,240,200,.16), transparent 42%); }
 `;
 
 function injectCss() {
@@ -2055,6 +2061,52 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   joyEl.addEventListener('pointerup', joyReset);
   joyEl.addEventListener('pointercancel', joyReset);
 
+  // 放大镜：点击桌上镜片可「举起」，镜片跟随鼠标，把画面局部真实放大
+  const lensEl = document.createElement('div');
+  lensEl.className = 'mm-lens';
+  lensEl.innerHTML = '<canvas width="380" height="380"></canvas>';
+  root.appendChild(lensEl);
+  const lensCtx = lensEl.querySelector('canvas').getContext('2d');
+  let lensOn = false;
+  const lensXY = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  function lensPlace(x, y) {
+    lensXY.x = x;
+    lensXY.y = y;
+    lensEl.style.left = x + 'px';
+    lensEl.style.top = y + 'px';
+  }
+  function toggleLens(force) {
+    lensOn = typeof force === 'boolean' ? force : !lensOn;
+    lensEl.style.display = lensOn ? 'block' : 'none';
+    if (lensOn) lensPlace(lensXY.x, lensXY.y);
+    toast(lensOn ? '你举起了放大镜：把镜片移到书脊或书页上。' : '你把放大镜放回桌上。');
+  }
+  function drawLens() {
+    if (!lensOn) return;
+    const host = renderer.domElement;
+    const rect = host.getBoundingClientRect();
+    const x = lensXY.x - rect.left;
+    const y = lensXY.y - rect.top;
+    if (x < -20 || y < -20 || x > rect.width + 20 || y > rect.height + 20) {
+      lensEl.style.display = 'none';
+      return;
+    }
+    lensEl.style.display = 'block';
+    const bw = host.width;
+    const bh = host.height;
+    const sw = Math.max(10, Math.round(bw * 0.085));
+    let sx = Math.round((x / rect.width) * bw) - sw / 2;
+    let sy = Math.round((y / rect.height) * bh) - sw / 2;
+    sx = Math.max(0, Math.min(bw - sw, sx));
+    sy = Math.max(0, Math.min(bh - sw, sy));
+    try {
+      lensCtx.drawImage(host, sx, sy, sw, sw, 0, 0, 380, 380);
+    } catch (err) { /* 个别浏览器读取 WebGL 缓冲失败时静默 */ }
+  }
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lensOn) toggleLens(false);
+  });
+
   const toastEl = document.createElement('div');
   toastEl.className = 'mm-toast';
   root.appendChild(toastEl);
@@ -2260,6 +2312,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     lastY = downY = e.clientY;
   });
   window.addEventListener('pointermove', (e) => {
+    if (lensOn) lensPlace(e.clientX, e.clientY);
     if (tour) {
       dragging = false;
       return;
@@ -2412,7 +2465,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
     const zoomHits = raycaster.intersectObject(zoomGroup, true);
     if (zoomHits.length) {
-      toast('你举起放大镜，书脊上的烫金小字清楚了一点。');
+      toggleLens();
       return;
     }
     const drawerHits = raycaster.intersectObjects(cabinetDrawers, false);
@@ -2627,6 +2680,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (tour) endTour();
     clearHover();
     joyReset();
+    if (lensOn) toggleLens(false);
     taking = false;
     for (const item of bookItems) {
       item.animating = false;
@@ -2783,6 +2837,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       orbitDots[d].material.emissiveIntensity = 0.6 + 0.4 * Math.sin(elapsed * 1.6 + d * 1.2);
     }
     renderer.render(scene, camera);
+    drawLens();
   }
   requestAnimationFrame(tick);
   requestAnimationFrame(() => loading.remove());
@@ -2869,6 +2924,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     setCollectibleStates,
     focusStolen,
     getStolenPlan,
+    toggleLens,
+    isLensOn: () => lensOn,
   };
 }
 

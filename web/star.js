@@ -37,6 +37,19 @@ const CSS = `
 .mm-star-tip { position: fixed; z-index: 80; max-width: 300px; background: #1d1712; border: 1px solid #8a6320; padding: 10px 12px; color: #cbb892; font-size: 12px; line-height: 1.65; pointer-events: none; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); font-family: ${FONT}; }
 .mm-star-tip b { color: #c8a24a; display: block; margin-bottom: 4px; letter-spacing: 1px; }
 .mm-star-tip em { font-style: normal; color: #7d6e55; display: block; margin-top: 4px; }
+/* 关系列表：给低配 / 键盘 / 读屏用户一张可读的「星图文字版」 */
+.mm-star3d-list { position: absolute; top: 62px; right: 20px; bottom: 64px; width: min(430px, 92vw); z-index: 4; display: none;
+  background: rgba(22,16,11,.96); border: 1px solid #8a6320; box-shadow: 0 18px 60px rgba(0,0,0,.6); overflow-y: auto; padding: 12px 15px 18px; }
+.mm-star3d-list.show { display: block; }
+.mm-star3d-list h4 { margin: 2px 0 4px; color: #c8a24a; font-size: 13px; letter-spacing: 3px; font-weight: 500; }
+.mm-star3d-list .mm-star-list-sub { color: #7d6e55; font-size: 11px; line-height: 1.7; margin-bottom: 10px; }
+.mm-star-edge { border-top: 1px dashed #3a2f22; padding: 9px 0; }
+.mm-star-edge-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mm-star-edge-top button { background: none; border: 1px solid #5a4526; color: #cbb892; padding: 4px 8px; font-family: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+.mm-star-edge-top button:hover { border-color: #c8a24a; color: #eadbb8; }
+.mm-star-edge-top span { color: #8a7a5c; font-size: 11px; }
+.mm-star-edge p { margin: 6px 0 0; color: #8a7a5c; font-size: 11.5px; line-height: 1.7; }
+.mm-star3d-listbtn.on { background: #3a2b16; color: #e2c17c; }
 @media (max-width: 820px) { .mm-star3d-legend { display: none; } }
 @media (max-width: 620px) {
   .mm-star3d-head { gap: 8px; padding: 10px 12px; }
@@ -207,11 +220,25 @@ export async function showStarMap() {
         <input class="mm-star3d-find" type="text" placeholder="按书名定位" aria-label="按书名定位" autocomplete="off" list="mm-star3d-books">
         <datalist id="mm-star3d-books">${data.nodes.map((n) => `<option value="${esc(n.title)}"></option>`).join('')}</datalist>
         <button class="mm-star3d-btn mm-star3d-reset" type="button">重置视线</button>
+        <button class="mm-star3d-btn mm-star3d-listbtn" type="button" title="星图文字版关系列表（快捷键 L）">关系列表</button>
         <button class="mm-star3d-close" type="button" aria-label="关闭星图">×</button>
       </div>
     </div>
     <div class="mm-star3d-canvas"></div>
-    <div class="mm-star3d-hint">拖拽环顾 · 滚轮远近 · 悬停看关系 · 点击开书 · Esc 关闭</div>`;
+    <div class="mm-star3d-list" aria-hidden="true">
+      <h4>关系列表</h4>
+      <div class="mm-star-list-sub">${data.nodes.length} 本书 · ${data.edges.length} 条关系。点书名直接开书；这张表不依赖 WebGL。</div>
+      ${data.edges.map((e) => {
+        const a = data.nodes.find((n) => n.id === e.source);
+        const b = data.nodes.find((n) => n.id === e.target);
+        if (!a || !b) return '';
+        return `<div class="mm-star-edge"><div class="mm-star-edge-top">
+          <button type="button" data-book="${esc(a.id)}">${esc(a.title)}</button><span>⇄</span>
+          <button type="button" data-book="${esc(b.id)}">${esc(b.title)}</button>
+        </div><p>${esc(e.reason || '共享主题')}</p></div>`;
+      }).join('')}
+    </div>
+    <div class="mm-star3d-hint">拖拽环顾 · 滚轮远近 · 悬停看关系 · 点击开书 · L 关系列表 · Esc 关闭</div>`;
   document.body.appendChild(overlay);
   window.__mmStarNodes = data.nodes.length;
 
@@ -593,7 +620,23 @@ export async function showStarMap() {
     compact = w < 620;
   };
 
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const listEl = overlay.querySelector('.mm-star3d-list');
+  const listBtn = overlay.querySelector('.mm-star3d-listbtn');
+  const toggleList = () => {
+    const on = listEl.classList.toggle('show');
+    listBtn.classList.toggle('on', on);
+    listEl.setAttribute('aria-hidden', String(!on));
+  };
+
+  const onKey = (e) => {
+    if (e.key === 'Escape') {
+      if (listEl.classList.contains('show')) toggleList();
+      else close();
+      return;
+    }
+    const typing = /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
+    if (!typing && (e.key === 'l' || e.key === 'L')) toggleList();
+  };
 
   const onVisibility = () => {
     if (document.hidden) stopLoop();
@@ -641,6 +684,17 @@ export async function showStarMap() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('.mm-star3d-close').addEventListener('click', close);
   overlay.querySelector('.mm-star3d-reset').addEventListener('click', resetView);
+  listBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleList(); });
+  listEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-book]');
+    if (!btn) return;
+    e.stopPropagation();
+    const id = btn.dataset.book;
+    close();
+    setTimeout(() => {
+      if (typeof window.openBookFirst === 'function') window.openBookFirst(id);
+    }, 80);
+  });
 
   const findInput = overlay.querySelector('.mm-star3d-find');
   findInput.addEventListener('keydown', (e) => {
