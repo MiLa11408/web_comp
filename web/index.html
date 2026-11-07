@@ -154,6 +154,15 @@
   .todo-row button { background: #2c241a; border: 1px solid var(--gold); color: var(--gold); padding: 5px 11px; cursor: pointer; font-size: 11.5px; font-family: inherit; }
   .todo-row button:hover { background: #3a2d1c; }
 
+  /* 借阅徽章：读完 / 残页 / 线路 / 盖章 */
+  .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .badge { display: flex; gap: 10px; align-items: center; background: #1a140f; border: 1px solid var(--line); padding: 10px 12px; opacity: .62; }
+  .badge.got { opacity: 1; border-color: #7a6330; background: #241c14; }
+  .badge .seal { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: "KaiTi", "STKaiti", "楷体", serif; font-size: 17px; color: #8a7a5c; border: 1px solid #5a4526; }
+  .badge.got .seal { color: #f0d68a; border-color: var(--gold); box-shadow: inset 0 0 0 2px rgba(200,162,74,.18); }
+  .badge b { display: block; color: #cbb892; font-size: 12.5px; font-weight: 500; }
+  .badge span { display: block; color: #8a7a5c; font-size: 11px; line-height: 1.5; margin-top: 2px; }
+
   /* ---------- 视图切换淡入淡出 ---------- */
   #viewFade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .38s ease; z-index: 60; }
   #viewFade.on { opacity: 1; }
@@ -1731,7 +1740,7 @@ async function showAbout() {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>73 项</b>，覆盖入馆、取书、检索、电梯、两套视图、隐藏馆藏与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>75 项</b>，覆盖入馆、取书、检索、电梯、两套视图、隐藏馆藏与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>
@@ -1776,6 +1785,51 @@ async function showStats() {
     const recentHtml = (me.recent || []).length
       ? me.recent.map((x) => `<div class="bar-row"><span class="bl">${esc(x.chapter_id)}</span><span class="bar"><i style="width:100%"></i></span><span class="bv">${x.times} 次</span></div>`).join('')
       : '<div class="empty" style="padding:10px 0">你还没有翻阅记录。</div>';
+    // 借阅纪念：徽章由真实台账算出来（读完章数、翻过的书、残页、线路、印章）
+    const rail = await ensureRail().catch(() => null);
+    let catalog = [];
+    try { catalog = await ensureCatalog(); } catch (e) { /* 忽略 */ }
+    const bookMeta = {};
+    const chapBook = {};
+    catalog.forEach((b) => {
+      bookMeta[b.id] = b;
+      (b.chapters || []).forEach((c) => { chapBook[c.id] = b.id; });
+    });
+    const readBooks = new Set((me.myBooks || []).map((x) => x.book_id));
+    (me.chapterIds || []).forEach((cid) => { const bid = chapBook[cid]; if (bid) readBooks.add(bid); });
+    const lines = (rail && rail.lines) || [];
+    const doneLines = lines.filter((l) => (l.stops || []).every((s) => readBooks.has(s.book)));
+    const stampCount = me.stamps || 0;
+    const badgeDefs = [
+      { char: '初', title: '初次翻书', desc: '读完 1 章', got: (me.chapters || 0) >= 1 },
+      { char: '十', title: '常客', desc: '读完 10 章', got: (me.chapters || 0) >= 10 },
+      { char: '五', title: '通读', desc: '读完 50 章', got: (me.chapters || 0) >= 50 },
+      { char: '书', title: '跨架读者', desc: '翻过 5 本书', got: readBooks.size >= 5 },
+      { char: '残', title: '拾页人', desc: '收编 1 张残页', got: myFrags.length >= 1 },
+      { char: '补', title: '补页人', desc: '收编 6 张残页', got: myFrags.length >= 6 },
+      { char: '全', title: '完帙', desc: `收满 ${totalFrags} 张残页`, got: myFrags.length >= totalFrags },
+      { char: '线', title: '巡线员', desc: '走完一条主题线路', got: doneLines.length >= 1 },
+      { char: '轨', title: '全线通', desc: `走完 ${lines.length || 5} 条主线`, got: lines.length > 0 && doneLines.length >= lines.length },
+      { char: '印', title: '盖章人', desc: '盖下 10 枚章', got: stampCount >= 10 },
+    ];
+    const gotBadges = badgeDefs.filter((b) => b.got).length;
+    const badgeHtml = badgeDefs.map((b) => `
+      <div class="badge ${b.got ? 'got' : ''}">
+        <div class="seal">${esc(b.char)}</div>
+        <div><b>${esc(b.title)}</b><span>${esc(b.desc)}</span></div>
+      </div>`).join('');
+    const myBooks = me.myBooks || [];
+    const maxMy = Math.max(1, ...myBooks.map((x) => x.times));
+    const myBooksHtml = myBooks.length
+      ? myBooks.slice(0, 16).map((x) => {
+        const b = bookMeta[x.book_id] || {};
+        return `<div class="bar-row" title="${esc(b.title || x.book_id)}">
+          <span class="bl">${esc(b.call || '')} · ${esc(b.title || x.book_id)}</span>
+          <span class="bar"><i style="width:${Math.round((x.times / maxMy) * 100)}%"></i></span>
+          <span class="bv">${x.times} 次</span>
+        </div>`;
+      }).join('') + (myBooks.length > 16 ? `<div class="rail-hint">还有 ${myBooks.length - 16} 本，去书架继续翻。</div>` : '')
+      : '<div class="empty" style="padding:10px 0">还没有翻过的书。先从一本开始。</div>';
     // 今日可做：把隐藏玩法摊成一张能照着做的清单（每类最多两条，避免被失窃页刷屏）
     const todoStolen = [];
     const todoRestless = [];
@@ -1814,6 +1868,11 @@ async function showStats() {
         <div class="stat-card"><b>${myFrags.length}/${totalFrags}</b><span>我的残页收编</span></div>
       </div>
       <section class="stat-sec">
+        <h3>借阅徽章 · ${gotBadges}/${badgeDefs.length}</h3>
+        <div class="sec-sub">徽章按真实台账自动点亮；「走完一条线路」指这条线上每本书都至少读过一章。印章需借书证。</div>
+        <div class="badge-grid">${badgeHtml}</div>
+      </section>
+      <section class="stat-sec">
         <h3>今日可做 · ${todoTotal} 件<button class="stat-mini" onclick="enterAbout()">这馆怎么玩</button></h3>
         <div class="todo-list">${todoHtml}</div>
       </section>
@@ -1824,6 +1883,10 @@ async function showStats() {
       <section class="stat-sec">
         <h3>我的翻阅记录 · 最近 10 章</h3>
         ${recentHtml}
+      </section>
+      <section class="stat-sec">
+        <h3>我翻过的书 · ${myBooks.length} 本</h3>
+        ${myBooksHtml}
       </section>
       <section class="stat-sec">
         <h3>残页收集程度 · ${myFrags.length}/${totalFrags}</h3>

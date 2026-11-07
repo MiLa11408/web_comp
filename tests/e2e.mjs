@@ -202,7 +202,7 @@ decades >= 7 ? ok('时间轴年代分组', String(decades)) : bad('时间轴年�
 tnodes >= 200 ? ok('时间轴章节卡片', String(tnodes)) : bad('时间轴章节卡片', String(tnodes));
 const failCount = await page.locator('.fail-item').count();
 const sizeCount = await page.locator('.size-item').count();
-failCount >= 12 ? ok('失败博物馆条目', String(failCount)) : bad('失败博物馆条目', String(failCount));
+failCount >= 20 ? ok('失败博物馆条目', String(failCount)) : bad('失败博物馆条目', String(failCount));
 sizeCount >= 12 ? ok('模型尺寸墙条目', String(sizeCount)) : bad('模型尺寸墙条目', String(sizeCount));
 await page.locator('.tl-node').first().click();
 await page.waitForSelector('#reader', { timeout: 8000 });
@@ -244,6 +244,10 @@ const statCards = await page.locator('.stat-card').count();
 const fragChips = await page.locator('.frag-chip').count();
 statCards === 4 ? ok('借阅档案统计卡', String(statCards)) : bad('借阅档案统计卡', String(statCards));
 fragChips >= 8 ? ok('残页收集面板', String(fragChips)) : bad('残页收集面板', String(fragChips));
+const badgeCount = await page.locator('.badge').count();
+badgeCount === 10 ? ok('借阅徽章 10 枚', String(badgeCount)) : bad('借阅徽章数量', String(badgeCount));
+const myBooksHead = await page.locator('.stat-sec h3', { hasText: '我翻过的书' }).count();
+myBooksHead ? ok('「我翻过的书」聚合') : bad('「我翻过的书」聚合');
 
 // 5b2. 异常馆藏视图：失窃页 / 分岔 / 残页拼合板
 await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });

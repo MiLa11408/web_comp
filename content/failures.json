@@ -13,6 +13,14 @@
     { "id": "amazon-hiring", "year": "2018", "title": "Amazon 招聘算法", "book": "b11", "what": "路透报道内部招聘模型对女性候选人降权，项目被弃用。", "lesson": "历史数据里的偏见，会被模型当成「规律」学走。" },
     { "id": "watson-oncology", "year": "2021", "title": "Watson for Oncology", "book": "b26", "what": "内部文件与报道质疑其治疗建议质量，相关产品未能按最初承诺铺开。", "lesson": "医疗场景里，「差不多」不算可用。" },
     { "id": "zillow-offers", "year": "2021", "title": "Zillow Offers", "book": "b27", "what": "算法定价买房未能覆盖库存风险，项目关闭并计提大额损失。", "lesson": "预测价格是一回事，承担库存是另一回事。" },
-    { "id": "nyt-openai", "year": "2023", "title": "NYT 诉 OpenAI", "book": "b11", "what": "《纽约时报》就训练数据与输出替代问题起诉 OpenAI 与微软，版权争议进入法庭。", "lesson": "生成能力越强，来源与授权越难含糊过去。" }
+    { "id": "nyt-openai", "year": "2023", "title": "NYT 诉 OpenAI", "book": "b11", "what": "《纽约时报》就训练数据与输出替代问题起诉 OpenAI 与微软，版权争议进入法庭。", "lesson": "生成能力越强，来源与授权越难含糊过去。" },
+    { "id": "alpac", "year": "1966", "title": "ALPAC 报告", "book": "b14", "what": "美国 ALPAC 委员会认定机器翻译短期无法兑现承诺，相关经费被撤，机器翻译进入低潮。", "lesson": "在数据与算力都不够的年代，把翻译当成纯规则问题是路线错误。" },
+    { "id": "shrdlu", "year": "1972", "title": "SHRDLU 积木世界", "book": "b2", "what": "程序在积木与桌面的封闭世界里对答如流，一旦离开这个桌面就几乎失效。", "lesson": "在封闭世界里成立，不等于在开放世界里成立。" },
+    { "id": "uber-tempe", "year": "2018", "title": "Uber ATG 坦佩事故", "book": "b29", "what": "夜间测试车撞上横穿马路的行人，安全员分心，系统未及时制动，随后项目被出售。", "lesson": "感知边界、接管时间与责任归属，缺一项都不能上路。" },
+    { "id": "argo-ai", "year": "2022", "title": "Argo AI 关闭", "book": "b29", "what": "福特与大众支持的自动驾驶公司停止运营，团队与资产被两家车企吸收。", "lesson": "L4 的长周期与资本回报周期对不上，技术再好也会被关掉。" },
+    { "id": "galactica", "year": "2022", "title": "Meta Galactica 撤下", "book": "b24", "what": "号称能辅助科研写作的模型上线三天，因大量编造引用与错误结论被撤下。", "lesson": "把生成结果包装成「知识」之前，先解决引用是否真实。" },
+    { "id": "cnet-ai", "year": "2023", "title": "CNET 自动化文章更正", "book": "b45", "what": "媒体用自动化工具批量生成解释性文章，被发现多处事实错误后大范围更正并暂停。", "lesson": "编辑责任不能外包给模型。" },
+    { "id": "chevy-chatbot", "year": "2023", "title": "雪佛兰客服机器人", "book": "b33", "what": "经销商网站客服机器人被用户引导，以 1 美元「卖车」并输出并不存在的承诺。", "lesson": "面向公众的对话系统，必须假设用户会故意越界。" },
+    { "id": "air-canada", "year": "2024", "title": "Air Canada 聊天机器人裁决", "book": "b33", "what": "加拿大仲裁机构认定航司要为客服机器人给出的错误退票说明承担责任。", "lesson": "机器人说的话，企业得认。" }
   ]
 }

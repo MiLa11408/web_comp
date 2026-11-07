@@ -306,7 +306,12 @@ app.get('/api/stats', async (request) => {
     const r = db.prepare('SELECT COUNT(*) AS reads, COUNT(DISTINCT chapter_id) AS chapters, COUNT(DISTINCT book_id) AS books FROM reads WHERE reader_id = ?').get(reader.id);
     const myFrags = db.prepare('SELECT fragment_id FROM fragment_picks WHERE reader_id = ?').all(reader.id).map((x) => x.fragment_id);
     const recent = db.prepare('SELECT book_id, chapter_id, COUNT(*) AS times, MAX(created_at) AS last FROM reads WHERE reader_id = ? GROUP BY chapter_id ORDER BY last DESC LIMIT 10').all(reader.id);
-    me = { reads: r.reads, chapters: r.chapters, books: r.books, fragments: myFrags, recent };
+    const chapterIds = db.prepare('SELECT DISTINCT chapter_id FROM reads WHERE reader_id = ?').all(reader.id).map((x) => x.chapter_id);
+    const myBooks = db.prepare('SELECT book_id, COUNT(*) AS times, MAX(created_at) AS last FROM reads WHERE reader_id = ? GROUP BY book_id ORDER BY times DESC').all(reader.id);
+    const stamps = reader.user
+      ? db.prepare('SELECT COUNT(*) AS c FROM stamps WHERE user_id = ?').get(reader.user.id).c
+      : 0;
+    me = { reads: r.reads, chapters: r.chapters, books: r.books, fragments: myFrags, recent, chapterIds, myBooks, stamps };
   }
   return { totals, topBooks, fragments, me, ifline: IFLINE_DATA };
 });

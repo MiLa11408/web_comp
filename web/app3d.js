@@ -79,6 +79,14 @@ body.reading .mm-root, body.grid .mm-root { display: none; }
   border: 1px solid #c8a24a; padding: 8px 14px; cursor: pointer; font-size: 12.5px; letter-spacing: 1px;
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif; z-index: 25; }
 .mm-elev-btn:hover { background: #2c241a; }
+.mm-joy { position: absolute; left: 20px; bottom: 20px; width: 124px; height: 124px; border-radius: 50%;
+  border: 1px solid rgba(200,162,74,.55); background: rgba(18,14,11,.5); display: none; z-index: 26;
+  touch-action: none; user-select: none; }
+.mm-joy::before { content: ''; position: absolute; inset: 26px; border-radius: 50%; border: 1px dashed rgba(200,162,74,.32); }
+.mm-joy i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+  background: rgba(200,162,74,.3); border: 1px solid #c8a24a; transition: transform .08s linear; }
+.mm-joy-label { position: absolute; left: 20px; bottom: 148px; color: #8a7a5c; font-size: 11px; letter-spacing: 1px;
+  background: rgba(18,14,11,.5); padding: 3px 7px; border: 1px solid #2c2116; display: none; z-index: 26; }
 `;
 
 function injectCss() {
@@ -1996,6 +2004,57 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   hint.textContent = 'WASD 移动 · 鼠标拖拽转视角 · 点击书取书 · 从书架之间的空隙可绕到后排';
   root.appendChild(hint);
 
+  // 触屏：左下虚拟摇杆负责移动，画面拖动转视角（canvas 的 pointer 事件已通用）
+  const joyEl = document.createElement('div');
+  joyEl.className = 'mm-joy';
+  joyEl.innerHTML = '<i></i>';
+  root.appendChild(joyEl);
+  const joyLabel = document.createElement('div');
+  joyLabel.className = 'mm-joy-label';
+  joyLabel.textContent = '拖动 / 点按摇杆移动';
+  root.appendChild(joyLabel);
+  const joyKnob = joyEl.querySelector('i');
+  const joy = { x: 0, z: 0, active: false, id: null };
+  const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  if (coarsePointer) {
+    joyEl.style.display = 'block';
+    joyLabel.style.display = 'block';
+    hint.textContent = '左下摇杆移动 · 拖动画面转视角 · 点书取书';
+  }
+  function joyMove(e) {
+    const rect = joyEl.getBoundingClientRect();
+    const max = rect.width / 2 - 20;
+    let dx = e.clientX - (rect.left + rect.width / 2);
+    let dy = e.clientY - (rect.top + rect.height / 2);
+    const len = Math.hypot(dx, dy);
+    if (len > max) { dx = (dx / len) * max; dy = (dy / len) * max; }
+    joy.x = dx / max;
+    joy.z = dy / max;
+    joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+  joyEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    joy.active = true;
+    joy.id = e.pointerId;
+    try { joyEl.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+    joyMove(e);
+  });
+  joyEl.addEventListener('pointermove', (e) => {
+    if (!joy.active || e.pointerId !== joy.id) return;
+    e.preventDefault();
+    joyMove(e);
+  });
+  function joyReset() {
+    joy.active = false;
+    joy.id = null;
+    joy.x = 0;
+    joy.z = 0;
+    joyKnob.style.transform = 'translate(0, 0)';
+  }
+  joyEl.addEventListener('pointerup', joyReset);
+  joyEl.addEventListener('pointercancel', joyReset);
+
   const toastEl = document.createElement('div');
   toastEl.className = 'mm-toast';
   root.appendChild(toastEl);
@@ -2468,6 +2527,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const home = tour && tour.home;
     tour = null;
     override = null;
+    joyReset();
     if (home) {
       player.pos.copy(home.pos);
       player.tYaw = home.tYaw;
@@ -2566,6 +2626,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   function reset() {
     if (tour) endTour();
     clearHover();
+    joyReset();
     taking = false;
     for (const item of bookItems) {
       item.animating = false;
@@ -2608,10 +2669,14 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (keys.s) fz += 1;
     if (keys.a) fx -= 1;
     if (keys.d) fx += 1;
+    // 手机虚拟摇杆：保留模拟量，轻推慢走、推满快走
+    if (joy.active) {
+      if (Math.abs(joy.x) > 0.12) fx += joy.x;
+      if (Math.abs(joy.z) > 0.12) fz += joy.z;
+    }
     if (!fx && !fz) return;
     const len = Math.hypot(fx, fz);
-    fx /= len;
-    fz /= len;
+    if (len > 1) { fx /= len; fz /= len; }
     const cos = Math.cos(player.yaw);
     const sin = Math.sin(player.yaw);
     const wx = fx * cos + fz * sin;
