@@ -297,6 +297,19 @@
   .frag-chip b { color: var(--gold); font-family: monospace; margin-right: 6px; }
   .frag-chip i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
   .frag-chip.got { border-color: var(--gold); background: #241c14; }
+
+  /* ---------- 残页卡与残页弹层 ---------- */
+  .ifline-hit { margin-top: 7px; padding-top: 6px; border-top: 1px dashed rgba(143,122,82,.5); color: #e2c06a; font-size: 11.5px; line-height: 1.7; }
+  .ifline-hit.dim { color: #7d6e55; }
+  .ifline-hit a { color: var(--gold); cursor: pointer; border-bottom: 1px dotted #8a6320; text-decoration: none; }
+  .frag-modal { position: fixed; inset: 0; z-index: 96; background: rgba(8,6,4,.74); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .frag-box { position: relative; width: min(620px, 94vw); max-height: 86vh; overflow-y: auto; background: #f4ead1; color: #3b3020; border: 1px solid #8a6320; padding: 26px 30px; box-shadow: 0 30px 80px rgba(0,0,0,.7); font-family: "KaiTi", "STKaiti", "楷体", serif; }
+  .frag-box h3 { margin: 8px 0 10px; font-family: "Songti SC", "SimSun", serif; font-size: 20px; color: #5a451f; }
+  .frag-box p { font-size: 14px; line-height: 1.95; margin: 0 0 10px; }
+  .frag-kicker { color: #8a6d33; font-size: 11px; letter-spacing: 2px; font-family: "Consolas", monospace; }
+  .frag-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+  .frag-actions button { background: #2c241a; color: #e2c06a; border: 1px solid #8a6320; padding: 7px 14px; cursor: pointer; font-size: 12.5px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .frag-actions button.ghost { background: transparent; color: #5a451f; border-color: #b9a778; }
 </style>
 </head>
 <body>
@@ -392,7 +405,7 @@
   <button class="back" style="margin:0" onclick="enter3D()">3D 阅览室</button>
   <button class="back" style="margin:0" onclick="enterShelf()">书架视图</button>
   <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
-  <button class="back" style="margin:0" onclick="enterRail()">铁路线</button>
+  <button class="back" style="margin:0" onclick="enterRail()">线索</button>
   <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
   <button class="back" style="margin:0" onclick="enterStats()">借阅档案</button>
   <button class="back" style="margin:0" onclick="mmShowStar()">星图</button>
@@ -530,7 +543,10 @@ async function logRead(chapterId) {
     const d = await r.json();
     const el = document.getElementById('fragCount');
     if (el && d && d.total) el.textContent = `${d.collected}/${d.total}`;
-    if (d && d.fragment && d.collected != null) mmToast(`收编残页 ${d.fragment}（${d.collected}/${d.total}）`);
+    if (d && d.fragment && d.collected != null) {
+      mmToast(`收编残页 ${d.fragment}（${d.collected}/${d.total}）`);
+      maybeFragGuide(d.fragment, d.collected, d.total);
+    }
   } catch (e) { /* 离线也能读 */ }
 }
 
@@ -587,6 +603,52 @@ async function loadAnnotations(chapterId) {
   } catch (e) { /* 忽略 */ }
 }
 
+let fragCache = null;
+async function loadFragmentData() {
+  if (!fragCache) fragCache = await (await fetch('api/fragments')).json();
+  return fragCache;
+}
+
+async function showFragment(id) {
+  const data = await loadFragmentData();
+  const f = (data.fragments || []).find((x) => x.id === id);
+  if (!f) return;
+  let el = document.getElementById('fragModal');
+  if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
+  el.className = 'frag-modal';
+  el.innerHTML = `
+    <div class="frag-box">
+      <div class="frag-kicker">另一条时间线 · ${esc(f.id)} · 推测</div>
+      <h3>${esc(f.title)}</h3>
+      <p>${esc(f.text)}</p>
+      <div class="frag-actions"><button id="fragClose">合上残页</button></div>
+    </div>`;
+  el.querySelector('#fragClose').onclick = () => el.remove();
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+}
+
+function maybeFragGuide(fragmentId, collected, total) {
+  if (localStorage.getItem('mm_frag_guide')) return;
+  localStorage.setItem('mm_frag_guide', '1');
+  let el = document.getElementById('fragModal');
+  if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
+  el.className = 'frag-modal';
+  el.innerHTML = `
+    <div class="frag-box">
+      <div class="frag-kicker">发现残页 · 新手指引</div>
+      <h3>你捡到了另一条时间线的第一页</h3>
+      <p>刚刚收编的是 <b>${esc(fragmentId)}</b>。全馆共 <b>${total}</b> 张残页，分散在不同章节里；读到藏有残页的章节就会自动收编，现在你有 <b>${collected}/${total}</b>。</p>
+      <p>去哪看：顶栏「借阅档案」→ 残页收集程度；已收编的残页点开可以读全文。集齐 ${total} 张，另一条时间线才完整。</p>
+      <div class="frag-actions">
+        <button class="ghost" id="fgView">先读这一页</button>
+        <button id="fgOk">知道了，继续读</button>
+      </div>
+    </div>`;
+  el.querySelector('#fgOk').onclick = () => el.remove();
+  el.querySelector('#fgView').onclick = () => { el.remove(); showFragment(fragmentId); };
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+}
+
 const DEMO_MAP = { 'b1-c1': 'turing', 'b34-c4': 'chinese-room', 'b5-c1': 'attention' };
 async function mmOpenDemo(kind) {
   try {
@@ -609,7 +671,7 @@ const GUIDE_STEPS = [
   'WASD 前后左右移动；按住鼠标左键拖动，转视角。',
   '把视线对准书架上的书，点击书脊，书会飞出来翻开。',
   '左侧墙上挂着黄铜电梯：点击它，或用右下按钮选层。',
-  '顶栏可以切到书架视图、总览、铁路线、时间轴；检索框直接查全馆。',
+  '顶栏可以切到书架视图、总览、线索、时间轴、星图；检索框直接查全馆。',
   '阅读页右上角随时「合上书」；右侧页边注点一下会跳到正文对应段落。',
 ];
 function startGuide() {
@@ -658,11 +720,14 @@ async function showStats() {
       : '<div class="empty" style="padding:12px 0">还没有人翻书。你可以做第一个。</div>';
     const myFrags = me.fragments || [];
     const totalFrags = (d.ifline && d.ifline.total) || 8;
-    const fragHtml = (d.fragments || []).map((f) => `
-      <div class="frag-chip ${myFrags.includes(f.id) ? 'got' : ''}">
-        <b>${esc(f.id)}</b>${esc(f.title)}
-        <i>${myFrags.includes(f.id) ? '已收编' : '未收编'} · 全馆 ${f.readers} 人持有</i>
-      </div>`).join('');
+    const fragHtml = (d.fragments || []).map((f) => {
+      const got = myFrags.includes(f.id);
+      return `
+      <div class="frag-chip ${got ? 'got' : ''}" ${got ? `onclick="showFragment('${f.id}')"` : ''} style="${got ? 'cursor:pointer' : ''}">
+        <b>${esc(f.id)}</b>${got ? esc(f.title) : '未发现的残页'}
+        <i>${got ? `已收编 · 全馆 ${f.readers} 人持有` : '藏在某一章里'}</i>
+      </div>`;
+    }).join('');
     const recentHtml = (me.recent || []).length
       ? me.recent.map((x) => `<div class="bar-row"><span class="bl">${esc(x.chapter_id)}</span><span class="bar"><i style="width:100%"></i></span><span class="bv">${x.times} 次</span></div>`).join('')
       : '<div class="empty" style="padding:10px 0">你还没有翻阅记录。</div>';
@@ -760,7 +825,7 @@ async function showTimeline() {
   app.innerHTML = `
   <div class="tl-view">
     <div class="rail-head"><span>发展时间轴 · ${span} · ${entries.length} 章</span>
-      <span class="head-links"><a onclick="enterRail()">铁路线 →</a> · <a onclick="enterOverview()">书架总览 →</a></span>
+      <span class="head-links"><a onclick="enterRail()">线索 →</a> · <a onclick="enterOverview()">书架总览 →</a></span>
     </div>
     <div class="rail-sub">按章节标注的年份排列，同一 decade 里的先后不代表精确月份；点任意卡片打开那一章。</div>
     ${[...decades.entries()].map(([d, items]) => `
@@ -1033,7 +1098,9 @@ async function showChapter(id) {
     </main>
     <aside id="notesCol">
       <div class="notes-title">页边注</div>
-      <div class="ifline-card">另一条时间线 · 残页 <span id="fragCount">0/${iflineInfo ? iflineInfo.total : 8}</span><br><small>八张残页，拼出另一条时间线（推测）</small></div>
+      <div class="ifline-card">另一条时间线 · 残页 <span id="fragCount">0/${iflineInfo ? iflineInfo.total : 8}</span>
+        ${fr ? `<div class="ifline-hit">本章藏有 <b>${esc(fr.id)}</b> · ${esc(fr.title)}<br><a onclick="showFragment('${esc(fr.id)}')">查看残页 →</a><br><small>读到即自动收编</small></div>` : '<div class="ifline-hit dim">本章没有残页，继续往别的书里找。</div>'}
+      </div>
       ${notes.length ? notes.map((n) => `
         <div class="note"${n.anchor ? ` data-anchor="${esc(n.anchor)}" title="点击跳到「${esc(n.anchor)}」"` : ''}>
           ${n.anchor ? `<div class="note-anchor"><span>〔${esc(n.anchor)}〕</span><span>↘</span></div>` : ''}

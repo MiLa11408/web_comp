@@ -1,4 +1,4 @@
-// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
+﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
 // 运行：node tests/e2e.mjs   （需本机 Chrome 或 Edge，服务已在 3300 启动）
 // 可用 BASE=http://127.0.0.1:3300/ 覆盖地址。
 import { chromium } from 'playwright-core';
@@ -42,25 +42,28 @@ await page.waitForTimeout(800);
 const mainVisible = await page.locator('#app').isVisible();
 mainVisible ? ok('主界面可见') : bad('主界面可见');
 
-// 星图
+// 星图（3D）
 await page.getByRole('button', { name: '星图' }).click();
 await page.waitForSelector('#mm-star-overlay', { timeout: 12000 });
-const starNodes = await page.locator('.mm-star-node').count();
-const starLegend = await page.locator('.mm-star-legend-item').count();
-starNodes >= 36 ? ok('星图节点数', String(starNodes)) : bad('星图节点数', String(starNodes));
+await page.waitForTimeout(600);
+const starNodes = await page.evaluate(() => window.__mmStarNodes || 0);
+const starCanvas = await page.locator('#mm-star-overlay canvas').count();
+const starLegend = await page.locator('.mm-star3d-legend span').count();
+starNodes >= 36 ? ok('立体星图节点数', String(starNodes)) : bad('立体星图节点数', String(starNodes));
+starCanvas === 1 ? ok('星图 WebGL 画布') : bad('星图 WebGL 画布', String(starCanvas));
 starLegend === 4 ? ok('星图四层图例', String(starLegend)) : bad('星图四层图例', String(starLegend));
 await page.keyboard.press('Escape');
 await page.waitForTimeout(400);
 (await page.locator('#mm-star-overlay').count()) === 0 ? ok('星图 Esc 关闭') : bad('星图 Esc 关闭');
 
-// 2. 铁路线视图
-await page.getByRole('button', { name: '铁路线' }).click();
+// 2. 线索视图
+await page.getByRole('button', { name: '线索' }).click();
 await page.waitForSelector('.rail-line', { timeout: 8000 });
 const lineCount = await page.locator('.rail-line').count();
 const stopCount = await page.locator('.rail-stop').count();
 const branchCount = await page.locator('.rail-branch').count();
 const transferCount = await page.locator('.rs-transfer').count();
-lineCount === 5 ? ok('铁路线 5 条主线', String(lineCount)) : bad('铁路线主线数', String(lineCount));
+lineCount === 5 ? ok('线索 5 条主线', String(lineCount)) : bad('线索主线数', String(lineCount));
 stopCount >= 40 ? ok('铁路站点数', String(stopCount)) : bad('铁路站点数', String(stopCount));
 branchCount >= 5 ? ok('支线数', String(branchCount)) : bad('支线数', String(branchCount));
 transferCount >= 3 ? ok('换乘站标记', String(transferCount)) : bad('换乘站标记', String(transferCount));
@@ -85,6 +88,18 @@ if (await page.locator('button:has-text("可玩演示")').count()) {
   await page.waitForTimeout(300);
   (await page.locator('.mm-demo-overlay').count()) === 0 ? ok('可玩演示弹层与关闭') : bad('可玩演示弹层', 'Esc 未关闭');
 } else bad('可玩演示入口', '当前章节没有演示按钮');
+
+// 残页：切到 b1-c3（藏 R-01）
+await page.evaluate(() => window.showChapter('b1-c3'));
+await page.waitForTimeout(1200);
+const fragHit = await page.locator('.ifline-hit').innerText();
+fragHit.includes('R-01') ? ok('本章残页提示', fragHit.split('\n')[0]) : bad('本章残页提示', fragHit.slice(0, 30));
+const fragGuide = await page.locator('#fragModal').count();
+fragGuide ? ok('首次发现残页教程') : bad('首次发现残页教程');
+if (await page.locator('#fgOk').count()) await page.locator('#fgOk').click();
+await page.waitForTimeout(300);
+const fragCount = await page.locator('#fragCount').innerText();
+fragCount.startsWith('1/') ? ok('残页收编计数', fragCount) : bad('残页收编计数', fragCount);
 
 const noteCount = await page.locator('.note').count();
 noteCount >= 1 ? ok('页边注渲染', String(noteCount)) : bad('页边注渲染', String(noteCount));
@@ -199,16 +214,16 @@ await mob.waitForSelector('#gate', { state: 'attached', timeout: 15000 });
 const overflow = await mob.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 overflow <= 1 ? ok('移动端无横向溢出', `${overflow}px`) : bad('移动端横向溢出', `${overflow}px`);
 await mob.bringToFront();
-await mob.waitForFunction(() => typeof window.gateGuest === 'function', null, { timeout: 30000 });
-await mob.evaluate(() => window.gateGuest());
-await mob.waitForTimeout(1500);
+await mob.evaluate(() => { if (window.gateGuest) window.gateGuest(); else document.getElementById('gate')?.remove(); });
+await mob.waitForTimeout(1600);
 if (await mob.locator('#gate').count()) await mob.evaluate(() => document.getElementById('gate')?.remove());
 await mob.waitForTimeout(300);
-await mob.waitForSelector('button:has-text("铁路线")', { timeout: 20000 });
-await mob.locator('button:has-text("铁路线")').first().click();
+await mob.waitForSelector('button:has-text("线索")', { timeout: 20000 });
+await mob.waitForFunction(() => typeof window.enterRail === 'function', null, { timeout: 30000 });
+await mob.locator('button:has-text("线索")').first().click();
 await mob.waitForSelector('.rail-line', { timeout: 8000 });
 const mobRail = await mob.locator('.rail-line').count();
-mobRail === 5 ? ok('移动端铁路线渲染', String(mobRail)) : bad('移动端铁路线渲染', String(mobRail));
+mobRail === 5 ? ok('移动端线索渲染', String(mobRail)) : bad('移动端线索渲染', String(mobRail));
 if (mobErrors.length) bad('移动端 JS 报错', mobErrors.slice(0, 2).join(' | '));
 else ok('移动端无 JS 报错');
 await mob.close();
