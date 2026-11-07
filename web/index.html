@@ -176,7 +176,16 @@
   /* ---------- 入馆登记门厅 ---------- */
   #gate { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: radial-gradient(900px 520px at 50% 28%, #2a1f14, #0c0906 72%); transition: opacity .55s ease, transform .55s ease; }
   #gate::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(200,162,74,.045) 0 2px, transparent 2px 88px); pointer-events: none; }
-  #gate.leaving { opacity: 0; transform: scale(1.06); pointer-events: none; }
+  #gate.leaving { pointer-events: none; background: transparent; }
+  .gate-doors { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .gate-doors .door { position: absolute; top: 0; bottom: 0; width: 50.5%; background: linear-gradient(90deg, #17110c, #2b1f13 55%, #17110c); box-shadow: inset 0 0 60px rgba(0,0,0,.7); transition: transform 1s cubic-bezier(.76,0,.24,1); }
+  .gate-doors .door::after { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(200,162,74,.18); }
+  .gate-doors .door.left { left: 0; border-right: 1px solid #6b5a3a; transform-origin: left center; }
+  .gate-doors .door.right { right: 0; border-left: 1px solid #6b5a3a; transform-origin: right center; }
+  #gate.leaving .door.left { transform: translateX(-102%); }
+  #gate.leaving .door.right { transform: translateX(102%); }
+  .gate-card { z-index: 2; }
+  #gate.leaving .gate-card { opacity: 0; transform: translateY(-12px) scale(.97); transition: opacity .3s, transform .3s; }
   .gate-card { position: relative; width: min(560px, 92vw); max-height: 92vh; overflow-y: auto; border: 1px solid #5a4526; background: linear-gradient(165deg, #1d1610, #14100c); padding: 34px 38px 28px; box-shadow: 0 30px 90px rgba(0,0,0,.7); animation: gateRise .7s cubic-bezier(.2,.8,.3,1) both; }
   @keyframes gateRise { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
   .gate-card::after { content: ""; position: absolute; inset: 6px; border: 1px dashed rgba(200,162,74,.26); pointer-events: none; }
@@ -254,10 +263,45 @@
   .si-params { color: var(--gold); font-family: monospace; font-size: 12px; }
   .si-year { color: #7d6e55; font-size: 11px; margin-left: auto; }
   .size-note { color: #7d6e55; font-size: 11px; line-height: 1.6; margin-top: 4px; }
+
+  /* ---------- 新手引导 ---------- */
+  #guide { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 82; width: min(540px, 92vw); background: #1d1712; border: 1px solid var(--gold); box-shadow: 0 22px 60px rgba(0,0,0,.75); padding: 15px 20px 13px; animation: gateRise .35s ease both; }
+  #guide .g-step { color: #8a7a5c; font-size: 11px; letter-spacing: 3px; }
+  #guide .g-text { color: var(--ink); font-size: 14px; line-height: 1.8; margin: 6px 0 12px; }
+  #guide .g-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+  #guide .g-actions button { background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 6px 14px; cursor: pointer; font-size: 12.5px; letter-spacing: 1px; font-family: inherit; }
+  #guide .g-actions button.ghost { border-color: #5a4526; color: #cbb892; background: transparent; }
+  #guide .g-dots { margin-right: auto; color: #6f6046; font-size: 11px; letter-spacing: 2px; }
+
+  /* ---------- 阅读工具条 / 轻提示 / 统计 ---------- */
+  .reader-tools { max-width: 780px; margin: 0 auto 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .reader-tools button { background: #241c14; color: var(--gold); border: 1px solid #6b5a3a; padding: 6px 12px; cursor: pointer; font-size: 12px; letter-spacing: 1px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .reader-tools button:hover { border-color: var(--gold); }
+  .reader-tools span { color: #8a7a5c; font-size: 11px; margin-left: auto; }
+  #mmToast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(10px); z-index: 100; background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 9px 18px; font-size: 13px; letter-spacing: 1px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+  #mmToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .stats-view { max-width: 1050px; }
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .stat-card { background: #1d1712; border: 1px solid var(--line); padding: 12px 14px; }
+  .stat-card b { display: block; color: var(--gold); font-size: 22px; font-family: monospace; }
+  .stat-card span { color: #8a7a5c; font-size: 11px; letter-spacing: 1px; }
+  .stat-sec { border: 1px solid var(--line); background: #1a140f; padding: 14px 16px; margin-bottom: 14px; }
+  .stat-sec h3 { margin: 0 0 10px; color: var(--gold); font-size: 14px; letter-spacing: 2px; font-weight: 500; }
+  .bar-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px; gap: 10px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+  .bar-row .bl { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .bar { height: 8px; background: #3a2f22; }
+  .bar-row .bar i { display: block; height: 100%; background: linear-gradient(90deg, #8a6320, var(--gold)); }
+  .bar-row .bv { color: #a8977a; font-family: monospace; font-size: 11.5px; text-align: right; }
+  .frag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  .frag-chip { border: 1px solid #4a3a24; padding: 8px 10px; font-size: 12px; color: #cbb892; }
+  .frag-chip b { color: var(--gold); font-family: monospace; margin-right: 6px; }
+  .frag-chip i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
+  .frag-chip.got { border-color: var(--gold); background: #241c14; }
 </style>
 </head>
 <body>
 <div id="gate">
+  <div class="gate-doors"><div class="door left"></div><div class="door right"></div></div>
   <div class="gate-card">
     <div class="gate-kicker">MACHINE MEMORY · FRONT DESK</div>
     <div class="gate-title">机忆书库</div>
@@ -291,7 +335,10 @@
   function closeGate(text) {
     if (text) say(text, true);
     gate.classList.add('leaving');
-    setTimeout(() => gate.remove(), 600);
+    setTimeout(() => {
+      gate.remove();
+      if (window.mmStartGuide) setTimeout(() => window.mmStartGuide(), 900);
+    }, 1150);
   }
   window.gateGuest = () => closeGate('访客入馆。书页可以读，印章就别盖了。');
   async function post(path, body) {
@@ -347,6 +394,7 @@
   <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
   <button class="back" style="margin:0" onclick="enterRail()">铁路线</button>
   <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
+  <button class="back" style="margin:0" onclick="enterStats()">借阅档案</button>
 </div>
 <div id="scene3d"></div>
 <div id="app"></div>
@@ -447,6 +495,197 @@ function shade(hex, f) {
   const g = Math.min(255, Math.round(((n >> 8) & 255) * f));
   const b = Math.min(255, Math.round((n & 255) * f));
   return `rgb(${r},${g},${b})`;
+}
+
+// ---------- 阅读记录 / 轻提示 / 新手引导 ----------
+function mmToast(text) {
+  let el = document.getElementById('mmToast');
+  if (!el) { el = document.createElement('div'); el.id = 'mmToast'; document.body.appendChild(el); }
+  el.textContent = text;
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('on'), 2200);
+}
+
+function readerKey() {
+  let id = localStorage.getItem('mm_reader');
+  if (!id) {
+    id = 'v' + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 20) : String(Date.now()) + Math.random().toString(36).slice(2, 8));
+    localStorage.setItem('mm_reader', id);
+  }
+  return id;
+}
+function authHeaders() {
+  const token = localStorage.getItem('mm_token');
+  return token ? { authorization: 'Bearer ' + token } : {};
+}
+async function logRead(chapterId) {
+  try {
+    const r = await fetch('api/reads', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ chapter_id: chapterId, reader_id: readerKey() }),
+    });
+    const d = await r.json();
+    const el = document.getElementById('fragCount');
+    if (el && d && d.total) el.textContent = `${d.collected}/${d.total}`;
+    if (d && d.fragment && d.collected != null) mmToast(`收编残页 ${d.fragment}（${d.collected}/${d.total}）`);
+  } catch (e) { /* 离线也能读 */ }
+}
+
+async function stampChapter(id) {
+  if (!localStorage.getItem('mm_token')) return mmToast('访客不能盖章：回首屏办一张借书证。');
+  const r = await fetch('api/stamps', {
+    method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ chapter_id: id, kind: 'chapter' }),
+  });
+  mmToast(r.ok ? '已盖章。' : '盖章失败，稍后再试。');
+}
+
+async function annotateChapter(id) {
+  if (!localStorage.getItem('mm_token')) return mmToast('访客不能写批注：回首屏办一张借书证。');
+  const sel = String(window.getSelection() || '').trim();
+  const quote = sel || prompt('引文（从正文里挑一句）');
+  if (!quote) return;
+  const note = prompt('批注内容');
+  if (!note) return;
+  const r = await fetch('api/annotations', {
+    method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ chapter_id: id, quote: quote.slice(0, 200), note }),
+  });
+  if (r.ok) { mmToast('批注已写入。'); loadAnnotations(id); }
+  else mmToast('批注失败，稍后再试。');
+}
+
+async function markDone(id) {
+  if (!localStorage.getItem('mm_token')) return mmToast('访客不能记进度：回首屏办一张借书证。');
+  const r = await fetch('api/progress', {
+    method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ chapter_id: id, state: 'done' }),
+  });
+  if (r.ok) {
+    const s = document.getElementById('readState');
+    if (s) s.textContent = '已读完';
+    mmToast('已标记读完。');
+  } else mmToast('记录失败，稍后再试。');
+}
+
+async function loadAnnotations(chapterId) {
+  if (!localStorage.getItem('mm_token')) return;
+  try {
+    const r = await fetch('api/annotations?chapter_id=' + encodeURIComponent(chapterId), { headers: authHeaders() });
+    if (!r.ok) return;
+    const list = await r.json();
+    const box = document.getElementById('myNotes');
+    if (!box) return;
+    box.innerHTML = list.length
+      ? '<div class="notes-title" style="margin-top:16px">我的批注</div>' + list.map((a) => `
+        <div class="note"><div class="note-anchor"><span>〔${esc(a.quote.slice(0, 22))}〕</span><span>批注</span></div>
+        <div class="note-text">${esc(a.note)}</div></div>`).join('')
+      : '';
+  } catch (e) { /* 忽略 */ }
+}
+
+const DEMO_MAP = { 'b1-c1': 'turing', 'b34-c4': 'chinese-room', 'b5-c1': 'attention' };
+async function mmOpenDemo(kind) {
+  try {
+    const mod = await import('./demos.js');
+    mod.openDemo(kind);
+  } catch (e) { mmToast('演示加载失败，稍后再试。'); }
+}
+window.mmOpenDemo = mmOpenDemo;
+
+const GUIDE_STEPS = [
+  'WASD 前后左右移动；按住鼠标左键拖动，转视角。',
+  '把视线对准书架上的书，点击书脊，书会飞出来翻开。',
+  '左侧墙上挂着黄铜电梯：点击它，或用右下按钮选层。',
+  '顶栏可以切到书架视图、总览、铁路线、时间轴；检索框直接查全馆。',
+  '阅读页右上角随时「合上书」；右侧页边注点一下会跳到正文对应段落。',
+];
+function startGuide() {
+  if (localStorage.getItem('mm_guide_done')) return;
+  if (document.getElementById('guide') || document.getElementById('gate')) return;
+  let i = 0;
+  const el = document.createElement('div');
+  el.id = 'guide';
+  document.body.appendChild(el);
+  const render = () => {
+    el.innerHTML = `
+      <div class="g-step">入馆指引 ${i + 1} / ${GUIDE_STEPS.length}</div>
+      <div class="g-text">${esc(GUIDE_STEPS[i])}</div>
+      <div class="g-actions">
+        <span class="g-dots">${GUIDE_STEPS.map((_, k) => (k === i ? '●' : '○')).join(' ')}</span>
+        <button class="ghost" id="gSkip">跳过</button>
+        <button id="gNext">${i === GUIDE_STEPS.length - 1 ? '开始' : '下一步'}</button>
+      </div>`;
+    el.querySelector('#gSkip').onclick = finish;
+    el.querySelector('#gNext').onclick = () => { i += 1; if (i >= GUIDE_STEPS.length) finish(); else render(); };
+  };
+  const finish = () => { localStorage.setItem('mm_guide_done', '1'); el.remove(); };
+  render();
+}
+window.mmStartGuide = startGuide;
+
+function enterStats() { fadeSwap(() => showStats()); }
+
+async function showStats() {
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在翻借阅台账……</div>';
+  try {
+    const r = await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()), { headers: authHeaders() });
+    const d = await r.json();
+    const totals = d.totals || {};
+    const me = d.me || { reads: 0, chapters: 0, books: 0, fragments: [] };
+    const maxReads = Math.max(1, ...(d.topBooks || []).map((b) => b.reads));
+    const topHtml = (d.topBooks || []).length
+      ? d.topBooks.map((b) => `
+        <div class="bar-row" title="${esc(b.title)}">
+          <span class="bl">${esc(b.call)} · ${esc(b.title)}</span>
+          <span class="bar"><i style="width:${Math.round((b.reads / maxReads) * 100)}%"></i></span>
+          <span class="bv">${b.reads} 次 / ${b.readers} 人</span>
+        </div>`).join('')
+      : '<div class="empty" style="padding:12px 0">还没有人翻书。你可以做第一个。</div>';
+    const myFrags = me.fragments || [];
+    const totalFrags = (d.ifline && d.ifline.total) || 8;
+    const fragHtml = (d.fragments || []).map((f) => `
+      <div class="frag-chip ${myFrags.includes(f.id) ? 'got' : ''}">
+        <b>${esc(f.id)}</b>${esc(f.title)}
+        <i>${myFrags.includes(f.id) ? '已收编' : '未收编'} · 全馆 ${f.readers} 人持有</i>
+      </div>`).join('');
+    const recentHtml = (me.recent || []).length
+      ? me.recent.map((x) => `<div class="bar-row"><span class="bl">${esc(x.chapter_id)}</span><span class="bar"><i style="width:100%"></i></span><span class="bv">${x.times} 次</span></div>`).join('')
+      : '<div class="empty" style="padding:10px 0">你还没有翻阅记录。</div>';
+    app.innerHTML = `
+    <div class="stats-view">
+      <div class="rail-head"><span>借阅档案 · 谁在读什么</span>
+        <span class="head-links"><a onclick="enterOverview()">书架总览 →</a> · <a onclick="showStats()">刷新</a></span>
+      </div>
+      <div class="rail-sub">每次打开章节都会记一笔：读者、书、章节、时间。访客用本机随机读者号，登录后用借书证号；不采集其它信息。</div>
+      <div class="stat-cards">
+        <div class="stat-card"><b>${totals.reads || 0}</b><span>全馆翻阅次数</span></div>
+        <div class="stat-card"><b>${totals.readers || 0}</b><span>全馆读者人数</span></div>
+        <div class="stat-card"><b>${me.reads || 0}</b><span>我的翻阅次数</span></div>
+        <div class="stat-card"><b>${myFrags.length}/${totalFrags}</b><span>我的残页收编</span></div>
+      </div>
+      <section class="stat-sec">
+        <h3>最常被翻的书 · TOP 12</h3>
+        ${topHtml}
+      </section>
+      <section class="stat-sec">
+        <h3>我的翻阅记录 · 最近 10 章</h3>
+        ${recentHtml}
+      </section>
+      <section class="stat-sec">
+        <h3>残页收集程度 · ${myFrags.length}/${totalFrags}</h3>
+        <div class="frag-grid">${fragHtml}</div>
+      </section>
+      <div class="rail-hintbar">残页藏在本章里：读到对应章节就自动收编。集齐 8 张，另一条时间线才会完整。</div>
+    </div>`;
+  } catch (e) {
+    console.error('[stats]', e);
+    app.innerHTML = '<div class="empty">台账暂时打不开，稍后再试。</div>';
+  }
 }
 
 function openBookFirst(id) {
@@ -754,6 +993,13 @@ async function showChapter(id) {
       </div>
     </aside>
     <main>
+      <div class="reader-tools">
+        <button onclick="stampChapter('${esc(m.id)}')">盖章</button>
+        <button onclick="annotateChapter('${esc(m.id)}')">批注</button>
+        <button onclick="markDone('${esc(m.id)}')">标记读完</button>
+        ${DEMO_MAP[m.id] ? `<button onclick="mmOpenDemo('${DEMO_MAP[m.id]}')">可玩演示</button>` : ''}
+        <span id="readState"></span>
+      </div>
       <div class="paper ${m.style}" id="paperBox">
         <button class="back" onclick="enter3D()">← 合上书，回到阅览室</button>
         <div class="reception">
@@ -776,17 +1022,20 @@ async function showChapter(id) {
     </main>
     <aside id="notesCol">
       <div class="notes-title">页边注</div>
-      <div class="ifline-card">另一条时间线 · 残页 0/${iflineInfo ? iflineInfo.total : 8}<br><small>八张残页，拼出另一条时间线（推测）</small></div>
+      <div class="ifline-card">另一条时间线 · 残页 <span id="fragCount">0/${iflineInfo ? iflineInfo.total : 8}</span><br><small>八张残页，拼出另一条时间线（推测）</small></div>
       ${notes.length ? notes.map((n) => `
         <div class="note"${n.anchor ? ` data-anchor="${esc(n.anchor)}" title="点击跳到「${esc(n.anchor)}」"` : ''}>
           ${n.anchor ? `<div class="note-anchor"><span>〔${esc(n.anchor)}〕</span><span>↘</span></div>` : ''}
           <div class="note-text">${esc(n.text)}</div>
           <div class="note-sign">—— ${librarian}</div>
         </div>`).join('') : '<div class="notes-empty">这一章暂时没有页边注</div>'}
+      <div id="myNotes"></div>
     </aside>
   </div>
   <button class="reader-float-close" onclick="enter3D()">← 合上书</button>`;
   renderMd(main, $('#paperBody'));
+  logRead(m.id);
+  loadAnnotations(m.id);
   $('#railToggle').onclick = toggleRail;
   const qIn2 = $('#railQ');
   qIn2.value = state.query;

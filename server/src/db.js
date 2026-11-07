@@ -49,6 +49,22 @@ CREATE TABLE IF NOT EXISTS progress (
   read_at TEXT NOT NULL,
   PRIMARY KEY (user_id, chapter_id)
 );
+CREATE TABLE IF NOT EXISTS reads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reader_id TEXT NOT NULL,
+  book_id TEXT NOT NULL,
+  chapter_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reads_book ON reads(book_id);
+CREATE INDEX IF NOT EXISTS idx_reads_reader ON reads(reader_id);
+CREATE TABLE IF NOT EXISTS fragment_picks (
+  reader_id TEXT NOT NULL,
+  fragment_id TEXT NOT NULL,
+  chapter_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (reader_id, fragment_id)
+);
 `);
 
 export function nowIso() {

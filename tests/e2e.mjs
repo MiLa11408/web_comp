@@ -34,8 +34,10 @@ const gateBtns = await page.locator('.gate-btn').count();
 gateBtns === 3 ? ok('门厅三个按钮', String(gateBtns)) : bad('门厅三个按钮', String(gateBtns));
 
 await page.getByRole('button', { name: '以访客身份入馆' }).click();
-await page.waitForFunction(() => !document.getElementById('gate'), null, { timeout: 3000 });
-ok('访客入馆后门厅移除');
+await page.waitForFunction(() => !document.getElementById('gate'), null, { timeout: 5000 });
+await page.waitForTimeout(1200);
+if (await page.locator('#gSkip').count()) await page.locator('#gSkip').click();
+ok('访客入馆后门厅移除与入馆指引');
 await page.waitForTimeout(800);
 const mainVisible = await page.locator('#app').isVisible();
 mainVisible ? ok('主界面可见') : bad('主界面可见');
@@ -62,6 +64,16 @@ const hasNotes = await page.locator('#notesCol').count();
 const hasFloat = await page.locator('.reader-float-close').count();
 (hasRail && hasNotes) ? ok('阅读三栏（左检索/右页边注）') : bad('阅读三栏', `rail=${hasRail} notes=${hasNotes}`);
 hasFloat ? ok('浮动合书键存在') : bad('浮动合书键存在');
+
+const toolCount = await page.locator('.reader-tools button').count();
+toolCount >= 3 ? ok('阅读工具条（盖章/批注/读完）', String(toolCount)) : bad('阅读工具条', String(toolCount));
+if (await page.locator('button:has-text("可玩演示")').count()) {
+  await page.locator('button:has-text("可玩演示")').click();
+  await page.waitForSelector('.mm-demo-overlay', { timeout: 8000 });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  (await page.locator('.mm-demo-overlay').count()) === 0 ? ok('可玩演示弹层与关闭') : bad('可玩演示弹层', 'Esc 未关闭');
+} else bad('可玩演示入口', '当前章节没有演示按钮');
 
 const noteCount = await page.locator('.note').count();
 noteCount >= 1 ? ok('页边注渲染', String(noteCount)) : bad('页边注渲染', String(noteCount));
@@ -114,6 +126,8 @@ rowCount >= 36 ? ok('总览书目行数', String(rowCount)) : bad('总览书目�
 // 5. 检索四级排序
 await page.getByRole('button', { name: '书架视图' }).click();
 await page.waitForSelector('#q', { timeout: 5000 });
+await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
+await page.waitForTimeout(600);
 await page.fill('#q', 'Transformer');
 await page.press('#q', 'Enter');
 await page.waitForSelector('.hit', { timeout: 8000 });
@@ -123,6 +137,15 @@ const hits = await page.locator('.hit').count();
   ? ok('检索首条命中标题/tag', firstHit)
   : bad('检索首条命中', firstHit);
 hits >= 1 ? ok('检索返回结果数', String(hits)) : bad('检索返回结果数');
+
+// 5b. 借阅档案（阅读上报与残页收编）
+await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
+await page.getByRole('button', { name: '借阅档案' }).click();
+await page.waitForSelector('.stat-cards', { timeout: 10000 });
+const statCards = await page.locator('.stat-card').count();
+const fragChips = await page.locator('.frag-chip').count();
+statCards === 4 ? ok('借阅档案统计卡', String(statCards)) : bad('借阅档案统计卡', String(statCards));
+fragChips >= 8 ? ok('残页收集面板', String(fragChips)) : bad('残页收集面板', String(fragChips));
 
 // 6. 后端接口：注册 / 登录 / 盖章 / 批注 / 进度
 const api = page.request;

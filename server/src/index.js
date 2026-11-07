@@ -16,6 +16,18 @@ const CONTENT_DIR = path.join(ROOT, 'content');
 
 const ctx = initSearch(CONTENT_DIR);
 
+// 残页目录（阅读上报时自动收编）
+const FRAGMENTS_FILE = path.join(CONTENT_DIR, 'fragments.json');
+let IFLINE_DATA = { title: '另一条时间线', total: 8 };
+let FRAGMENTS_LIST = [];
+const FRAGMENT_MAP = {};
+if (existsSync(FRAGMENTS_FILE)) {
+  const fj = JSON.parse(readFileSync(FRAGMENTS_FILE, 'utf8'));
+  IFLINE_DATA = fj.ifline || IFLINE_DATA;
+  FRAGMENTS_LIST = fj.fragments || [];
+  FRAGMENTS_LIST.forEach((f) => { if (f.chapter) FRAGMENT_MAP[f.chapter] = f; });
+}
+
 const app = Fastify({ logger: true });
 
 // ---------- 样章预览页（阶段 2 换 3D 界面） ----------
@@ -29,6 +41,12 @@ app.get('/', async (request, reply) => {
 app.get('/app3d.js', async (request, reply) => {
   const p = path.join(ROOT, 'web', 'app3d.js');
   if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'app3d.js 缺失' } });
+  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
+});
+
+app.get('/demos.js', async (request, reply) => {
+  const p = path.join(ROOT, 'web', 'demos.js');
+  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'demos.js 缺失' } });
   return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
 });
 
@@ -53,6 +71,20 @@ async function authHook(request, reply) {
 }
 
 const auth = { preHandler: authHook };
+
+function optionalUser(request) {
+  const header = request.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : (request.cookies && request.cookies.mm_token) || null;
+  return getUserByToken(token);
+}
+
+function resolveReader(request, body) {
+  const u = optionalUser(request);
+  if (u) return { id: `u:${u.id}`, user: u };
+  const v = String((body && body.reader_id) || '');
+  if (!/^[A-Za-z0-9_-]{8,40}$/.test(v)) return null;
+  return { id: `v:${v}`, user: null };
+}
 
 function fail(reply, status, code, message) {
   return reply.code(status).send({ error: { code, message } });
@@ -155,6 +187,57 @@ app.get('/api/fragments', async (request, reply) => jsonContent(reply, 'fragment
 app.get('/api/failures', async (request, reply) => jsonContent(reply, 'failures.json'));
 
 app.get('/api/models', async (request, reply) => jsonContent(reply, 'models.json'));
+
+// ---------- 阅读记录与残页收编 ----------
+app.post('/api/reads', async (request, reply) => {
+  const { chapter_id } = request.body || {};
+  const entry = ctx.chapters.get(chapter_id);
+  if (!entry) return fail(reply, 400, 'BAD_REQUEST', '章节不存在');
+  const reader = resolveReader(request, request.body);
+  if (!reader) return fail(reply, 400, 'BAD_REQUEST', '缺少有效的 reader_id');
+  db.prepare('INSERT INTO reads (reader_id, book_id, chapter_id, created_at) VALUES (?, ?, ?, ?)')
+    .run(reader.id, entry.meta.book, chapter_id, nowIso());
+  const fr = FRAGMENT_MAP[chapter_id] || null;
+  if (fr) {
+    db.prepare('INSERT OR IGNORE INTO fragment_picks (reader_id, fragment_id, chapter_id, created_at) VALUES (?, ?, ?, ?)')
+      .run(reader.id, fr.id, chapter_id, nowIso());
+  }
+  const collected = db.prepare('SELECT COUNT(*) AS c FROM fragment_picks WHERE reader_id = ?').get(reader.id).c;
+  return reply.code(201).send({
+    ok: true, fragment: fr ? fr.id : null,
+    collected, total: IFLINE_DATA.total || FRAGMENTS_LIST.length,
+  });
+});
+
+app.get('/api/stats', async (request) => {
+  const reader = resolveReader(request, request.query);
+  const totals = {
+    reads: db.prepare('SELECT COUNT(*) AS c FROM reads').get().c,
+    readers: db.prepare('SELECT COUNT(DISTINCT reader_id) AS c FROM reads').get().c,
+    books: ctx.books.length,
+    fragments: IFLINE_DATA.total || FRAGMENTS_LIST.length,
+  };
+  const rows = db.prepare('SELECT book_id, COUNT(*) AS reads, COUNT(DISTINCT reader_id) AS readers FROM reads GROUP BY book_id ORDER BY reads DESC LIMIT 12').all();
+  const bookMap = {};
+  ctx.books.forEach((b) => { bookMap[b.id] = b; });
+  const topBooks = rows.map((r) => {
+    const b = bookMap[r.book_id] || {};
+    return { id: r.book_id, title: b.title || r.book_id, call: b.call || '', floor: b.floor || '', reads: r.reads, readers: r.readers };
+  });
+  const picks = db.prepare('SELECT fragment_id, COUNT(*) AS readers FROM fragment_picks GROUP BY fragment_id').all();
+  const fragments = FRAGMENTS_LIST.map((f) => ({
+    id: f.id, title: f.title, floor: f.floor,
+    readers: (picks.find((p) => p.fragment_id === f.id) || {}).readers || 0,
+  }));
+  let me = null;
+  if (reader) {
+    const r = db.prepare('SELECT COUNT(*) AS reads, COUNT(DISTINCT chapter_id) AS chapters, COUNT(DISTINCT book_id) AS books FROM reads WHERE reader_id = ?').get(reader.id);
+    const myFrags = db.prepare('SELECT fragment_id FROM fragment_picks WHERE reader_id = ?').all(reader.id).map((x) => x.fragment_id);
+    const recent = db.prepare('SELECT book_id, chapter_id, COUNT(*) AS times, MAX(created_at) AS last FROM reads WHERE reader_id = ? GROUP BY chapter_id ORDER BY last DESC LIMIT 10').all(reader.id);
+    me = { reads: r.reads, chapters: r.chapters, books: r.books, fragments: myFrags, recent };
+  }
+  return { totals, topBooks, fragments, me, ifline: IFLINE_DATA };
+});
 
 app.get('/api/chapters/:id', async (request, reply) => {
   const entry = ctx.chapters.get(request.params.id);
