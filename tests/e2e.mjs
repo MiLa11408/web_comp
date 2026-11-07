@@ -82,6 +82,19 @@ const fadeOn = await page.evaluate(() => !!document.querySelector('#viewFade.on'
 if (stillReading || fadeOn) bad('合书返回阅览室', `reading=${stillReading} fadeOn=${fadeOn}`);
 else ok('合书返回阅览室');
 
+// 3b. 发展时间轴
+await page.getByRole('button', { name: '时间轴' }).click();
+await page.waitForSelector('.tl-decade', { timeout: 10000 });
+const decades = await page.locator('.tl-decade').count();
+const tnodes = await page.locator('.tl-node').count();
+decades >= 7 ? ok('时间轴年代分组', String(decades)) : bad('时间轴年代分组', String(decades));
+tnodes >= 200 ? ok('时间轴章节卡片', String(tnodes)) : bad('时间轴章节卡片', String(tnodes));
+await page.locator('.tl-node').first().click();
+await page.waitForSelector('#reader', { timeout: 8000 });
+ok('时间轴卡片可开章');
+await page.locator('.reader-float-close').first().click();
+await page.waitForTimeout(2000);
+
 // 4. 书架视图 / 总览
 await page.getByRole('button', { name: '书架视图' }).click();
 await page.waitForSelector('.unit', { timeout: 8000 });

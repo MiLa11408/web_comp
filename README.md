@@ -33,6 +33,12 @@ npm start              # 默认 http://127.0.0.1:3300
 npm run verify
 ```
 
+端到端 / 兼容性 / 性能冒烟（使用本机 Chrome 或 Edge，不起下载浏览器）：
+
+```bash
+npm run test:e2e
+```
+
 ## 目录
 
 ```
@@ -48,9 +54,12 @@ Explore/ai-library/
 ├─ server/src/            Fastify 入口、鉴权、检索、SQLite
 ├─ web/                   index.html（三视图 + 阅读页）、app3d.js（3D）、vendor/
 ├─ tools/verify.mjs       内容与数据校验
+├─ tests/e2e.mjs          端到端 / 移动端 / 性能冒烟
 ├─ docs/                  数据/接口/内容规范、分级与废墟图书馆方案、24 本扩容目录
 └─ deploy/                systemd / nginx / 部署脚本
 ```
+
+> `npm install` 会安装 `playwright-core`（仅测试用，不下载浏览器）。生产部署可用 `npm ci --omit=dev`，不装测试依赖。
 
 ## 主要接口
 

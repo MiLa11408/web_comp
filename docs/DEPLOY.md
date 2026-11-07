@@ -38,6 +38,7 @@ ln -sfn /opt/web_comp/Explore/ai-library /opt/machine-memory   # 或直接把目
 
 ```bash
 cd <本地仓库>/Explore/ai-library
+chmod +x deploy/deploy.sh
 rsync -az --delete \
   --exclude node_modules --exclude .git --exclude .data --exclude '*.log' \
   -e "ssh -i /e/下载download/1.pem" ./ root@<服务器IP>:/opt/machine-memory/

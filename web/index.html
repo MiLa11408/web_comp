@@ -222,6 +222,18 @@
   .rail-branch-head { color: var(--c); font-size: 12px; letter-spacing: 1px; }
   .rail-branch-head i { font-style: normal; color: #8a7a5c; font-size: 11px; margin-left: 8px; }
   .rail-hintbar { color: #7d6e55; font-size: 11px; margin-top: 10px; }
+
+  /* ---------- 发展时间轴 ---------- */
+  .tl-view { max-width: 1200px; }
+  .tl-decade { border-left: 3px solid #6b5a3a; padding: 4px 0 4px 14px; margin-bottom: 18px; }
+  .tl-decade h3 { color: var(--gold); font-size: 13px; letter-spacing: 2px; margin: 0 0 8px; font-weight: 500; }
+  .tl-decade h3 i { font-style: normal; color: #8a7a5c; font-size: 11px; margin-left: 8px; }
+  .tl-items { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tl-node { background: #1d1712; border: 1px solid var(--line); padding: 7px 10px; cursor: pointer; max-width: 240px; }
+  .tl-node:hover { border-color: var(--gold); background: #241c14; }
+  .tl-node b { color: var(--gold); font-family: monospace; font-size: 11px; margin-right: 6px; }
+  .tl-node span { color: var(--ink); font-size: 12.5px; }
+  .tl-node i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
 </style>
 </head>
 <body>
@@ -314,6 +326,7 @@
   <button class="back" style="margin:0" onclick="enterShelf()">书架视图</button>
   <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
   <button class="back" style="margin:0" onclick="enterRail()">铁路线</button>
+  <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
 </div>
 <div id="scene3d"></div>
 <div id="app"></div>
@@ -449,6 +462,45 @@ function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
 function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() { fadeSwap(() => backToRoom()); }
 function enterRail() { fadeSwap(() => showRail()); }
+function enterTimeline() { fadeSwap(() => showTimeline()); }
+
+async function showTimeline() {
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在按年份整理卡片……</div>';
+  const catalog = await ensureCatalog();
+  const entries = [];
+  catalog.forEach((b) => (b.chapters || []).forEach((c) => {
+    const m = String(c.year || '').match(/\d{4}/);
+    if (!m) return;
+    entries.push({ ...c, y: Number(m[0]), bookTitle: b.title, floor: b.floor });
+  }));
+  entries.sort((a, b) => a.y - b.y || a.no - b.no);
+  const decades = new Map();
+  entries.forEach((e) => {
+    const d = Math.floor(e.y / 10) * 10;
+    if (!decades.has(d)) decades.set(d, []);
+    decades.get(d).push(e);
+  });
+  const span = entries.length ? `${entries[0].y}–${entries[entries.length - 1].y}` : '—';
+  app.innerHTML = `
+  <div class="tl-view">
+    <div class="rail-head"><span>发展时间轴 · ${span} · ${entries.length} 章</span>
+      <span class="head-links"><a onclick="enterRail()">铁路线 →</a> · <a onclick="enterOverview()">书架总览 →</a></span>
+    </div>
+    <div class="rail-sub">按章节标注的年份排列，同一 decade 里的先后不代表精确月份；点任意卡片打开那一章。</div>
+    ${[...decades.entries()].map(([d, items]) => `
+      <section class="tl-decade">
+        <h3>${d}s<i>${items.length} 章</i></h3>
+        <div class="tl-items">${items.map((e) => `
+          <div class="tl-node" onclick="showChapter('${e.id}')" title="打开《${esc(e.bookTitle)}》· ${esc(e.title)}">
+            <b>${esc(String(e.year))}</b><span>${esc(e.title)}</span>
+            <i>${esc(e.bookTitle)}</i>
+          </div>`).join('')}</div>
+      </section>`).join('')}
+    <div class="rail-hintbar">时间轴只收有明确年份的章节；年份区间取起点年份。</div>
+  </div>`;
+}
 
 let railCache = null;
 async function ensureRail() {
