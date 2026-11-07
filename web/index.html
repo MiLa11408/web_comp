@@ -421,6 +421,12 @@
   .tour-actions button { background: #2c241a; color: var(--gold); border: 1px solid #8a6320; padding: 6px 12px; cursor: pointer; font-size: 12px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
   .tour-actions button:hover { border-color: var(--gold); }
   .tour-actions .tour-end { color: #b9a778; border-color: #5a4526; background: transparent; }
+  .tour-actions button.tour-pause { border-color: var(--gold); min-width: 74px; }
+  .tour-bar { height: 3px; background: #3a2f22; margin: 10px 0 7px; overflow: hidden; }
+  .tour-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #8a6320, #e6c36a); }
+  .tour-status { display: flex; justify-content: space-between; gap: 10px; color: #8a7a5c; font-size: 10.5px; letter-spacing: 1px; margin-bottom: 10px; font-family: "Consolas", "Microsoft YaHei", monospace; }
+  .tour-status b { color: #cbb892; font-weight: normal; }
+  .tour-keys { color: #7d6e55; font-size: 10px; letter-spacing: 1px; margin-top: 8px; text-align: right; }
 
   /* ---------- 章节总结卡 ---------- */
   .chapter-card { background: linear-gradient(160deg, #221a13, #1a140f); border: 1px solid #8a6320; padding: 12px 13px 11px; margin: 16px 0 12px; box-shadow: inset 0 0 0 1px rgba(200,162,74,.12); font-family: "Songti SC", "SimSun", serif; min-width: 0; overflow-wrap: anywhere; }
@@ -1698,7 +1704,7 @@ async function showAbout() {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>70 项</b>，覆盖入馆、取书、检索、电梯、两套视图、隐藏馆藏与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>73 项</b>，覆盖入馆、取书、检索、电梯、两套视图、隐藏馆藏与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>
@@ -2106,31 +2112,42 @@ async function showPlan(floor = 'all') {
 // ---------- 馆内导览 ----------
 const TOUR_STOPS = [
   {
-    title: '① 入口', floor: 'all', x: 0, y: 1.68, z: 9.1, lookX: 0, lookY: 1.5, lookZ: -4,
+    title: '① 入口', floor: 'all', x: 0, y: 1.68, z: 9.1, lookX: 0, lookY: 1.5, lookZ: -4, dwell: 20000,
     text: '夜里十一点，前台只留一盏灯。往里走，地板会记住你的脚步声，但不会告诉任何人你从哪来。',
   },
   {
-    title: '② 书架', floor: 'all', x: 0, y: 1.68, z: 3.2, lookX: 0, lookY: 1.6, lookZ: -5.4,
+    title: '② 书架', floor: 'all', x: 0, y: 1.68, z: 3.2, lookX: 0, lookY: 1.6, lookZ: -5.4, dwell: 21000,
     text: '八组书架，四十八本书，把四层的记忆分门别类排好。书脊上的烫金字不是装饰，是提醒：有些名字一旦被读出来，就会开始发生。',
   },
   {
-    title: '③ 电梯', floor: 'all', x: -9.4, y: 1.68, z: 0.6, lookX: -12.8, lookY: 1.6, lookZ: -0.6,
+    title: '③ 失窃展柜', floor: 'L1', x: -8.4, y: 1.68, z: 4.5, lookX: -10.4, lookY: 1.2, lookZ: 3.2, dwell: 20000,
+    text: '铜柱上罩着玻璃的是失窃页。书被撕走一页时，馆里会替它保留一个空位——空位比文字更记得自己缺了什么。',
+  },
+  {
+    title: '④ 黄铜电梯', floor: 'all', x: -9.4, y: 1.68, z: 0.6, lookX: -12.8, lookY: 1.6, lookZ: -0.6, dwell: 19000,
     text: '黄铜电梯只停四层，每一层的灯色都不一样。旧纸、蓝图、账簿、蜡封——越往下，纸越不愿意开口。',
   },
   {
-    title: '④ 星图台', floor: 'all', x: 0.4, y: 1.68, z: 4.6, lookX: 0.4, lookY: 1.0, lookZ: 0.9,
+    title: '⑤ 星图台', floor: 'all', x: 0.4, y: 1.68, z: 4.6, lookX: 0.4, lookY: 1.0, lookZ: 0.9, dwell: 20000,
     text: '铜盘上钉着许多年份，转一圈，整座馆的历史就按自己的顺序排好。那颗悬着的球别碰，它不属于任何一层。',
   },
   {
-    title: '⑤ 卡片目录', floor: 'all', x: 7.9, y: 1.68, z: 3.6, lookX: 10.5, lookY: 1.5, lookZ: 2.4,
+    title: '⑥ 卡片目录', floor: 'all', x: 7.9, y: 1.68, z: 3.6, lookX: 10.5, lookY: 1.5, lookZ: 2.4, dwell: 19000,
     text: '卡片柜是馆里最诚实的地方，每张卡都写着谁在哪一年说过什么。先看标签，再问自己到底想找哪一句。',
   },
   {
-    title: '⑥ L4 帷幕', floor: 'L4', x: 0, y: 1.68, z: 6.2, lookX: 0, lookY: 2.2, lookZ: -2.5,
-    text: '帷幕后面是未编目地库，蜡封馆员今晚值班。别问门后有什么，问了她也只会把灯调暗一点。',
+    title: '⑦ 技术工坊', floor: 'L2', x: 0, y: 1.68, z: 5.4, lookX: 0, lookY: 1.5, lookZ: -4.2, dwell: 20000,
+    text: '第二层的灯是蓝的。蓝图、工具墙、卷起的图纸：这一层不收藏结论，只收藏结论被推翻之前的样子。',
+  },
+  {
+    title: '⑧ 未编目地库', floor: 'L4', x: 0, y: 1.68, z: 6.2, lookX: 0, lookY: 2.2, lookZ: -2.5, dwell: 21000,
+    text: '第四层，未编目地库。帷幕后面没有索引，只有还没被决定的未来。导览到这里结束；灯会在你走之后关掉。',
   },
 ];
 let tourIndex = 0;
+let tourTimer = null;
+let tourPaused = false;
+const TOUR_DWELL_MS = 20000;
 
 function mmTourCardEl() {
   let el = document.getElementById('tourCard');
@@ -2142,6 +2159,74 @@ function mmTourCardEl() {
   return el;
 }
 
+function mmTourPaint() {
+  const bar = document.getElementById('tourBar');
+  const status = document.getElementById('tourStatus');
+  const btn = document.getElementById('tourPause');
+  if (btn) btn.textContent = tourPaused ? '▶ 继续' : '⏸ 暂停';
+  if (!bar && !status) return;
+  if (!tourTimer) {
+    if (bar) bar.style.width = '0%';
+    if (status) status.innerHTML = '<span>▶ 自动播放 · 8 站 · 约 3 分钟</span><b>正在走向这一站…</b>';
+    return;
+  }
+  const left = tourTimer.paused ? tourTimer.remain : Math.max(0, tourTimer.remain - (performance.now() - tourTimer.t0));
+  const pct = Math.max(0, Math.min(1, 1 - left / tourTimer.dwell));
+  if (bar) bar.style.width = (pct * 100).toFixed(2) + '%';
+  if (status) {
+    const sec = Math.ceil(Math.max(0, left) / 1000);
+    status.innerHTML = `<span>${tourPaused ? '⏸ 已暂停' : '▶ 自动播放 · 8 站 · 约 3 分钟'}</span><b>${tourPaused ? '空格继续' : sec + 's 后下一站'}</b>`;
+  }
+}
+
+function mmTourStopTimer() {
+  if (tourTimer) { cancelAnimationFrame(tourTimer.raf); tourTimer = null; }
+}
+
+function mmTourTick() {
+  if (!tourTimer || tourTimer.paused) return;
+  mmTourPaint();
+  const left = tourTimer.remain - (performance.now() - tourTimer.t0);
+  if (left <= 0) {
+    tourTimer = null;
+    mmTourNext(true);
+    return;
+  }
+  tourTimer.raf = requestAnimationFrame(mmTourTick);
+}
+
+function mmTourStartTimer(ms) {
+  mmTourStopTimer();
+  const dwell = Math.max(6000, Number(ms) || TOUR_DWELL_MS);
+  tourTimer = { dwell, remain: dwell, t0: performance.now(), paused: tourPaused, raf: 0 };
+  mmTourPaint();
+  if (!tourPaused) tourTimer.raf = requestAnimationFrame(mmTourTick);
+}
+
+function mmTourPause() {
+  if (!tourActive) return;
+  tourPaused = true;
+  if (tourTimer) {
+    tourTimer.remain = Math.max(800, tourTimer.remain - (performance.now() - tourTimer.t0));
+    tourTimer.paused = true;
+    cancelAnimationFrame(tourTimer.raf);
+  }
+  mmTourPaint();
+}
+function mmTourResume() {
+  if (!tourActive) return;
+  tourPaused = false;
+  if (tourTimer) {
+    tourTimer.paused = false;
+    tourTimer.t0 = performance.now();
+    tourTimer.raf = requestAnimationFrame(mmTourTick);
+  }
+  mmTourPaint();
+}
+function mmTourToggle() { if (tourPaused) mmTourResume(); else mmTourPause(); }
+window.mmTourPause = mmTourPause;
+window.mmTourResume = mmTourResume;
+
 function mmTourRenderCard(i) {
   const stop = TOUR_STOPS[i];
   if (!stop) return;
@@ -2149,31 +2234,40 @@ function mmTourRenderCard(i) {
   const el = mmTourCardEl();
   el.innerHTML = `
     <div class="tour-card">
-      <div class="tour-kicker">馆内导览 · <span>${i + 1}/${TOUR_STOPS.length}</span></div>
+      <div class="tour-kicker">馆长导览 · 自动 <span>${i + 1}/${TOUR_STOPS.length}</span></div>
       <h3>${esc(stop.title)}</h3>
       <p>${esc(stop.text)}</p>
+      <div class="tour-bar"><i id="tourBar"></i></div>
+      <div class="tour-status" id="tourStatus"></div>
       <div class="tour-actions">
-        <button onclick="mmTourPrev()">上一步</button>
-        <button onclick="mmTourNext()">下一步</button>
-        <button class="tour-end" onclick="mmEndTour()">结束导览</button>
+        <button id="tourPause" class="tour-pause" onclick="mmTourToggle()">${tourPaused ? '▶ 继续' : '⏸ 暂停'}</button>
+        <button onclick="mmTourPrev()">← 上一步</button>
+        <button onclick="mmTourNext()">下一步 →</button>
+        <button class="tour-end" onclick="mmEndTour()">结束</button>
       </div>
+      <div class="tour-keys">空格 暂停/继续 · ← → 切换 · Esc 退出</div>
     </div>`;
   el.style.display = 'block';
+  mmTourPaint();
 }
 
 function mmTourCleanup() {
   tourActive = false;
+  tourPaused = false;
+  mmTourStopTimer();
   const el = document.getElementById('tourCard');
   if (el) el.remove();
 }
 
 function mmTourPrev() {
   if (!tourActive || !window.mm3d || typeof window.mm3d.tourGo !== 'function') return;
+  mmTourStopTimer();
   try { window.mm3d.tourGo(Math.max(0, tourIndex - 1)); } catch (e) { console.warn('[tour] 上一步失败', e); }
 }
 
 function mmTourNext() {
   if (!tourActive || !window.mm3d || typeof window.mm3d.tourGo !== 'function') return;
+  mmTourStopTimer();
   try { window.mm3d.tourGo(tourIndex + 1); } catch (e) { console.warn('[tour] 下一步失败', e); }
 }
 
@@ -2182,6 +2276,7 @@ function mmEndTour() {
     try { window.mm3d.endTour(); } catch (e) { console.warn('[tour] 结束失败', e); }
   }
   mmTourCleanup();
+  mmToast('导览结束，馆员退回柜台后。');
 }
 
 async function mmStartTour() {
@@ -2196,9 +2291,14 @@ async function mmStartTour() {
     await new Promise((resolve) => setTimeout(resolve, 600));
   }
   tourActive = true;
+  tourPaused = false;
+  mmTourStopTimer();
   try {
     mm.startTour(TOUR_STOPS, {
-      onStep: (i) => mmTourRenderCard(i),
+      onStep: (i) => {
+        mmTourRenderCard(i);
+        mmTourStartTimer(TOUR_STOPS[i] && TOUR_STOPS[i].dwell);
+      },
       onEnd: () => {
         mmTourCleanup();
         mmToast('导览结束，馆员退回柜台后。');
@@ -2216,7 +2316,19 @@ async function mmStartTour() {
     return;
   }
   if (!document.getElementById('tourCard')) mmTourRenderCard(0);
+  mmToast('馆长导览开始：8 站，约 3 分钟；空格暂停，Esc 退出。');
 }
+
+// 导览键盘控制：空格暂停/继续，←→切站，Esc 退出
+window.addEventListener('keydown', (e) => {
+  if (!tourActive) return;
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (e.key === 'Escape') { e.preventDefault(); mmEndTour(); }
+  else if (e.key === ' ') { e.preventDefault(); mmTourToggle(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); mmTourNext(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); mmTourPrev(); }
+});
 
 function tlFilter(btn) {
   const d = btn && btn.dataset ? btn.dataset.decade : 'all';
