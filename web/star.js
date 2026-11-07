@@ -2,10 +2,10 @@
 import * as THREE from './vendor/three.module.js';
 
 const FLOORS = [
-  { id: 'L1', name: '历史典藏', color: 0xc8a24a, radius: 4.2 },
-  { id: 'L2', name: '技术工坊', color: 0x7fb6d6, radius: 5.6 },
-  { id: 'L3', name: '产业观察', color: 0x9ec27a, radius: 7.0 },
-  { id: 'L4', name: '未编目地库', color: 0xc49ae0, radius: 8.4 },
+  { id: 'L1', name: '历史典藏', color: 0xc8a24a, radius: 6.2 },
+  { id: 'L2', name: '技术工坊', color: 0x7fb6d6, radius: 8.2 },
+  { id: 'L3', name: '产业观察', color: 0x9ec27a, radius: 10.2 },
+  { id: 'L4', name: '未编目地库', color: 0xc49ae0, radius: 12.2 },
 ];
 
 const CSS = `

@@ -20,7 +20,7 @@ const STYLES = new Set(['history', 'tech', 'industry', 'frontier']);
 
 // ---------- books.json ----------
 const books = JSON.parse(readFileSync(path.join(CONTENT, 'books.json'), 'utf8'));
-if (!Array.isArray(books) || books.length !== 36) F('books.json 需恰好 36 本书（12 原有 + 24 专题册）');
+if (!Array.isArray(books) || books.length !== 48) F('books.json 需恰好 48 本书（12 原有 + 24 专题册 + 12 补充册）');
 const calls = new Set();
 const bookIds = new Set();
 for (const b of books) {
