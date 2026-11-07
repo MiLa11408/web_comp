@@ -59,7 +59,7 @@ function makeLabel(text) {
   ctx.fillText(text, 256, 48);
   const tex = new THREE.CanvasTexture(canvas);
   tex.anisotropy = 2;
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false });
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: true });
   const sp = new THREE.Sprite(mat);
   sp.scale.set(1.9, 0.36, 1);
   return sp;
@@ -98,10 +98,12 @@ export async function showStarMap() {
   scene.background = new THREE.Color(0x0c0906);
   scene.fog = new THREE.FogExp2(0x0c0906, 0.028);
 
-  const camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 120);
-  camera.position.set(0, 6.2, 16);
+  const camera = new THREE.PerspectiveCamera(65, container.clientWidth / container.clientHeight, 0.1, 120);
+  camera.position.set(0, 0, 0);
+  camera.lookAt(0, 0, -1);
 
   const group = new THREE.Group();
+  group.rotation.y = 0.4;
   scene.add(group);
 
   scene.add(new THREE.AmbientLight(0xfff2d8, 1.35));
@@ -223,9 +225,8 @@ export async function showStarMap() {
   };
   const onWheel = (e) => {
     e.preventDefault();
-    const len = camera.position.length();
-    const next = Math.max(9, Math.min(24, len + e.deltaY * 0.012));
-    camera.position.multiplyScalar(next / len);
+    camera.fov = Math.max(35, Math.min(95, camera.fov + e.deltaY * 0.03));
+    camera.updateProjectionMatrix();
   };
   const onResize = () => {
     const w = container.clientWidth;

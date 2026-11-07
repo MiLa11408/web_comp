@@ -194,7 +194,7 @@ app.get('/api/failures', async (request, reply) => jsonContent(reply, 'failures.
 
 app.get('/api/models', async (request, reply) => jsonContent(reply, 'models.json'));
 
-// ---------- 阅读记录与残页收编 ----------
+// ---------- 阅读记录（残页改为手动拾取） ----------
 app.post('/api/reads', async (request, reply) => {
   const { chapter_id } = request.body || {};
   const entry = ctx.chapters.get(chapter_id);
@@ -203,16 +203,21 @@ app.post('/api/reads', async (request, reply) => {
   if (!reader) return fail(reply, 400, 'BAD_REQUEST', '缺少有效的 reader_id');
   db.prepare('INSERT INTO reads (reader_id, book_id, chapter_id, created_at) VALUES (?, ?, ?, ?)')
     .run(reader.id, entry.meta.book, chapter_id, nowIso());
-  const fr = FRAGMENT_MAP[chapter_id] || null;
-  if (fr) {
-    db.prepare('INSERT OR IGNORE INTO fragment_picks (reader_id, fragment_id, chapter_id, created_at) VALUES (?, ?, ?, ?)')
-      .run(reader.id, fr.id, chapter_id, nowIso());
-  }
   const collected = db.prepare('SELECT COUNT(*) AS c FROM fragment_picks WHERE reader_id = ?').get(reader.id).c;
-  return reply.code(201).send({
-    ok: true, fragment: fr ? fr.id : null,
-    collected, total: IFLINE_DATA.total || FRAGMENTS_LIST.length,
-  });
+  return reply.code(201).send({ ok: true, collected, total: IFLINE_DATA.total || FRAGMENTS_LIST.length });
+});
+
+// 拾取残页（只有玩家主动点「捡起来」才收编）
+app.post('/api/fragments/:id/pick', async (request, reply) => {
+  const f = FRAGMENTS_LIST.find((x) => x.id === request.params.id);
+  if (!f) return fail(reply, 404, 'NOT_FOUND', '没有这张残页');
+  const reader = resolveReader(request, request.body);
+  if (!reader) return fail(reply, 400, 'BAD_REQUEST', '缺少有效的 reader_id');
+  const had = db.prepare('SELECT 1 FROM fragment_picks WHERE reader_id = ? AND fragment_id = ?').get(reader.id, f.id);
+  db.prepare('INSERT OR IGNORE INTO fragment_picks (reader_id, fragment_id, chapter_id, created_at) VALUES (?, ?, ?, ?)')
+    .run(reader.id, f.id, f.chapter || 'scene', nowIso());
+  const collected = db.prepare('SELECT COUNT(*) AS c FROM fragment_picks WHERE reader_id = ?').get(reader.id).c;
+  return reply.code(201).send({ ok: true, isNew: !had, fragment: f, collected, total: IFLINE_DATA.total || FRAGMENTS_LIST.length });
 });
 
 app.get('/api/stats', async (request) => {

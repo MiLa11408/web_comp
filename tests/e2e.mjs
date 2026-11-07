@@ -89,17 +89,23 @@ if (await page.locator('button:has-text("可玩演示")').count()) {
   (await page.locator('.mm-demo-overlay').count()) === 0 ? ok('可玩演示弹层与关闭') : bad('可玩演示弹层', 'Esc 未关闭');
 } else bad('可玩演示入口', '当前章节没有演示按钮');
 
-// 残页：切到 b1-c3（藏 R-01）
+// 残页：切到 b1-c3（藏着 R-01），纸片掉落 → 主动捡起 → 残缺内容 + 馆员旁白
 await page.evaluate(() => window.showChapter('b1-c3'));
-await page.waitForTimeout(1200);
-const fragHit = await page.locator('.ifline-hit').innerText();
-fragHit.includes('R-01') ? ok('本章残页提示', fragHit.split('\n')[0]) : bad('本章残页提示', fragHit.slice(0, 30));
-const fragGuide = await page.locator('#fragModal').count();
-fragGuide ? ok('首次发现残页教程') : bad('首次发现残页教程');
-if (await page.locator('#fgOk').count()) await page.locator('#fgOk').click();
-await page.waitForTimeout(300);
+await page.waitForTimeout(1400);
+const fragDrop = await page.locator('#fragDrop').count();
+fragDrop ? ok('残页掉落提示（不直接显示编号）') : bad('残页掉落提示');
+if (fragDrop) {
+  const cardText = await page.locator('.ifline-card').innerText();
+  !cardText.includes('R-01') ? ok('右栏不剧透残页编号') : bad('右栏剧透残页编号', cardText.slice(0, 30));
+  await page.locator('#fdYes').click();
+  await page.waitForSelector('#fragModal', { timeout: 6000 });
+  const fragText = await page.locator('.frag-box').innerText();
+  (fragText.includes('R-01') && fragText.includes('别查')) ? ok('残页残缺内容与馆员旁白') : bad('残页内容/旁白', fragText.slice(0, 40));
+  await page.locator('#fragClose').click();
+  await page.waitForTimeout(300);
+}
 const fragCount = await page.locator('#fragCount').innerText();
-fragCount.startsWith('1/') ? ok('残页收编计数', fragCount) : bad('残页收编计数', fragCount);
+fragCount.startsWith('1/') ? ok('残页计数', fragCount) : bad('残页计数', fragCount);
 
 const noteCount = await page.locator('.note').count();
 noteCount >= 1 ? ok('页边注渲染', String(noteCount)) : bad('页边注渲染', String(noteCount));

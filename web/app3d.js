@@ -353,8 +353,26 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     starTable.add(dot);
     starDots.push(dot);
   }
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 24, 24),
+    new THREE.MeshStandardMaterial({ color: 0xc8a24a, emissive: 0xc8a24a, emissiveIntensity: 0.85, transparent: true, opacity: 0.92, roughness: 0.3 })
+  );
+  orb.position.y = 1.02;
+  starTable.add(orb);
   starTable.position.set(0.4, 0, 0.6);
   scene.add(starTable);
+
+  // ---------- 散落的域外残页（不在书里） ----------
+  const fragPapers = [];
+  const fragMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.9, emissive: 0x8a6320, emissiveIntensity: 0.22, side: THREE.DoubleSide });
+  [[-5.9, 0.02, 3.1, -0.5], [6.4, 0.02, -3.2, 0.7]].forEach(([x, y, z, rz]) => {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.46), fragMat);
+    p.rotation.x = -Math.PI / 2;
+    p.rotation.z = rz;
+    p.position.set(x, y, z);
+    scene.add(p);
+    fragPapers.push(p);
+  });
 
   // ---------- 卡片目录柜 ----------
   const cabinet = new THREE.Group();
@@ -655,7 +673,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     setPointer(e.clientX, e.clientY);
     const hits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);
     const hitElev = raycaster.intersectObject(elevator, true);
-    el.style.cursor = (hits.length || hitElev.length) ? 'pointer' : 'grab';
+    const hitStar = raycaster.intersectObject(starTable, true);
+    const hitFrag = raycaster.intersectObjects(fragPapers, false);
+    el.style.cursor = (hits.length || hitElev.length || hitStar.length || hitFrag.length) ? 'pointer' : 'grab';
   }
 
   function pick(x, y) {
@@ -664,6 +684,16 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const elevHits = raycaster.intersectObject(elevator, true);
     if (elevHits.length) {
       elevPanel.classList.add('show');
+      return;
+    }
+    const starHits = raycaster.intersectObject(starTable, true);
+    if (starHits.length) {
+      if (window.mmShowStar) window.mmShowStar();
+      return;
+    }
+    const fragHits = raycaster.intersectObjects(fragPapers, false);
+    if (fragHits.length) {
+      if (window.mmPickSceneFragment) window.mmPickSceneFragment();
       return;
     }
     const hits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);

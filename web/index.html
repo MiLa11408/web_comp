@@ -298,6 +298,18 @@
   .frag-chip i { display: block; font-style: normal; color: #7d6e55; font-size: 10.5px; margin-top: 3px; }
   .frag-chip.got { border-color: var(--gold); background: #241c14; }
 
+  /* ---------- 残页掉落与馆员旁白 ---------- */
+  .frag-drop { position: fixed; right: 18px; bottom: 110px; z-index: 85; width: min(340px, 88vw); background: #1d1712; border: 1px solid #8a6320; box-shadow: 0 18px 50px rgba(0,0,0,.7); padding: 12px 14px; display: flex; gap: 12px; align-items: center; animation: gateRise .4s ease both; }
+  .frag-drop .fd-paper { width: 34px; height: 46px; background: linear-gradient(150deg, #e6d6b0, #c8b487); transform: rotate(-8deg); box-shadow: 0 3px 8px rgba(0,0,0,.5); position: relative; flex: 0 0 auto; }
+  .frag-drop .fd-paper::after { content: ""; position: absolute; inset: 8px 5px auto 5px; height: 2px; background: rgba(90,69,31,.35); box-shadow: 0 8px 0 rgba(90,69,31,.25), 0 16px 0 rgba(90,69,31,.2); }
+  .frag-drop .fd-kicker { color: #8a7a5c; font-size: 10.5px; letter-spacing: 2px; }
+  .frag-drop .fd-text { color: #cbb892; font-size: 12.5px; line-height: 1.7; margin: 3px 0 8px; }
+  .frag-drop .fd-actions { display: flex; gap: 8px; }
+  .frag-drop button { background: #2c241a; color: var(--gold); border: 1px solid #8a6320; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+  .frag-drop button.ghost { background: transparent; color: #9a8a6f; border-color: #5a4526; }
+  .frag-line { margin: 10px 0 14px; padding: 10px 12px; border-left: 3px solid #8a6320; background: rgba(90,69,31,.12); color: #6b4f1d; font-size: 13px; line-height: 1.8; font-family: "KaiTi", "STKaiti", serif; }
+  .frag-line b { color: #5a451f; }
+
   /* ---------- 残页卡与残页弹层 ---------- */
   .ifline-hit { margin-top: 7px; padding-top: 6px; border-top: 1px dashed rgba(143,122,82,.5); color: #e2c06a; font-size: 11.5px; line-height: 1.7; }
   .ifline-hit.dim { color: #7d6e55; }
@@ -422,6 +434,12 @@ const bookNames = {};
 const bookFloors = {};
 const bookCalls = {};
 const LIBRARIANS = { L1: '旧纸馆员', L2: '蓝图馆员', L3: '账簿馆员', L4: '蜡封馆员' };
+const LIB_NOTE = {
+  L1: '旧纸最会骗人——它们只记得自己没被烧掉的那一页。',
+  L2: '蓝图上的线都有第二层含义，别只看粗的那根。',
+  L3: '账目之外的数字，不要记在自己本子上。',
+  L4: '你已经越过目录了。再往里，没有页码。',
+};
 const floorInfo = {};
 const chapterFragments = {};
 let iflineInfo = null;
@@ -543,10 +561,6 @@ async function logRead(chapterId) {
     const d = await r.json();
     const el = document.getElementById('fragCount');
     if (el && d && d.total) el.textContent = `${d.collected}/${d.total}`;
-    if (d && d.fragment && d.collected != null) {
-      mmToast(`收编残页 ${d.fragment}（${d.collected}/${d.total}）`);
-      maybeFragGuide(d.fragment, d.collected, d.total);
-    }
   } catch (e) { /* 离线也能读 */ }
 }
 
@@ -627,27 +641,92 @@ async function showFragment(id) {
   el.onclick = (e) => { if (e.target === el) el.remove(); };
 }
 
-function maybeFragGuide(fragmentId, collected, total) {
-  if (localStorage.getItem('mm_frag_guide')) return;
-  localStorage.setItem('mm_frag_guide', '1');
+const FRAG_LINES = [
+  '这不是馆里的纸。是域外书籍的残页。……我劝你，忍住好奇。别查，别搜。',
+  '我说过，别查。你还是不听劝。',
+  '第三张了。……馆里的规矩是，级别够了，什么都能读。你已经越过了那条线。',
+  '我把门留着。你读吧，别把纸屑抖在地上。',
+];
+function fragLine(collected) {
+  if (collected <= 1) return FRAG_LINES[0];
+  if (collected === 2) return FRAG_LINES[1];
+  if (collected === 3) return FRAG_LINES[2];
+  return FRAG_LINES[3];
+}
+
+function tryFragmentDrop(chapterId) {
+  const fr = chapterFragments[chapterId];
+  if (!fr || fr.where === 'scene') return;
+  if (document.getElementById('fragDrop') || document.getElementById('fragModal')) return;
+  const first = !localStorage.getItem('mm_frag_first_seen');
+  if (!first && Math.random() > 0.4) return;
+  localStorage.setItem('mm_frag_first_seen', '1');
+  const el = document.createElement('div');
+  el.id = 'fragDrop';
+  el.className = 'frag-drop';
+  el.innerHTML = `
+    <div class="fd-paper" aria-hidden="true"></div>
+    <div>
+      <div class="fd-kicker">书页之间</div>
+      <div class="fd-text">${esc(fr.hint || '书页间滑出一角纸片。')}</div>
+      <div class="fd-actions"><button class="ghost" id="fdNo">放回去</button><button id="fdYes">捡起来</button></div>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#fdNo').onclick = () => el.remove();
+  el.querySelector('#fdYes').onclick = () => { el.remove(); pickFragment(fr.id); };
+}
+
+async function pickFragment(id) {
+  try {
+    const r = await fetch('api/fragments/' + encodeURIComponent(id) + '/pick', {
+      method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ reader_id: readerKey() }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.fragment) return mmToast('纸片滑掉了，再试一次。');
+    const el = document.getElementById('fragCount');
+    if (el && d.total) el.textContent = `${d.collected}/${d.total}`;
+    showFragmentPage(d.fragment, d.collected, d.total, d.isNew);
+  } catch (e) { mmToast('纸片滑掉了，再试一次。'); }
+}
+
+function showFragmentPage(f, collected, total, isNew) {
   let el = document.getElementById('fragModal');
   if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
   el.className = 'frag-modal';
   el.innerHTML = `
     <div class="frag-box">
-      <div class="frag-kicker">发现残页 · 新手指引</div>
-      <h3>你捡到了另一条时间线的第一页</h3>
-      <p>刚刚收编的是 <b>${esc(fragmentId)}</b>。全馆共 <b>${total}</b> 张残页，分散在不同章节里；读到藏有残页的章节就会自动收编，现在你有 <b>${collected}/${total}</b>。</p>
-      <p>去哪看：顶栏「借阅档案」→ 残页收集程度；已收编的残页点开可以读全文。集齐 ${total} 张，另一条时间线才完整。</p>
-      <div class="frag-actions">
-        <button class="ghost" id="fgView">先读这一页</button>
-        <button id="fgOk">知道了，继续读</button>
-      </div>
+      <div class="frag-kicker">域外残页 · ${esc(f.id)} · 推测</div>
+      <h3>${esc(f.title)}</h3>
+      <div class="frag-line">${esc(fragLine(collected))}</div>
+      <p>${esc(f.text)}</p>
+      <p style="color:#8a7a5c;font-size:12px">已拾 ${collected} / ${total}。${isNew === false ? '这张你已经收过了。' : '纸页残缺，余下的字不在这一页上。'}</p>
+      <div class="frag-actions"><button id="fragClose">收起来</button></div>
     </div>`;
-  el.querySelector('#fgOk').onclick = () => el.remove();
-  el.querySelector('#fgView').onclick = () => { el.remove(); showFragment(fragmentId); };
+  el.querySelector('#fragClose').onclick = () => el.remove();
   el.onclick = (e) => { if (e.target === el) el.remove(); };
 }
+
+async function mmPickSceneFragment() {
+  if (document.getElementById('fragModal')) return;
+  const data = await loadFragmentData();
+  const scenes = (data.fragments || []).filter((f) => f.where === 'scene');
+  for (const f of scenes) {
+    const r = await fetch('api/fragments/' + encodeURIComponent(f.id) + '/pick', {
+      method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ reader_id: readerKey() }),
+    });
+    const d = await r.json();
+    if (r.ok && d.isNew) {
+      const el = document.getElementById('fragCount');
+      if (el && d.total) el.textContent = `${d.collected}/${d.total}`;
+      showFragmentPage(d.fragment, d.collected, d.total, true);
+      return;
+    }
+  }
+  mmToast('这里只剩灰了。');
+}
+window.mmPickSceneFragment = mmPickSceneFragment;
 
 const DEMO_MAP = { 'b1-c1': 'turing', 'b34-c4': 'chinese-room', 'b5-c1': 'attention' };
 async function mmOpenDemo(kind) {
@@ -1057,7 +1136,6 @@ async function showChapter(id) {
   const fl = floorInfo[bookFloors[m.book]] || null;
   const roman = ['I', 'II', 'III', 'IV'][((fl ? fl.tier : 1) - 1)] || 'I';
   const decayTxt = ['完好', '轻残', '中残', '高残'][fl ? fl.decay : 0] || '完好';
-  const fr = chapterFragments[m.id] || null;
   app.innerHTML = `
   <div id="reader">
     <aside id="rail">
@@ -1084,8 +1162,8 @@ async function showChapter(id) {
           <div>来访目的：<b>${esc(purpose || '——')}</b></div>
           <div>当值馆员：<b>${librarian}</b></div>
           <div>楼层：<b>${esc((fl && fl.name) || bookNames[m.book] || '—')} · 等级 ${roman} · ${decayTxt}</b></div>
-          <div>残页：<b>${fr ? `${esc(fr.id)} · ${esc(fr.title)}（推测 · 未收编）` : '—'}</b></div>
           <div>接待结果：<b>${missing ? '已收编 · 缺一页' : '已收编'}</b></div>
+          <div style="color:#8a6d33">馆员按语：<b>${esc(LIB_NOTE[bookFloors[m.book]] || '别把纸屑抖在地上。')}</b></div>
         </div>
         <h1>${esc(m.title)} <small style="color:#6b5a3a;font-size:15px">${esc(m.title_en || '')}</small></h1>
         <div class="meta-line">${esc(bookNames[m.book] || m.book)} · ${esc(m.year)} · ${(m.tags || []).map(esc).join(' / ')}</div>
@@ -1098,9 +1176,7 @@ async function showChapter(id) {
     </main>
     <aside id="notesCol">
       <div class="notes-title">页边注</div>
-      <div class="ifline-card">另一条时间线 · 残页 <span id="fragCount">0/${iflineInfo ? iflineInfo.total : 8}</span>
-        ${fr ? `<div class="ifline-hit">本章藏有 <b>${esc(fr.id)}</b> · ${esc(fr.title)}<br><a onclick="showFragment('${esc(fr.id)}')">查看残页 →</a><br><small>读到即自动收编</small></div>` : '<div class="ifline-hit dim">本章没有残页，继续往别的书里找。</div>'}
-      </div>
+      <div class="ifline-card">另一条时间线 · 已拾 <span id="fragCount">0/${iflineInfo ? iflineInfo.total : 12}</span><br><small>有些纸片不在书里。</small></div>
       ${notes.length ? notes.map((n) => `
         <div class="note"${n.anchor ? ` data-anchor="${esc(n.anchor)}" title="点击跳到「${esc(n.anchor)}」"` : ''}>
           ${n.anchor ? `<div class="note-anchor"><span>〔${esc(n.anchor)}〕</span><span>↘</span></div>` : ''}
@@ -1114,6 +1190,7 @@ async function showChapter(id) {
   renderMd(main, $('#paperBody'));
   logRead(m.id);
   loadAnnotations(m.id);
+  setTimeout(() => tryFragmentDrop(m.id), 800);
   $('#railToggle').onclick = toggleRail;
   const qIn2 = $('#railQ');
   qIn2.value = state.query;
