@@ -285,6 +285,21 @@
   .rg-train { pointer-events: none; }
   .rg-hintbar { color: #7d6e55; font-size: 11px; margin-top: 10px; }
   .rail-hintbar { color: #7d6e55; font-size: 11px; margin-top: 10px; }
+  /* 入场：轨道自左向右铺开，站点随后浮现；到站点亮时闪一下 */
+  @keyframes rgLineIn { from { stroke-dashoffset: 1; opacity: .12; } to { stroke-dashoffset: 0; opacity: .62; } }
+  .rg-lane-core { stroke-dasharray: 1; stroke-dashoffset: 1; animation: rgLineIn .8s ease forwards; }
+  @keyframes rgStopIn { from { opacity: 0; } to { opacity: 1; } }
+  .rg-stop { animation: rgStopIn .45s ease backwards; animation-delay: var(--d, 0ms); }
+  @keyframes rgHaloFlash { 0% { opacity: .14; } 35% { opacity: .55; } 100% { opacity: .14; } }
+  .rg-stop.lit .rg-halo { animation: rgHaloFlash .55s ease; }
+  @keyframes rgDashRun { to { stroke-dashoffset: -7; } }
+  .rg-svg.rg-focus .rg-xfer.rg-hi { animation: rgDashRun .9s linear infinite; }
+  @keyframes rgDepartPulse { 0%, 100% { box-shadow: 0 0 0 rgba(200,162,74,0); } 50% { box-shadow: 0 0 14px rgba(200,162,74,.32); } }
+  .rg-depart { animation: rgDepartPulse 2.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .rg-lane-core { animation: none; stroke-dashoffset: 0; }
+    .rg-stop, .rg-stop.lit .rg-halo, .rg-depart, .rg-svg.rg-focus .rg-xfer.rg-hi { animation: none; }
+  }
   @media (max-width: 760px) { .rg-note { display: none; } .rg-svg { min-width: 980px; } }
 
   /* ---------- 发展时间轴 ---------- */
@@ -767,22 +782,34 @@ function renderMd(md, el) {
 let shelfFloor = 'all';
 let catalogCache = [];
 
+let floorsPromise = null;
 async function ensureFloors() {
   if (!floorInfo.L1) {
-    try {
-      const fs = await (await fetch('api/floors')).json();
-      fs.forEach((f) => { floorInfo[f.id] = f; });
-    } catch (e) { console.warn('[floors] 加载失败', e); }
+    if (!floorsPromise) {
+      floorsPromise = (async () => {
+        try {
+          const fs = await (await fetch('api/floors')).json();
+          fs.forEach((f) => { floorInfo[f.id] = f; });
+        } catch (e) { console.warn('[floors] 加载失败', e); }
+      })().finally(() => { floorsPromise = null; });
+    }
+    await floorsPromise;
   }
   return ['L1', 'L2', 'L3', 'L4'].map((id) => floorInfo[id]).filter(Boolean);
 }
 
+let catalogPromise = null;
 async function ensureCatalog() {
-  if (!catalogCache.length) {
-    catalogCache = await (await fetch('api/catalog')).json();
-    window.mmAdoptBooks(catalogCache);
+  if (catalogCache.length) return catalogCache;
+  // 并发去重：预取和点进书轨可能同时发生，避免重复下载 53KB 目录
+  if (!catalogPromise) {
+    catalogPromise = (async () => {
+      catalogCache = await (await fetch('api/catalog')).json();
+      window.mmAdoptBooks(catalogCache);
+      return catalogCache;
+    })().finally(() => { catalogPromise = null; });
   }
-  return catalogCache;
+  return catalogPromise;
 }
 
 function shade(hex, f) {
@@ -1825,31 +1852,42 @@ let pendingSwap = null;
 let tourActive = false;
 let planFloor = 'all';
 let planSeq = 0;
-function fadeSwap(fn) {
+function fadeSwap(fn, ms) {
   if (tourActive) return;
   if (viewBusy) { pendingSwap = fn; return; }
   viewBusy = true;
   window.mmViewBusy = true;
   const f = $('#viewFade');
+  const speed = ms || {};
+  const hard = !!speed.hard;
+  const inMs = hard ? 0 : Math.max(120, Number(speed.in) || 380);
+  const outMs = Math.max(140, Number(speed.out) || 380);
   const finish = () => {
     viewBusy = false;
     window.mmViewBusy = false;
     if (pendingSwap) { const p = pendingSwap; pendingSwap = null; fadeSwap(p); }
   };
   const done = () => {
-    setTimeout(() => { f.classList.remove('on'); setTimeout(finish, 420); }, 80);
+    setTimeout(() => {
+      if (f) { f.style.transitionDuration = outMs + 'ms'; f.classList.remove('on'); }
+      setTimeout(finish, outMs + 40);
+    }, 80);
   };
   if (!f) { Promise.resolve(fn()).finally(finish); return; }
+  f.style.transitionDuration = inMs + 'ms';
   f.classList.add('on');
+  // hard：立刻压黑并暂停 3D，把主线程让给 2D 页面渲染（书轨用）
+  if (hard && speed.hide3d) document.body.classList.add('grid');
   setTimeout(async () => {
     try { await fn(); } catch (e) { console.error('[view] 切换失败', e); }
     done();
-  }, 380);
+  }, hard ? 60 : inMs);
 }
 function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
 function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() { fadeSwap(() => backToRoom()); }
-function enterRail() { fadeSwap(() => showRail()); }
+// 书轨用更短的转场：快速进入这张线路图
+function enterRail() { fadeSwap(() => showRail(), { hard: true, hide3d: true, out: 260 }); }
 function enterTimeline() { fadeSwap(() => showTimeline()); }
 function enterForks() { fadeSwap(() => showForks()); }
 function enterStolen() { fadeSwap(() => showStolenGallery()); }
@@ -2406,9 +2444,16 @@ async function showTimeline() {
 }
 
 let railCache = null;
+let railPromise = null;
 async function ensureRail() {
-  if (!railCache) railCache = await (await fetch('api/rail')).json();
-  return railCache;
+  if (railCache) return railCache;
+  if (!railPromise) {
+    railPromise = (async () => {
+      railCache = await (await fetch('api/rail')).json();
+      return railCache;
+    })().finally(() => { railPromise = null; });
+  }
+  return railPromise;
 }
 
 // 书轨 = 一张连贯的线路图：主线/支线/换乘线画在同一个坐标系里，点站开书，发车动画
@@ -2545,14 +2590,14 @@ async function showRail() {
     return parts.join('');
   }).join('');
 
-  const stopSvg = (s, x, y, color) => {
+  const stopSvg = (s, x, y, color, delay) => {
     const b = bookIndex[s.book] || {};
     const multi = multiBook(s.book);
     const title = `${s.year} · ${s.label}${s.note ? '\n' + s.note : ''}${b.title ? '\n' + (b.call || '') + ' · ' + b.title : ''}`;
     // 靠边的站点把标签向内对齐，避免被画布裁掉
     const anchor = x > RG_W - RG_RIGHT - 110 ? 'end' : (x < RG_LEFT + 70 ? 'start' : 'middle');
     const markX = anchor === 'end' ? -11 : 11;
-    return `<g class="rg-stop" data-book="${esc(s.book)}" transform="translate(${x},${y})">
+    return `<g class="rg-stop" data-book="${esc(s.book)}" style="--d:${Number(delay) || 0}ms" transform="translate(${x},${y})">
       <title>${esc(title)}</title>
       <circle class="rg-halo" r="13" fill="${color}" opacity=".14"></circle>
       <circle class="rg-dot" r="5" fill="${color}"></circle>
@@ -2563,12 +2608,12 @@ async function showRail() {
     </g>`;
   };
 
-  const branchStopSvg = (s, x, y, color) => {
+  const branchStopSvg = (s, x, y, color, delay) => {
     const multi = multiBook(s.book);
     const title = `${s.year} · ${s.label}${s.note ? '\n' + s.note : ''}`;
     const anchor = x > RG_W - RG_RIGHT - 200 ? 'end' : 'start';
     const tx = anchor === 'end' ? -9 : 9;
-    return `<g class="rg-stop" data-book="${esc(s.book)}" transform="translate(${x},${y})">
+    return `<g class="rg-stop" data-book="${esc(s.book)}" style="--d:${Number(delay) || 0}ms" transform="translate(${x},${y})">
       <title>${esc(title)}</title>
       <circle class="rg-dot" r="4" fill="${color}"></circle>
       <text x="${tx}" y="4" text-anchor="${anchor}" fill="#a8977a" font-size="10.5">${esc(String(s.year))} · ${esc(cut(s.label, 15))}${multi ? ' ⇄' : ''}</text>
@@ -2584,9 +2629,9 @@ async function showRail() {
     return `
       <rect x="40" y="${y - 58}" width="${RG_W - 80}" height="${RG_GAP - 34}" fill="rgba(200,162,74,${li % 2 ? 0.02 : 0.04})" pointer-events="none"></rect>
       <line x1="72" x2="${x2}" y1="${y}" y2="${y}" stroke="${l.color}" stroke-width="9" opacity=".05" pointer-events="none"></line>
-      <line x1="72" x2="${x2}" y1="${y}" y2="${y}" stroke="${l.color}" stroke-width="2.2" opacity=".62" pointer-events="none"></line>
+      <line class="rg-lane-core" x1="72" x2="${x2}" y1="${y}" y2="${y}" stroke="${l.color}" stroke-width="2.2" opacity=".62" pathLength="1" style="animation-delay:${li * 90}ms" pointer-events="none"></line>
       <text x="60" y="${y - 34}" fill="${l.color}" font-size="13" letter-spacing="2" pointer-events="none">${esc(l.name)}</text>
-      ${l.stops.map((s, si) => stopSvg(s, laneXs[li][si], y, l.color)).join('')}`;
+      ${l.stops.map((s, si) => stopSvg(s, laneXs[li][si], y, l.color, 260 + li * 80 + si * 22)).join('')}`;
   }).join('');
 
   const branchesSvg = branchRows.map(({ br, y, originX, xs, color }) => {
@@ -2594,10 +2639,17 @@ async function showRail() {
     return `
       <path d="M${originX} ${y - 62} Q ${originX + 18} ${y - 28}, ${xs[0]} ${y} L ${xEnd} ${y}" stroke="${color}" stroke-width="1.2" stroke-dasharray="4 4" fill="none" opacity=".55" pointer-events="none"></path>
       <text x="${xs[0]}" y="${y - 10}" fill="${color}" font-size="10.5" opacity=".9" pointer-events="none">↳ ${esc(cut(br.name, 16))}</text>
-      ${br.stops.map((s, i) => branchStopSvg(s, xs[i], y, color)).join('')}`;
+      ${br.stops.map((s, i) => branchStopSvg(s, xs[i], y, color, 420 + i * 30)).join('')}`;
   }).join('');
 
-  const trainsSvg = rail.lines.map((l) => `<g class="rg-train" opacity="0"><circle r="12" fill="${l.color}" opacity=".22"></circle><circle r="4" fill="#fff6d8"></circle></g>`).join('');
+  // 车头 + 向后拖尾（负 x 在车头左侧，随车一起平移）
+  const trainsSvg = rail.lines.map((l) => `<g class="rg-train" opacity="0">
+      <circle r="16" fill="${l.color}" opacity=".08"></circle>
+      <circle r="11" cx="-22" fill="${l.color}" opacity=".14"></circle>
+      <circle r="7" cx="-42" fill="${l.color}" opacity=".08"></circle>
+      <circle r="11" fill="${l.color}" opacity=".25"></circle>
+      <circle r="4" fill="#fff6d8"></circle>
+    </g>`).join('');
 
   const legend = rail.lines.map((l) => `<span class="rg-line-chip" title="${esc(l.desc || '')}"><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join('');
   const stopTotal = rail.lines.reduce((n, l) => n + l.stops.length + (l.branches || []).reduce((m, b) => m + b.stops.length, 0), 0);
@@ -2665,7 +2717,8 @@ async function showRail() {
       return m && Math.abs(Number(m[2]) - laneY(li)) < 1;
     }),
   }));
-  mmRailDepart();
+  // 等轨道铺开动画走完再发车，避免入场动画和列车同时抢帧
+  setTimeout(() => { if (document.getElementById('rgSvg')) mmRailDepart(); }, 320);
 }
 
 async function showShelves(floor) {
@@ -3269,11 +3322,9 @@ fetch('api/health').then((r) => r.json()).then((h) => {
 import { init3D } from './app3d.js';
 (async () => {
   try {
-    const [catalog, floors, shelves] = await Promise.all([
-      fetch('api/catalog').then((r) => r.json()),
-      fetch('api/floors').then((r) => r.json()),
-      fetch('api/shelves').then((r) => r.json()).catch(() => ({ booksPerBoard: 3, boardsPerUnit: 2 })),
-    ]);
+    // 走统一缓存：3D 启动时加载过的目录/楼层，后面书轨、书架视图不再重复下载
+    const [catalog, floors] = await Promise.all([window.ensureCatalog(), window.ensureFloors()]);
+    const shelves = await window.ensureShelfConfig();
     window.mmAdoptBooks(catalog);
     window.mm3d = await init3D({
       container: document.getElementById('scene3d'),
@@ -3291,6 +3342,13 @@ import { init3D } from './app3d.js';
     console.error('[3D] 初始化失败，回退书架视图', e);
     showShelves();
   }
+})();
+
+// 空闲时预取书轨数据（8.9KB），让第一次点「书轨」无需等待网络
+(function prefetchRail() {
+  const kick = () => { if (window.ensureRail) window.ensureRail().catch(() => {}); };
+  if ('requestIdleCallback' in window) requestIdleCallback(kick, { timeout: 3000 });
+  else setTimeout(kick, 1500);
 })();
 </script>
 </body>
