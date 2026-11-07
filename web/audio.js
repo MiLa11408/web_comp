@@ -3,8 +3,9 @@
   let ac = null;
   let master = null;
 
+  // 默认关闭：首次入馆不打扰，访客主动点「音效」才开启
   function enabled() {
-    return localStorage.getItem('mm_sound') !== 'off';
+    return localStorage.getItem('mm_sound') === 'on';
   }
 
   function ctx() {

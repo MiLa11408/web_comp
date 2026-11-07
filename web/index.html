@@ -21,8 +21,16 @@
   .search input { flex: 1 1 320px; min-width: 0; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; font-size: 14px; outline: none; }
   .search input:focus { border-color: var(--gold); }
   .search button { position: relative; z-index: 22; background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; cursor: pointer; font-size: 13px; }
+  /* 导航分组：把 12 个入口收成三组，减少首访认知负担 */
+  .nav-groups { position: relative; z-index: 5; padding: 0 30px 12px; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; border-bottom: 1px solid var(--line); }
+  .nav-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ng-label { color: #8a7a5c; font-size: 11px; letter-spacing: 3px; padding-right: 8px; border-right: 1px solid #3a2f22; margin-right: 2px; }
+  .nav-group .back { margin: 0; padding: 5px 11px; font-size: 12.5px; color: #cbb892; border-color: #5a4526; background: #1f1812; }
+  .nav-group .back:hover { color: var(--gold); border-color: var(--gold); background: #2c241a; }
+  .search .back { color: #cbb892; border-color: #5a4526; background: #1f1812; }
+  .search .back:hover { color: var(--gold); border-color: var(--gold); }
   #app { padding: 10px 30px 60px; }
-  body.reading .search { display: none; }
+  body.reading .search, body.reading .nav-groups { display: none; }
   body.reading #app { padding: 10px 18px 40px; }
 
   /* ---------- 书架 ---------- */
@@ -70,6 +78,23 @@
   .paper mark.find.active { background: #b78a2f; outline: 2px solid #8a6320; }
   .paper-end { margin-top: 46px; padding-top: 18px; border-top: 1px dashed rgba(107,90,58,.45); }
   .paper-end .back { margin-bottom: 0; }
+  /* 文末「继续读」：上一章 / 下一章 / 本书目录 / 换乘章节 */
+  .read-next { margin-top: 40px; border-top: 2px solid rgba(107,90,58,.42); padding-top: 16px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #3b3020; }
+  .rn-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; color: #6b4f1d; letter-spacing: 2px; font-size: 13px; flex-wrap: wrap; }
+  .rn-head span { color: #8a6d33; font-size: 11px; letter-spacing: 1px; }
+  .rn-pair { display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+  .rn-btn { flex: 1 1 200px; text-align: left; background: #f6edda; border: 1px solid #b49a68; padding: 10px 12px; cursor: pointer; font-size: 13px; color: #4a3a20; font-family: inherit; }
+  .rn-btn b { display: block; color: #6b4f1d; font-size: 14px; margin-bottom: 3px; }
+  .rn-btn i { font-style: normal; color: #8a7d66; font-size: 11px; line-height: 1.6; }
+  .rn-btn:hover { border-color: #8a6320; background: #fff6e2; }
+  .rn-btn.next { border-color: #8a6320; box-shadow: inset 0 0 0 1px rgba(200,162,74,.35); }
+  .rn-btn:disabled { opacity: .55; cursor: default; }
+  .rn-chapters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .rn-chip { border: 1px solid #b49a68; background: transparent; color: #5a451f; padding: 4px 9px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .rn-chip.active { background: #8a6320; color: #f6edda; border-color: #8a6320; }
+  .rn-chip:hover { border-color: #8a6320; }
+  .rn-transfer { margin-top: 12px; font-size: 12px; color: #6b4f1d; line-height: 1.9; }
+  .rn-transfer a { color: #3f5f8a; cursor: pointer; text-decoration: none; border-bottom: 1px dotted #3f5f8a; }
   .reader-float-close { position: fixed; right: 20px; top: 14px; bottom: auto; z-index: 70; background: #241c14; color: var(--gold); border: 1px solid var(--gold); padding: 9px 15px; cursor: pointer; font-size: 13px; letter-spacing: 1px; box-shadow: 0 10px 26px rgba(0,0,0,.55); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
   .reader-float-close:hover { background: #2c241a; }
   .back { background: none; border: 1px solid #6b5a3a; color: #5a451f; padding: 6px 14px; cursor: pointer; margin-bottom: 16px; font-size: 13px; }
@@ -104,6 +129,30 @@
   .sug-item:hover { background: #2c241a; }
   .sug-item i { font-style: normal; color: var(--dim); font-size: 11px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
+
+  /* ---------- 关于本馆 ---------- */
+  .about-view { max-width: 920px; }
+  .about-hero { border: 1px solid var(--line); background: linear-gradient(160deg, #221a13, #16100c); padding: 26px 30px; margin-bottom: 16px; }
+  .about-hero h2 { color: var(--gold); font-size: 20px; letter-spacing: 3px; margin: 0 0 10px; font-weight: 500; }
+  .about-lead { color: #cbb892; font-size: 14px; line-height: 2; margin: 0; }
+  .about-lead b { color: var(--gold); font-weight: 600; }
+  .about-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .about-fact { border: 1px solid #3a2f22; background: #1b1510; color: #a8977a; padding: 5px 10px; font-size: 12px; }
+  .about-fact b { color: var(--gold); margin-right: 5px; }
+  .about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .about-card { background: #1b1510; border: 1px solid var(--line); padding: 15px 17px; }
+  .about-card h3 { color: var(--gold); font-size: 13px; letter-spacing: 2px; margin: 0 0 8px; font-weight: 500; }
+  .about-card p { color: #a8977a; font-size: 12.5px; line-height: 1.9; margin: 0; }
+  .about-card p b { color: #d8c89e; }
+  .about-note { margin-top: 14px; border-left: 3px solid #6b5a3a; padding-left: 12px; color: #8a7a5c; font-size: 12px; line-height: 1.9; }
+  .about-note b { color: #cbb892; }
+  /* 借阅档案 · 今日可做 */
+  .todo-list { display: grid; gap: 8px; }
+  .todo-row { display: flex; align-items: center; gap: 10px; background: #1d1712; border: 1px solid var(--line); padding: 9px 12px; flex-wrap: wrap; }
+  .todo-row b { color: #cbb892; font-size: 12.5px; font-weight: 500; }
+  .todo-row i { font-style: normal; color: #7d6e55; font-size: 11px; margin-left: auto; }
+  .todo-row button { background: #2c241a; border: 1px solid var(--gold); color: var(--gold); padding: 5px 11px; cursor: pointer; font-size: 11.5px; font-family: inherit; }
+  .todo-row button:hover { background: #3a2d1c; }
 
   /* ---------- 视图切换淡入淡出 ---------- */
   #viewFade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .38s ease; z-index: 60; }
@@ -205,35 +254,45 @@
   .gate-msg.ok { color: #9ec27a; }
   .gate-foot { margin-top: 14px; border-top: 1px dashed #3a2f22; padding-top: 10px; color: #7d6e55; font-size: 11px; line-height: 1.7; }
 
-  /* ---------- 铁路线视图 ---------- */
-  .rail-view { max-width: 1200px; }
+  /* ---------- 书轨 · 主题线路图 ---------- */
+  .rail-view { max-width: 1360px; }
   .rail-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; color: var(--gold); letter-spacing: 2px; font-size: 14px; margin: 4px 0 6px; }
-  .rail-sub { color: var(--dim); font-size: 12px; letter-spacing: 1px; margin-bottom: 16px; line-height: 1.7; }
-  .rail-line { border: 1px solid var(--line); background: linear-gradient(180deg, #1c1610, #17120d); padding: 14px 16px 10px; margin-bottom: 16px; border-left: 5px solid var(--c); }
-  .rail-line-head { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
-  .rail-line-head b { color: var(--c); font-size: 15px; letter-spacing: 2px; }
-  .rail-line-head span { color: #a8977a; font-size: 12px; line-height: 1.6; flex: 1 1 320px; }
-  .rail-stops { display: flex; align-items: flex-start; overflow-x: auto; padding: 26px 2px 8px; }
-  .rail-stop { position: relative; flex: 0 0 148px; cursor: pointer; padding: 0 6px; }
-  .rail-stop::before { content: ""; position: absolute; left: -6px; right: -6px; top: 33px; height: 5px; background: #4a3a24; border-top: 1px solid var(--c); border-bottom: 1px solid var(--c); opacity: .75; }
-  .rail-stop:first-child::before { left: 50%; }
-  .rail-stop:last-child::before { right: 50%; }
-  .rail-stop:hover .rs-label { color: var(--c); }
-  .rs-year { display: block; color: #8a7a5c; font-family: monospace; font-size: 11px; text-align: center; margin-bottom: 5px; }
-  .rs-node { display: flex; justify-content: center; margin-bottom: 7px; }
-  .rs-dot { width: 13px; height: 13px; border-radius: 50%; background: #1a140f; border: 2px solid var(--c); box-shadow: 0 0 0 3px #1a140f, 0 0 10px rgba(200,162,74,.35); }
-  .rail-stop:hover .rs-dot { background: var(--c); }
-  .rs-label { display: block; color: var(--ink); font-size: 12.5px; text-align: center; line-height: 1.45; }
-  .rs-transfer { font-style: normal; color: var(--gold); font-size: 10px; border: 1px solid #6b5a3a; padding: 0 3px; white-space: nowrap; }
-  .rs-note { display: block; color: #8a7a5c; font-size: 11px; line-height: 1.55; text-align: center; margin-top: 5px; }
-  .rs-book { display: block; color: #6f6046; font-size: 10.5px; text-align: center; margin-top: 4px; font-family: monospace; }
-  .rail-branch { margin: 10px 0 6px 30px; border-left: 2px dashed var(--c); padding-left: 14px; }
-  .rail-branch-head { color: var(--c); font-size: 12px; letter-spacing: 1px; }
-  .rail-branch-head i { font-style: normal; color: #8a7a5c; font-size: 11px; margin-left: 8px; }
+  .rail-sub { color: var(--dim); font-size: 12px; letter-spacing: 1px; margin-bottom: 12px; line-height: 1.7; }
+  .rg-toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 4px 0 10px; }
+  .rg-depart { background: #2c241a; border: 1px solid var(--gold); color: var(--gold); padding: 7px 16px; cursor: pointer; font-size: 13px; letter-spacing: 2px; font-family: inherit; }
+  .rg-depart:hover { background: #3a2d1c; }
+  .rg-lines { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: #a8977a; }
+  .rg-line-chip { display: inline-flex; align-items: center; gap: 5px; cursor: default; }
+  .rg-line-chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .rg-note { margin-left: auto; color: #7d6e55; font-size: 11px; }
+  .rg-scroll { overflow: auto; border: 1px solid var(--line); background: linear-gradient(180deg, #17110c, #120d09); }
+  .rg-svg { display: block; min-width: 1120px; }
+  .rg-svg text { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .rg-stop { cursor: pointer; }
+  .rg-stop .rg-dot, .rg-stop .rg-halo { transition: opacity .15s; }
+  .rg-stop:hover .rg-dot, .rg-stop.lit .rg-dot { filter: drop-shadow(0 0 7px #c8a24a); }
+  .rg-stop:hover .rg-halo { opacity: .38; }
+  .rg-stop .rg-label { fill: #cbb892; font-size: 11.5px; }
+  .rg-stop:hover .rg-label { fill: #f0e4c8; }
+  .rg-stop .rg-year { fill: #8a7a5c; font-size: 10px; font-family: monospace; }
+  .rg-stop .rg-book { fill: #8a7a5c; font-size: 10px; }
+  .rg-stop .rg-xfermark { fill: #c8a24a; font-size: 10px; }
+  .rg-xfer { stroke: #8a6320; stroke-width: 1; fill: none; stroke-dasharray: 3 4; opacity: .16; transition: opacity .2s; }
+  .rg-svg.rg-focus .rg-stop:not(.rg-hi) { opacity: .28; }
+  .rg-svg.rg-focus .rg-xfer:not(.rg-hi) { opacity: .04; }
+  .rg-svg.rg-focus .rg-xfer.rg-hi { opacity: .9; }
+  .rg-svg.rg-focus .rg-stop.rg-hi .rg-dot { filter: drop-shadow(0 0 9px #f0d68a); }
+  .rg-train { pointer-events: none; }
+  .rg-hintbar { color: #7d6e55; font-size: 11px; margin-top: 10px; }
   .rail-hintbar { color: #7d6e55; font-size: 11px; margin-top: 10px; }
+  @media (max-width: 760px) { .rg-note { display: none; } .rg-svg { min-width: 980px; } }
 
   /* ---------- 发展时间轴 ---------- */
   .tl-view { max-width: 1200px; }
+  .tl-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+  .tl-chip { background: #241c14; border: 1px solid #3a2f22; color: #cbb892; padding: 5px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .tl-chip:hover, .tl-chip.active { border-color: var(--gold); color: var(--gold); }
+  .tl-decade.hidden { display: none; }
   .tl-decade { border-left: 3px solid #6b5a3a; padding: 4px 0 4px 14px; margin-bottom: 18px; }
   .tl-decade h3 { color: var(--gold); font-size: 13px; letter-spacing: 2px; margin: 0 0 8px; font-weight: 500; }
   .tl-decade h3 i { font-style: normal; color: #8a7a5c; font-size: 11px; margin-left: 8px; }
@@ -539,6 +598,13 @@
     gate.classList.add('leaving');
     setTimeout(() => {
       gate.remove();
+      // 移动端默认落在 2D 书架视图：3D 需要手动进入，避免首屏就撞上重渲染
+      if (window.innerWidth < 760) {
+        try {
+          enterShelf('all');
+          mmToast('移动端已切到书架视图；想看 3D，点顶部「3D 阅览室」。');
+        } catch (e) { /* 移动端降级失败不影响入馆 */ }
+      }
       if (window.mmStartGuide) setTimeout(() => window.mmStartGuide(), 900);
     }, 1150);
   }
@@ -591,19 +657,28 @@
 <div class="search">
   <input id="q" placeholder="卡片目录检索：神经网络 / 达特茅斯 / 扩散 ……" onkeydown="if(event.key==='Enter')doSearch()">
   <button onclick="doSearch()">检索</button>
-  <button class="back" style="margin:0" onclick="enter3D()">3D 阅览室</button>
-  <button class="back" style="margin:0" onclick="enterShelf()">书架视图</button>
-  <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
-  <button class="back" style="margin:0" onclick="enterPlan()">楼层平面图</button>
-  <button class="back" style="margin:0" onclick="mmStartTour()">导览</button>
-  <button class="back" style="margin:0" onclick="enterForks()">分岔</button>
-  <button class="back" style="margin:0" onclick="enterStolen()">失窃页</button>
-  <button class="back" style="margin:0" onclick="enterRail()">线索</button>
-  <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
-  <button class="back" style="margin:0" onclick="enterStats()">借阅档案</button>
-  <button class="back" style="margin:0" onclick="mmShowStar()">星图</button>
-  <button id="soundBtn" class="back" style="margin:0" onclick="mmToggleSound()">音效：开</button>
+  <button class="back" style="margin:0" onclick="enterAbout()">关于本馆</button>
+  <button id="soundBtn" class="back" style="margin:0" onclick="mmToggleSound()">音效：关</button>
 </div>
+<nav class="nav-groups" aria-label="馆内导航">
+  <div class="nav-group"><span class="ng-label">阅览</span>
+    <button class="back" onclick="enter3D()">3D 阅览室</button>
+    <button class="back" onclick="enterShelf()">书架视图</button>
+    <button class="back" onclick="enterOverview()">书架总览</button>
+    <button class="back" onclick="enterPlan()">楼层平面图</button>
+  </div>
+  <div class="nav-group"><span class="ng-label">查找</span>
+    <button class="back" onclick="enterRail()">书轨</button>
+    <button class="back" onclick="mmShowStar()">星图</button>
+    <button class="back" onclick="enterTimeline()">时间轴</button>
+    <button class="back" onclick="mmStartTour()">导览</button>
+  </div>
+  <div class="nav-group"><span class="ng-label">档案与玩法</span>
+    <button class="back" onclick="enterForks()">分岔</button>
+    <button class="back" onclick="enterStolen()">失窃页</button>
+    <button class="back" onclick="enterStats()">借阅档案</button>
+  </div>
+</nav>
 <div id="scene3d"></div>
 <div id="app"></div>
 <div id="viewFade"></div>
@@ -1551,11 +1626,12 @@ async function mmShowStar() {
 window.mmShowStar = mmShowStar;
 
 const GUIDE_STEPS = [
-  'WASD 前后左右移动；按住鼠标左键拖动，转视角。',
+  '这座书库有 48 本书、384 章：从 1943 年的一枚抽象神经元，一直写到 2026 年的前沿。第一次来，建议从《序卷：何为智能》读起；「书架总览」能一次看完所有书。',
+  'WASD 前后左右移动；按住鼠标左键拖动，转视角。手机端可直接拖动屏幕，也可随时退回书架视图。',
   '把视线对准书架上的书，点击书脊，书会飞出来翻开。',
-  '左侧墙上挂着黄铜电梯：点击它，或用右下按钮选层。',
-  '顶栏可以切到书架视图、总览、线索、时间轴、星图；检索框直接查全馆。',
-  '阅读页右上角随时「合上书」；右侧页边注点一下会跳到正文对应段落。',
+  '左侧墙上挂着黄铜电梯：点击它，或用右下按钮选层。楼层越高，密级越高、书页越残。',
+  '顶栏按「阅览 / 查找 / 档案与玩法」分三组：书轨看主题线路，星图看书与书的关联，借阅档案里有「今日可做」。',
+  '阅读页右上角随时「合上书」；右侧页边注点一下会跳到正文对应段落；页底有上一章与下一章。',
 ];
 function startGuide() {
   if (localStorage.getItem('mm_guide_done')) return;
@@ -1580,6 +1656,58 @@ function startGuide() {
   render();
 }
 window.mmStartGuide = startGuide;
+
+function enterAbout() { fadeSwap(() => showAbout()); }
+
+async function showAbout() {
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在取馆史……</div>';
+  let chapters = 384;
+  try {
+    const h = await (await fetch('api/health')).json();
+    chapters = h.chapters || chapters;
+  } catch (e) { /* 健康检查失败时用默认值 */ }
+  app.innerHTML = `
+  <div class="about-view">
+    <div class="rail-head"><span>关于本馆 · THE MACHINE MEMORY</span>
+      <span class="head-links"><a onclick="enter3D()">进阅览室 →</a> · <a onclick="enterStats()">借阅档案 →</a></span>
+    </div>
+    <div class="about-hero">
+      <h2>一座闭馆后的 AI 知识档案馆</h2>
+      <p class="about-lead">夜里十一点，书库只留前台一盏灯。这里不生产“AI 帮你总结”，也不替你判断一段历史值不值得读。它做的事更笨：把 AI 从 1943 年到现在拆成 <b>48 本书、${chapters} 章</b>，按四级密级收进四层书库；你可以像真正的读者那样找书、取书、翻页边注、在书页之间捡到一张没写完的残页。</p>
+      <div class="about-facts">
+        <span class="about-fact"><b>48</b>本书</span>
+        <span class="about-fact"><b>${chapters}</b>章</span>
+        <span class="about-fact"><b>12</b>张残页</span>
+        <span class="about-fact"><b>9</b>件失窃页</span>
+        <span class="about-fact"><b>12</b>页躁动书页</span>
+        <span class="about-fact"><b>6</b>条历史分岔</span>
+        <span class="about-fact"><b>6</b>个可玩演示</span>
+        <span class="about-fact"><b>13</b>条星图连线</span>
+      </div>
+    </div>
+    <div class="about-grid">
+      <section class="about-card">
+        <h3>内容标准</h3>
+        <p>每章 <b>1500–2500 汉字</b>，固定九段：一句话 / 时间·人物·机构 / 为什么是这个时候 / 怎么工作 / 它改变了什么 / 今天的地位 / 争议与局限 / 关系 / 档案。每条来源都实际打开核验过；打不开的换掉，不编造。页边注可以调侃，但只许用正文里已经核验的事实支撑。</p>
+      </section>
+      <section class="about-card">
+        <h3>怎么逛</h3>
+        <p>第一次来，从《序卷：何为智能》开始；找具体主题用<b>卡片目录</b>（先锁标题，再锁 tag，再看正文提及）；想乱逛就开<b>星图</b>或<b>书轨</b>；想看隐藏内容，去<b>借阅档案</b>看「今日可做」。</p>
+      </section>
+      <section class="about-card">
+        <h3>技术与验证</h3>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>70 项</b>，覆盖入馆、取书、检索、电梯、两套视图、隐藏馆藏与移动端。</p>
+      </section>
+      <section class="about-card">
+        <h3>素材与声明</h3>
+        <p>素材取自公共领域与 CC0/CC-BY 文本，材质与书脊全部程序化生成，许可记录在 <b>assets.json</b>。残页里的“假如”段落<b>均为标注的推测</b>，不是史实；历史结论以每章末的档案为准。</p>
+      </section>
+    </div>
+    <div class="about-note"><b>为什么不做 AI 问答？</b>因为这座馆想保留“自己走一趟”的部分：路线可以给你，判断尽量留给你。作者 MiLa · 网页设计大赛参赛作品 · 主题 AI · 非商业使用。</div>
+  </div>`;
+}
 
 function enterStats() { fadeSwap(() => showStats()); }
 
@@ -1615,6 +1743,31 @@ async function showStats() {
     const recentHtml = (me.recent || []).length
       ? me.recent.map((x) => `<div class="bar-row"><span class="bl">${esc(x.chapter_id)}</span><span class="bar"><i style="width:100%"></i></span><span class="bv">${x.times} 次</span></div>`).join('')
       : '<div class="empty" style="padding:10px 0">你还没有翻阅记录。</div>';
+    // 今日可做：把隐藏玩法摊成一张能照着做的清单（每类最多两条，避免被失窃页刷屏）
+    const todoStolen = [];
+    const todoRestless = [];
+    const todoFork = [];
+    COLLECT.stolen.forEach((it) => {
+      if (collectStateOf('stolen', it.id) !== 'recovered') {
+        todoStolen.push({ label: `失窃页 ${it.no} · ${it.title}`, hint: `${it.floor} 展柜`, act: 'enterStolen()', btn: '去展柜' });
+      }
+    });
+    COLLECT.restless.forEach((it) => {
+      if (collectStateOf('restless', it.id) === 'found') {
+        todoRestless.push({ label: `躁动书页 ${it.no} · ${it.title}`, hint: '已收容，尚未归位', act: `mmOpenRestless('${it.id}')`, btn: '去归位' });
+      }
+    });
+    COLLECT.forks.forEach((it) => {
+      if (collectStateOf('fork', it.id) !== 'chosen') {
+        todoFork.push({ label: `分岔 ${it.year} · ${it.title}`, hint: '还没走这条假如线', act: 'enterForks()', btn: '去选择' });
+      }
+    });
+    const todoTotal = todoStolen.length + todoRestless.length + todoFork.length;
+    const todoRows = [...todoStolen.slice(0, 2), ...todoRestless.slice(0, 2), ...todoFork.slice(0, 2)];
+    const todoHtml = todoRows.length
+      ? todoRows.map((t) => `<div class="todo-row"><b>${esc(t.label)}</b><i>${esc(t.hint)}</i><button onclick="${t.act}">${esc(t.btn)}</button></div>`).join('')
+        + (todoTotal > todoRows.length ? `<div class="rail-hint">还有 ${todoTotal - todoRows.length} 项，先做眼前这几件。</div>` : '')
+      : '<div class="rail-hint">今天没有待办。馆员给你续了杯茶。</div>';
     app.innerHTML = `
     <div class="stats-view">
       <div class="rail-head"><span>借阅档案 · 谁在读什么</span>
@@ -1627,6 +1780,10 @@ async function showStats() {
         <div class="stat-card"><b>${me.reads || 0}</b><span>我的翻阅次数</span></div>
         <div class="stat-card"><b>${myFrags.length}/${totalFrags}</b><span>我的残页收编</span></div>
       </div>
+      <section class="stat-sec">
+        <h3>今日可做 · ${todoTotal} 件<button class="stat-mini" onclick="enterAbout()">这馆怎么玩</button></h3>
+        <div class="todo-list">${todoHtml}</div>
+      </section>
       <section class="stat-sec">
         <h3>最常被翻的书 · TOP 12</h3>
         ${topHtml}
@@ -2061,6 +2218,14 @@ async function mmStartTour() {
   if (!document.getElementById('tourCard')) mmTourRenderCard(0);
 }
 
+function tlFilter(btn) {
+  const d = btn && btn.dataset ? btn.dataset.decade : 'all';
+  document.querySelectorAll('#tlChips .tl-chip').forEach((b) => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.tl-decade').forEach((sec) => {
+    sec.classList.toggle('hidden', d !== 'all' && sec.dataset.decade !== d);
+  });
+}
+
 async function showTimeline() {
   document.body.classList.add('grid');
   state.findMarks = []; state.global = []; state.chapterMain = '';
@@ -2087,11 +2252,15 @@ async function showTimeline() {
   app.innerHTML = `
   <div class="tl-view">
     <div class="rail-head"><span>发展时间轴 · ${span} · ${entries.length} 章</span>
-      <span class="head-links"><a onclick="enterRail()">线索 →</a> · <a onclick="enterOverview()">书架总览 →</a></span>
+      <span class="head-links"><a onclick="enterRail()">书轨 →</a> · <a onclick="enterOverview()">书架总览 →</a></span>
     </div>
     <div class="rail-sub">按章节标注的年份排列，同一 decade 里的先后不代表精确月份；点任意卡片打开那一章。</div>
+    <div class="tl-chips" id="tlChips">
+      <button class="tl-chip active" data-decade="all" onclick="tlFilter(this)">全部 ${entries.length}</button>
+      ${[...decades.entries()].map(([d, items]) => `<button class="tl-chip" data-decade="${d}" onclick="tlFilter(this)">${d}s · ${items.length}</button>`).join('')}
+    </div>
     ${[...decades.entries()].map(([d, items]) => `
-      <section class="tl-decade">
+      <section class="tl-decade" data-decade="${d}">
         <h3>${d}s<i>${items.length} 章</i></h3>
         <div class="tl-items">${items.map((e) => `
           <div class="tl-node" onclick="showChapter('${e.id}')" title="打开《${esc(e.bookTitle)}》· ${esc(e.title)}">
@@ -2130,56 +2299,261 @@ async function ensureRail() {
   return railCache;
 }
 
+// 书轨 = 一张连贯的线路图：主线/支线/换乘线画在同一个坐标系里，点站开书，发车动画
+const RG_W = 1320, RG_LEFT = 118, RG_RIGHT = 46, RG_TOP = 116, RG_GAP = 172;
+let railLanes = [];
+let railAnim = 0;
+
+window.mmRailDepart = function () {
+  const svg = document.getElementById('rgSvg');
+  if (!svg || !railLanes.length) return;
+  cancelAnimationFrame(railAnim);
+  const trains = Array.from(svg.querySelectorAll('.rg-train'));
+  railLanes.forEach((lane) => lane.stops.forEach((el) => el.classList.remove('lit')));
+  const t0 = performance.now();
+  const DUR = 4200, STAGGER = 380;
+  const frame = (now) => {
+    if (!document.getElementById('rgSvg')) { cancelAnimationFrame(railAnim); return; }
+    let running = false;
+    railLanes.forEach((lane, li) => {
+      const g = trains[li];
+      if (!g) return;
+      const start = t0 + li * STAGGER;
+      if (now < start) { running = true; return; }
+      const total = Math.max(1, lane.xs.length - 1);
+      const p = Math.min(1, (now - start) / DUR);
+      const f = p * total;
+      const i = Math.min(total - 1, Math.floor(f));
+      const frac = f - i;
+      const x = lane.xs[i] + (lane.xs[i + 1] - lane.xs[i]) * frac;
+      g.setAttribute('transform', `translate(${x},${lane.y})`);
+      g.setAttribute('opacity', p >= 1 ? '0' : '1');
+      const upto = Math.floor(f) + 1;
+      lane.stops.forEach((el, k) => { if (k < upto) el.classList.add('lit'); });
+      if (p < 1) running = true;
+    });
+    if (running) railAnim = requestAnimationFrame(frame);
+  };
+  railAnim = requestAnimationFrame(frame);
+};
+
 async function showRail() {
   document.body.classList.add('grid');
   state.findMarks = []; state.global = []; state.chapterMain = '';
-  app.innerHTML = '<div class="empty">正在铺设轨道……</div>';
+  app.innerHTML = '<div class="empty">正在铺设书轨……</div>';
   const [rail, catalog] = await Promise.all([ensureRail(), ensureCatalog()]);
   if (!rail || !Array.isArray(rail.lines)) {
-    app.innerHTML = '<div class="empty">铁路线数据还没铺好，先去书架视图看看。</div>';
+    app.innerHTML = '<div class="empty">书轨数据还没铺好，先去书架视图看看。</div>';
     return;
   }
   const bookIndex = {};
   catalog.forEach((b) => { bookIndex[b.id] = b; });
-  const transfers = {};
-  const bump = (s) => { transfers[s.book] = (transfers[s.book] || 0) + 1; };
-  rail.lines.forEach((l) => { l.stops.forEach(bump); (l.branches || []).forEach((br) => br.stops.forEach(bump)); });
 
-  const stopHtml = (s, color) => {
-    const b = bookIndex[s.book] || {};
-    const xfer = transfers[s.book] > 1;
-    return `
-    <div class="rail-stop" style="--c:${color}" onclick="openBookFirst('${s.book}')" title="打开《${esc(b.title || s.book)}》">
-      <span class="rs-year">${esc(String(s.year))}</span>
-      <span class="rs-node"><i class="rs-dot"></i></span>
-      <span class="rs-label">${esc(s.label)}${xfer ? ' <em class="rs-transfer">⇄ 换乘</em>' : ''}</span>
-      <span class="rs-note">${esc(s.note || '')}</span>
-      <span class="rs-book">${esc(b.call || '')} · ${esc(b.title || '')}</span>
-    </div>`;
+  const cut = (s, n) => {
+    s = String(s == null ? '' : s);
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  };
+  const yearOf = (s) => {
+    const m = String(s && s.year != null ? s.year : '').match(/\d{4}/);
+    return m ? Number(m[0]) : null;
   };
 
-  const branchesHtml = (line) => (line.branches || []).map((br) => `
-    <div class="rail-branch" style="--c:${br.color || line.color}">
-      <div class="rail-branch-head">↳ ${esc(br.name)}<i>从 ${esc(String(br.from))} 站分出 · ${esc(br.desc || '')}</i></div>
-      <div class="rail-stops">${br.stops.map((s) => stopHtml(s, br.color || line.color)).join('')}</div>
-    </div>`).join('');
+  const allYears = [];
+  rail.lines.forEach((l) => {
+    l.stops.forEach((s) => { const y = yearOf(s); if (y) allYears.push(y); });
+    (l.branches || []).forEach((br) => br.stops.forEach((s) => { const y = yearOf(s); if (y) allYears.push(y); }));
+  });
+  const minYear = Math.min(...allYears);
+  const maxYear = Math.max(...allYears);
+  const xOfYear = (yr) => RG_LEFT + ((yr - minYear) / Math.max(1, maxYear - minYear)) * (RG_W - RG_LEFT - RG_RIGHT);
 
-  const linesHtml = rail.lines.map((l) => `
-    <section class="rail-line" style="--c:${l.color}">
-      <div class="rail-line-head"><b>${esc(l.name)}</b><span>${esc(l.desc || '')}</span></div>
-      <div class="rail-stops">${l.stops.map((s) => stopHtml(s, l.color)).join('')}</div>
-      ${branchesHtml(l)}
-    </section>`).join('');
+  // 所有站点在同一个坐标系里的位置：用于画换乘曲线
+  const positions = {};
+  const addPos = (book, x, y, laneIdx) => {
+    (positions[book] || (positions[book] = [])).push({ x, y, laneIdx });
+  };
+
+  // 主线：按年份定位；同一条线上过近的站点右推，最后整体压缩进画布
+  const laneXs = [];
+  rail.lines.forEach((l) => {
+    let prev = -1e9;
+    let xs = l.stops.map((s) => {
+      const yr = yearOf(s);
+      let x = yr ? xOfYear(yr) : RG_LEFT;
+      if (x < prev + 112) x = prev + 112;
+      prev = x;
+      return x;
+    });
+    const right = RG_W - RG_RIGHT;
+    if (xs.length && xs[xs.length - 1] > right) {
+      const span = xs[xs.length - 1] - xs[0] || 1;
+      const target = right - RG_LEFT;
+      xs = xs.map((x) => RG_LEFT + ((x - xs[0]) / span) * target);
+    }
+    laneXs.push(xs);
+  });
+
+  rail.lines.forEach((l, li) => {
+    const y = RG_TOP + li * RG_GAP;
+    l.stops.forEach((s, si) => addPos(s.book, laneXs[li][si], y, li));
+  });
+
+  // 支线：挂在主线下方，用虚线接出去
+  const branchRows = [];
+  rail.lines.forEach((l, li) => {
+    const y = RG_TOP + li * RG_GAP;
+    (l.branches || []).forEach((br, bi) => {
+      const by = y + 58 + bi * 48;
+      const fromMatch = String(br.from || '').match(/\d{4}/);
+      const originX = fromMatch ? xOfYear(Number(fromMatch[0])) : laneXs[li][0];
+      const startX = Math.min(Math.max(originX + 26, RG_LEFT), RG_W - RG_RIGHT - 80);
+      let bxs = br.stops.map((s, i) => Math.min(RG_W - RG_RIGHT, startX + i * 148));
+      if (bxs.length && bxs[bxs.length - 1] > RG_W - RG_RIGHT) {
+        const span = bxs[bxs.length - 1] - bxs[0] || 1;
+        const target = Math.max(80, (RG_W - RG_RIGHT) - bxs[0]);
+        bxs = bxs.map((x) => bxs[0] + ((x - bxs[0]) / span) * target);
+      }
+      br.stops.forEach((s, i) => addPos(s.book, bxs[i], by, li));
+      branchRows.push({ br, y: by, originX, xs: bxs, color: br.color || l.color });
+    });
+  });
+
+  const laneY = (li) => RG_TOP + li * RG_GAP;
+  const multiBook = (book) => (positions[book] || []).length > 1;
+
+  // 换乘线：同一本书在不同线路上的位置用虚线连起来（默认很淡，悬停才亮）
+  const xferSvg = Object.keys(positions).filter(multiBook).map((book) => {
+    const arr = positions[book].slice().sort((a, b) => a.y - b.y);
+    const parts = [];
+    for (let i = 0; i < arr.length - 1; i++) {
+      const a = arr[i], b = arr[i + 1];
+      const my = (a.y + b.y) / 2;
+      parts.push(`<path class="rg-xfer" data-book="${esc(book)}" pointer-events="none" d="M${a.x} ${a.y} C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y}" />`);
+    }
+    return parts.join('');
+  }).join('');
+
+  const stopSvg = (s, x, y, color) => {
+    const b = bookIndex[s.book] || {};
+    const multi = multiBook(s.book);
+    const title = `${s.year} · ${s.label}${s.note ? '\n' + s.note : ''}${b.title ? '\n' + (b.call || '') + ' · ' + b.title : ''}`;
+    // 靠边的站点把标签向内对齐，避免被画布裁掉
+    const anchor = x > RG_W - RG_RIGHT - 110 ? 'end' : (x < RG_LEFT + 70 ? 'start' : 'middle');
+    const markX = anchor === 'end' ? -11 : 11;
+    return `<g class="rg-stop" data-book="${esc(s.book)}" transform="translate(${x},${y})">
+      <title>${esc(title)}</title>
+      <circle class="rg-halo" r="13" fill="${color}" opacity=".14"></circle>
+      <circle class="rg-dot" r="5" fill="${color}"></circle>
+      <text class="rg-year" y="-12" text-anchor="${anchor}">${esc(String(s.year))}</text>
+      <text class="rg-label" y="21" text-anchor="${anchor}">${esc(cut(s.label, 10))}</text>
+      <text class="rg-book" y="35" text-anchor="${anchor}">${esc(b.call || '')}${b.title ? ' · ' + esc(cut(b.title, 8)) : ''}</text>
+      ${multi ? `<text class="rg-xfermark" x="${markX}" y="-12">⇄</text>` : ''}
+    </g>`;
+  };
+
+  const branchStopSvg = (s, x, y, color) => {
+    const multi = multiBook(s.book);
+    const title = `${s.year} · ${s.label}${s.note ? '\n' + s.note : ''}`;
+    const anchor = x > RG_W - RG_RIGHT - 200 ? 'end' : 'start';
+    const tx = anchor === 'end' ? -9 : 9;
+    return `<g class="rg-stop" data-book="${esc(s.book)}" transform="translate(${x},${y})">
+      <title>${esc(title)}</title>
+      <circle class="rg-dot" r="4" fill="${color}"></circle>
+      <text x="${tx}" y="4" text-anchor="${anchor}" fill="#a8977a" font-size="10.5">${esc(String(s.year))} · ${esc(cut(s.label, 15))}${multi ? ' ⇄' : ''}</text>
+    </g>`;
+  };
+
+  const nLines = rail.lines.length;
+  const svgH = RG_TOP + (nLines - 1) * RG_GAP + 156;
+
+  const lanesSvg = rail.lines.map((l, li) => {
+    const y = laneY(li);
+    const x2 = RG_W - RG_RIGHT;
+    return `
+      <rect x="40" y="${y - 58}" width="${RG_W - 80}" height="${RG_GAP - 34}" fill="rgba(200,162,74,${li % 2 ? 0.02 : 0.04})" pointer-events="none"></rect>
+      <line x1="72" x2="${x2}" y1="${y}" y2="${y}" stroke="${l.color}" stroke-width="9" opacity=".05" pointer-events="none"></line>
+      <line x1="72" x2="${x2}" y1="${y}" y2="${y}" stroke="${l.color}" stroke-width="2.2" opacity=".62" pointer-events="none"></line>
+      <text x="60" y="${y - 34}" fill="${l.color}" font-size="13" letter-spacing="2" pointer-events="none">${esc(l.name)}</text>
+      ${l.stops.map((s, si) => stopSvg(s, laneXs[li][si], y, l.color)).join('')}`;
+  }).join('');
+
+  const branchesSvg = branchRows.map(({ br, y, originX, xs, color }) => {
+    const xEnd = xs[xs.length - 1] == null ? originX : xs[xs.length - 1];
+    return `
+      <path d="M${originX} ${y - 62} Q ${originX + 18} ${y - 28}, ${xs[0]} ${y} L ${xEnd} ${y}" stroke="${color}" stroke-width="1.2" stroke-dasharray="4 4" fill="none" opacity=".55" pointer-events="none"></path>
+      <text x="${xs[0]}" y="${y - 10}" fill="${color}" font-size="10.5" opacity=".9" pointer-events="none">↳ ${esc(cut(br.name, 16))}</text>
+      ${br.stops.map((s, i) => branchStopSvg(s, xs[i], y, color)).join('')}`;
+  }).join('');
+
+  const trainsSvg = rail.lines.map((l) => `<g class="rg-train" opacity="0"><circle r="12" fill="${l.color}" opacity=".22"></circle><circle r="4" fill="#fff6d8"></circle></g>`).join('');
+
+  const legend = rail.lines.map((l) => `<span class="rg-line-chip" title="${esc(l.desc || '')}"><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join('');
+  const stopTotal = rail.lines.reduce((n, l) => n + l.stops.length + (l.branches || []).reduce((m, b) => m + b.stops.length, 0), 0);
 
   app.innerHTML = `
   <div class="rail-view">
-    <div class="rail-head"><span>${esc(rail.title || '铁路线')}</span>
-      <span class="head-links"><a onclick="enterOverview()">书架总览 →</a> · <a onclick="enterShelf()">书架视图 →</a></span>
+    <div class="rail-head"><span>书轨 · 主题线路图</span>
+      <span class="head-links"><a onclick="enterOverview()">书架总览 →</a> · <a onclick="enterShelf()">书架视图 →</a> · <a onclick="enterTimeline()">时间轴 →</a></span>
     </div>
-    <div class="rail-sub">${esc(rail.subtitle || '')} 点任意站点直接打开对应的书；⇄ 表示同一本书在两条线上都出现过，可以互相换乘。</div>
-    ${linesHtml}
-    <div class="rail-hintbar">线路只取主干站，完整细节在书里。轨道铺到 2026 年 11 月为止，再往后只能靠你自己找。</div>
+    <div class="rail-sub">五条主线、七条支线，共 ${stopTotal} 个站点。同一个书名出现在两条线上，就是一座换乘站——悬停任一站点，会亮起它在别的线路上的位置。</div>
+    <div class="rg-toolbar">
+      <button class="rg-depart" onclick="mmRailDepart()">▶ 发车</button>
+      <div class="rg-lines">${legend}</div>
+      <span class="rg-note">⇄ = 换乘 · 点站点直接开书</span>
+    </div>
+    <div class="rg-scroll">
+      <svg id="rgSvg" class="rg-svg" viewBox="0 0 ${RG_W} ${svgH}" width="${RG_W}" height="${svgH}" role="img" aria-label="AI 知识主题线路图">
+        ${xferSvg}
+        ${lanesSvg}
+        ${branchesSvg}
+        ${trainsSvg}
+      </svg>
+    </div>
+    <div class="rail-hintbar">线路只取主干站，完整细节在书里。轨道铺到 2026 年为止；再往后只能靠你自己找。</div>
   </div>`;
+
+  // 悬停聚焦同一本书的所有站点与换乘连线；点击开书
+  const svg = document.getElementById('rgSvg');
+  if (!svg) return;
+  const focusBook = (book) => {
+    if (!book) return;
+    svg.classList.add('rg-focus');
+    svg.querySelectorAll('.rg-stop, .rg-xfer').forEach((el) => {
+      el.classList.toggle('rg-hi', el.dataset.book === book);
+    });
+  };
+  const clearFocus = () => {
+    svg.classList.remove('rg-focus');
+    svg.querySelectorAll('.rg-hi').forEach((el) => el.classList.remove('rg-hi'));
+  };
+  svg.addEventListener('mouseover', (e) => {
+    const g = e.target.closest('.rg-stop');
+    if (g) focusBook(g.dataset.book);
+  });
+  svg.addEventListener('mouseout', (e) => {
+    const g = e.target.closest('.rg-stop');
+    if (!g) return;
+    // 在同一个站点的子元素之间移动时不要反复清除高亮
+    const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.rg-stop') : null;
+    if (to === g) return;
+    clearFocus();
+  });
+  svg.addEventListener('click', (e) => {
+    const g = e.target.closest('.rg-stop');
+    if (g && typeof openBookFirst === 'function') openBookFirst(g.dataset.book);
+  });
+
+  // 供发车动画使用：每条主线的纵坐标、站点横坐标、站点元素
+  railLanes = rail.lines.map((l, li) => ({
+    y: laneY(li),
+    xs: laneXs[li],
+    stops: Array.from(svg.querySelectorAll('.rg-stop')).filter((el) => {
+      const t = el.getAttribute('transform') || '';
+      const m = t.match(/translate\(([-\d.]+),([-\d.]+)\)/);
+      return m && Math.abs(Number(m[2]) - laneY(li)) < 1;
+    }),
+  }));
+  mmRailDepart();
 }
 
 async function showShelves(floor) {
@@ -2487,10 +2861,22 @@ function downloadChapterCard(id) {
   mmToast('总结卡已导出。');
 }
 
+// 从已经加载的目录里取某一章的简报（供「继续读」区块使用）
+function chapterBrief(id) {
+  if (!id) return null;
+  for (const b of catalogCache) {
+    const c = (b.chapters || []).find((x) => x.id === id);
+    if (c) return { id, title: c.title, year: c.year, bookTitle: b.title, call: b.call, no: c.no };
+  }
+  return { id, title: id, year: '', bookTitle: '', call: '', no: 0 };
+}
+
 async function showChapter(id) {
   document.body.classList.add('reading');
   const r = await (await fetch('api/chapters/' + id)).json();
   await loadCollectData();
+  // 章末导航需要目录里的标题；目录很轻（一次约 53KB，之后走缓存）
+  if (!catalogCache.length) { try { await ensureCatalog(); } catch (e) { /* 目录失败时退化为只显示章号 */ } }
   const m = r.meta;
   window.__mmChapterMeta = m;
   const { main, notes } = splitNotes(r.content);
@@ -2506,6 +2892,32 @@ async function showChapter(id) {
   const cardData = mmChapterCardData(m, main);
   window.__mmCard = window.__mmCard || {};
   window.__mmCard[m.id] = cardData;
+  // 章末「继续读」：优先用 meta.relations 的上一章/下一章，缺失时按章号兜底
+  const rel = m.relations || {};
+  const curBook = catalogCache.find((b) => b.id === m.book) || null;
+  const chapterList = (curBook && curBook.chapters) || [];
+  const prevId = (rel.prev || [])[0] || (chapterList.find((c) => c.no === m.no - 1) || {}).id;
+  const nextId = (rel.next || [])[0] || (chapterList.find((c) => c.no === m.no + 1) || {}).id;
+  const transitIds = (rel.transit || []).slice(0, 4);
+  const prevB = chapterBrief(prevId);
+  const nextB = chapterBrief(nextId);
+  const readNextHtml = `
+    <div class="read-next">
+      <div class="rn-head">继续读<span>《${esc(curBook ? curBook.title : (bookNames[m.book] || m.book))}》· 第 ${esc(String(m.no || 1))} / ${chapterList.length || 8} 章</span></div>
+      <div class="rn-pair">
+        ${prevB
+          ? `<button class="rn-btn" onclick="showChapter('${esc(prevB.id)}')"><b>← 上一章</b><i>${esc(prevB.title)} · ${esc(prevB.year || '')}</i></button>`
+          : '<button class="rn-btn" disabled><b>← 上一章</b><i>这是本书第一章</i></button>'}
+        ${nextB
+          ? `<button class="rn-btn next" onclick="showChapter('${esc(nextB.id)}')"><b>下一章 →</b><i>${esc(nextB.title)} · ${esc(nextB.year || '')}</i></button>`
+          : '<button class="rn-btn next" onclick="enterOverview()"><b>本书读完了 →</b><i>去书架总览挑下一本</i></button>'}
+      </div>
+      <div class="rn-chapters">${chapterList.map((c) => `<button class="rn-chip ${c.id === m.id ? 'active' : ''}" onclick="showChapter('${esc(c.id)}')" title="${esc(c.title)}">${esc(String(c.no))}. ${esc(c.title)}</button>`).join('')}</div>
+      ${transitIds.length ? `<div class="rn-transfer">⇄ 本章换乘：${transitIds.map((t) => {
+        const b = chapterBrief(t);
+        return `<a onclick="showChapter('${esc(t)}')">${esc(b.bookTitle || t)} · ${esc(b.title)}</a>`;
+      }).join(' ／ ')}</div>` : ''}
+    </div>`;
   app.innerHTML = `
   <div id="reader">
     <aside id="rail">
@@ -2539,6 +2951,7 @@ async function showChapter(id) {
         <div class="meta-line">${esc(bookNames[m.book] || m.book)} · ${esc(m.year)} · ${(m.tags || []).map(esc).join(' / ')}</div>
         <div class="meta-line">${(m.people || []).map((p) => esc(p.name + (p.org ? '（' + p.org + '）' : ''))).join('；')}</div>
         <div id="paperBody"></div>
+        ${readNextHtml}
         <div class="paper-end">
           <button class="back" onclick="enter3D()">← 合上书，回到阅览室</button>
         </div>

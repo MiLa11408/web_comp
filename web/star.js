@@ -1,4 +1,4 @@
-// star.js · 立体星图（three.js）：四层球壳、关系连线、拖拽旋转、滚轮缩放、点星开书
+// star.js · 立体星图（three.js）：群星环绕、四层星轨、弧光关系线、悬停/定位
 import * as THREE from './vendor/three.module.js';
 
 const FLOORS = [
@@ -8,22 +8,44 @@ const FLOORS = [
   { id: 'L4', name: '未编目地库', color: 0xc49ae0, radius: 12.2 },
 ];
 
+const FONT = '"Songti SC", "STSong", "SimSun", serif';
+const INITIAL_YAW = 0.42;
+const INITIAL_PITCH = 0.06;
+const INITIAL_FOV = 65;
+
 const CSS = `
-.mm-star3d { position: fixed; inset: 0; z-index: 75; background: radial-gradient(900px 620px at 50% 42%, #17110c, #080604 76%); overflow: hidden; }
-.mm-star3d-head { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 18px; padding: 14px 20px; z-index: 3; }
-.mm-star3d-title { color: #e6d9bd; font-size: 16px; letter-spacing: 4px; }
-.mm-star3d-title small { color: #8a7a5c; font-size: 11px; letter-spacing: 1px; margin-left: 8px; }
+.mm-star3d { position: fixed; inset: 0; z-index: 75; background: radial-gradient(1200px 780px at 50% 44%, #17110c, #0c0906 58%, #070503 100%); overflow: hidden; font-family: ${FONT}; }
+.mm-star3d::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 180px 52px rgba(0,0,0,.72); }
+.mm-star3d-head { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 18px; padding: 14px 20px; z-index: 3; background: linear-gradient(180deg, rgba(9,7,4,.95) 0%, rgba(9,7,4,.6) 62%, rgba(9,7,4,0)); }
+.mm-star3d-title { color: #eadbb8; font-size: 17px; letter-spacing: 5px; white-space: nowrap; text-shadow: 0 0 18px rgba(200,162,74,.28); }
+.mm-star3d-title small { color: #8a7a5c; font-size: 11px; letter-spacing: 1px; margin-left: 10px; }
 .mm-star3d-legend { display: flex; gap: 14px; margin-left: auto; color: #a8977a; font-size: 11px; flex-wrap: wrap; }
 .mm-star3d-legend span { white-space: nowrap; }
-.mm-star3d-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-.mm-star3d-close { background: #241c14; color: #c8a24a; border: 1px solid #8a6320; width: 32px; height: 32px; cursor: pointer; font-size: 16px; line-height: 1; }
-.mm-star3d-canvas { position: absolute; inset: 0; }
+.mm-star3d-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; box-shadow: 0 0 6px currentColor; }
+.mm-star3d-tools { display: flex; align-items: center; gap: 8px; }
+.mm-star3d-find { width: 152px; background: #140f0b; border: 1px solid #46371f; color: #d8c8a8; padding: 5px 8px; font-family: inherit; font-size: 12px; letter-spacing: 1px; outline: none; transition: border-color .2s, box-shadow .2s; }
+.mm-star3d-find::placeholder { color: #6f6048; }
+.mm-star3d-find:focus { border-color: #c8a24a; box-shadow: 0 0 0 1px rgba(200,162,74,.25); }
+.mm-star3d-find.miss { border-color: #9c4c32; box-shadow: 0 0 0 1px rgba(156,76,50,.3); }
+.mm-star3d-btn, .mm-star3d-close { background: #241c14; color: #c8a24a; border: 1px solid #8a6320; height: 30px; cursor: pointer; font-family: inherit; font-size: 12px; letter-spacing: 1px; transition: background .18s, color .18s; }
+.mm-star3d-btn { padding: 0 12px; white-space: nowrap; }
+.mm-star3d-btn:hover, .mm-star3d-close:hover { background: #332714; color: #e2c17c; }
+.mm-star3d-close { width: 30px; padding: 0; font-size: 15px; line-height: 1; }
+.mm-star3d-canvas { position: absolute; inset: 0; z-index: 0; }
 .mm-star3d-canvas canvas { display: block; }
-.mm-star3d-hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); color: #7d6e55; font-size: 11px; letter-spacing: 1px; z-index: 3; text-align: center; width: 92%; }
-.mm-star-tip { position: fixed; z-index: 80; max-width: 300px; background: #1d1712; border: 1px solid #8a6320; padding: 10px 12px; color: #cbb892; font-size: 12px; line-height: 1.65; pointer-events: none; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+.mm-star3d-hint { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: #8b7a5c; font-size: 11px; letter-spacing: 2px; z-index: 3; text-align: center; width: 92%; pointer-events: none; text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+.mm-star-tip { position: fixed; z-index: 80; max-width: 300px; background: #1d1712; border: 1px solid #8a6320; padding: 10px 12px; color: #cbb892; font-size: 12px; line-height: 1.65; pointer-events: none; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); font-family: ${FONT}; }
 .mm-star-tip b { color: #c8a24a; display: block; margin-bottom: 4px; letter-spacing: 1px; }
 .mm-star-tip em { font-style: normal; color: #7d6e55; display: block; margin-top: 4px; }
-@media (max-width: 620px) { .mm-star3d-legend { display: none; } .mm-star3d-title small { display: none; } }
+@media (max-width: 820px) { .mm-star3d-legend { display: none; } }
+@media (max-width: 620px) {
+  .mm-star3d-head { gap: 8px; padding: 10px 12px; }
+  .mm-star3d-title { font-size: 14px; letter-spacing: 2px; }
+  .mm-star3d-title small { display: none; }
+  .mm-star3d-find { width: 104px; font-size: 11px; }
+  .mm-star3d-btn { padding: 0 8px; font-size: 11px; }
+  .mm-star3d-hint { font-size: 10px; letter-spacing: 0; bottom: 10px; }
+}
 `;
 
 function injectCss() {
@@ -46,22 +68,124 @@ async function loadGraph() {
   return null;
 }
 
-function makeLabel(text) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 96;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 512, 96);
-  ctx.font = '32px "Songti SC", "SimSun", serif';
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function makeDotTexture() {
+  const size = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.18, 'rgba(255,255,255,.94)');
+  g.addColorStop(0.5, 'rgba(255,255,255,.28)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeGlowTexture() {
+  const size = 96;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,255,255,.85)');
+  g.addColorStop(0.22, 'rgba(255,255,255,.45)');
+  g.addColorStop(0.55, 'rgba(255,255,255,.12)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeNebulaTexture() {
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,255,255,.40)');
+  g.addColorStop(0.34, 'rgba(255,255,255,.16)');
+  g.addColorStop(0.7, 'rgba(255,255,255,.045)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeLabelSprite(title, colorHex) {
+  const fontPx = 30;
+  const h = 72;
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.font = `${fontPx}px ${FONT}`;
+  const textW = Math.ceil(probe.measureText(title).width);
+  const w = Math.min(512, Math.max(148, textW + 46));
+
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+
+  // 低调的深色衬底，减少星点对文字的干扰
+  const r = 10;
+  ctx.beginPath();
+  ctx.moveTo(r, 1);
+  ctx.lineTo(w - r, 1);
+  ctx.quadraticCurveTo(w - 1, 1, w - 1, r);
+  ctx.lineTo(w - 1, h - r);
+  ctx.quadraticCurveTo(w - 1, h - 1, w - r, h - 1);
+  ctx.lineTo(r, h - 1);
+  ctx.quadraticCurveTo(1, h - 1, 1, h - r);
+  ctx.lineTo(1, r);
+  ctx.quadraticCurveTo(1, 1, r, 1);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(11,8,5,.52)';
+  ctx.fill();
+
+  ctx.strokeStyle = colorHex;
+  ctx.globalAlpha = 0.55;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(16, h - 9);
+  ctx.lineTo(w - 16, h - 9);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(230,217,189,.92)';
-  ctx.fillText(text, 256, 48);
-  const tex = new THREE.CanvasTexture(canvas);
+  ctx.shadowColor = 'rgba(0,0,0,.9)';
+  ctx.shadowBlur = 7;
+  ctx.fillStyle = 'rgba(240,229,205,.96)';
+
+  let size = fontPx;
+  if (textW > w - 46) {
+    size = Math.max(18, Math.floor(fontPx * (w - 46) / textW));
+    ctx.font = `${size}px ${FONT}`;
+  } else {
+    ctx.font = `${fontPx}px ${FONT}`;
+  }
+  ctx.fillText(title, w / 2, h / 2 - 3);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 2;
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: true });
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: true, opacity: 0 });
   const sp = new THREE.Sprite(mat);
-  sp.scale.set(1.9, 0.36, 1);
+  const labelH = 0.55;
+  sp.scale.set(labelH * w / h, labelH, 1);
+  sp.visible = false;
+  sp.renderOrder = 6;
   return sp;
 }
 
@@ -71,18 +195,25 @@ export async function showStarMap() {
   if (!data) return;
   injectCss();
 
+  const colors = FLOORS.map((f) => '#' + f.color.toString(16).padStart(6, '0'));
   const overlay = document.createElement('div');
   overlay.id = 'mm-star-overlay';
   overlay.className = 'mm-star3d';
   overlay.innerHTML = `
     <div class="mm-star3d-head">
-      <div class="mm-star3d-title">星图 · 3D<small>36 本书 · 四层同心球壳 · 点星开书</small></div>
-      <div class="mm-star3d-legend">${FLOORS.map((f) => `<span><i style="background:#${f.color.toString(16).padStart(6, '0')}"></i>${f.name}</span>`).join('')}</div>
-      <button class="mm-star3d-close" aria-label="关闭星图">×</button>
+      <div class="mm-star3d-title">星图 · 群星环绕<small>${data.nodes.length} 本书 · 四层星轨 · 点星开书</small></div>
+      <div class="mm-star3d-legend">${FLOORS.map((f, i) => `<span><i style="background:${colors[i]};color:${colors[i]}"></i>${f.name}</span>`).join('')}</div>
+      <div class="mm-star3d-tools">
+        <input class="mm-star3d-find" type="text" placeholder="按书名定位" aria-label="按书名定位" autocomplete="off" list="mm-star3d-books">
+        <datalist id="mm-star3d-books">${data.nodes.map((n) => `<option value="${esc(n.title)}"></option>`).join('')}</datalist>
+        <button class="mm-star3d-btn mm-star3d-reset" type="button">重置视线</button>
+        <button class="mm-star3d-close" type="button" aria-label="关闭星图">×</button>
+      </div>
     </div>
     <div class="mm-star3d-canvas"></div>
-    <div class="mm-star3d-hint">拖拽旋转 · 滚轮缩放 · 悬停看关系 · 点击星点打开书 · Esc 关闭</div>`;
+    <div class="mm-star3d-hint">拖拽环顾 · 滚轮远近 · 悬停看关系 · 点击开书 · Esc 关闭</div>`;
   document.body.appendChild(overlay);
+  window.__mmStarNodes = data.nodes.length;
 
   const tip = document.createElement('div');
   tip.className = 'mm-star-tip';
@@ -96,19 +227,108 @@ export async function showStarMap() {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0c0906);
-  scene.fog = new THREE.FogExp2(0x0c0906, 0.028);
+  scene.fog = new THREE.FogExp2(0x0c0906, 0.0055);
 
-  const camera = new THREE.PerspectiveCamera(65, container.clientWidth / container.clientHeight, 0.1, 120);
+  const camera = new THREE.PerspectiveCamera(INITIAL_FOV, container.clientWidth / container.clientHeight, 0.1, 140);
   camera.position.set(0, 0, 0);
   camera.lookAt(0, 0, -1);
 
+  let yaw = INITIAL_YAW;
+  let pitch = INITIAL_PITCH;
+
   const group = new THREE.Group();
-  group.rotation.y = 0.4;
+  group.rotation.order = 'XYZ';
+  group.rotation.set(pitch, yaw, 0);
   scene.add(group);
 
-  scene.add(new THREE.AmbientLight(0xfff2d8, 1.35));
-  const core = new THREE.PointLight(0xffd98a, 2.2, 40, 1.6);
-  scene.add(core);
+  scene.add(new THREE.AmbientLight(0xfff2d8, 1.0));
+  const coreLight = new THREE.PointLight(0xffd98a, 2.4, 42, 1.6);
+  scene.add(coreLight);
+
+  const dotTex = makeDotTexture();
+  const glowTex = makeGlowTexture();
+  const nebulaTex = makeNebulaTexture();
+
+  // 背景星野：三层冷暖白 + 银河带 + 星云
+  const starLayers = [
+    { count: 1600, rMin: 25, rMax: 38, size: 0.34, color: 0xd5e4ff, opacity: 0.72 },
+    { count: 2200, rMin: 37, rMax: 55, size: 0.55, color: 0xf3ecdd, opacity: 0.55 },
+    { count: 1600, rMin: 54, rMax: 70, size: 0.85, color: 0xffe3bd, opacity: 0.4 },
+  ];
+  starLayers.forEach((def) => {
+    const geo = new THREE.BufferGeometry();
+    const arr = new Float32Array(def.count * 3);
+    for (let i = 0; i < def.count; i++) {
+      const u = Math.random() * 2 - 1;
+      const th = Math.random() * Math.PI * 2;
+      const s = Math.sqrt(Math.max(0, 1 - u * u));
+      const r = def.rMin + Math.random() * (def.rMax - def.rMin);
+      arr[i * 3] = Math.cos(th) * s * r;
+      arr[i * 3 + 1] = u * r;
+      arr[i * 3 + 2] = Math.sin(th) * s * r;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    const mat = new THREE.PointsMaterial({
+      map: dotTex, color: def.color, size: def.size, sizeAttenuation: true,
+      transparent: true, opacity: def.opacity, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    group.add(pts);
+  });
+
+  // 银河带：沿大圆聚集的密集星点
+  {
+    const count = 1300;
+    const n = new THREE.Vector3(0.86, 0.18, 0.48).normalize();
+    const u = new THREE.Vector3(0, 1, 0).cross(n).normalize();
+    const v = n.clone().cross(u).normalize();
+    const geo = new THREE.BufferGeometry();
+    const arr = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const th = Math.random() * Math.PI * 2;
+      const off = (Math.random() + Math.random() + Math.random() - 1.5) * 0.09;
+      const dir = new THREE.Vector3()
+        .addScaledVector(u, Math.cos(th))
+        .addScaledVector(v, Math.sin(th))
+        .addScaledVector(n, off)
+        .normalize();
+      const r = 36 + Math.random() * 27;
+      arr[i * 3] = dir.x * r;
+      arr[i * 3 + 1] = dir.y * r;
+      arr[i * 3 + 2] = dir.z * r;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+    const mat = new THREE.PointsMaterial({
+      map: dotTex, color: 0xdfceb0, size: 0.5, sizeAttenuation: true,
+      transparent: true, opacity: 0.55, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const band = new THREE.Points(geo, mat);
+    band.frustumCulled = false;
+    group.add(band);
+  }
+
+  // 低透明度星云：紫 / 琥珀
+  const nebulas = [
+    { dir: [0.15, 0.2, -0.97], color: 0x8d6fb8, scale: 36, opacity: 0.14 },
+    { dir: [0.55, -0.5, -0.68], color: 0xc8a24a, scale: 32, opacity: 0.10 },
+    { dir: [-0.75, 0.4, -0.4], color: 0x7b62a8, scale: 30, opacity: 0.09 },
+    { dir: [-0.2, 0.75, 0.6], color: 0xc99a55, scale: 34, opacity: 0.08 },
+  ];
+  nebulas.forEach((nb) => {
+    const mat = new THREE.SpriteMaterial({
+      map: nebulaTex, color: nb.color, transparent: true, opacity: nb.opacity,
+      depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    });
+    const sp = new THREE.Sprite(mat);
+    const dir = new THREE.Vector3(nb.dir[0], nb.dir[1], nb.dir[2]).normalize();
+    sp.position.copy(dir.multiplyScalar(58));
+    sp.scale.set(nb.scale, nb.scale, 1);
+    sp.renderOrder = 1;
+    group.add(sp);
+  });
 
   // 布局：每层一个球壳，Fibonacci 均匀撒点
   const byFloor = {};
@@ -126,50 +346,180 @@ export async function showStarMap() {
     });
   });
 
-  const nodeGeo = new THREE.SphereGeometry(0.15, 14, 14);
+  const nodeGeo = new THREE.SphereGeometry(1, 16, 16);
   const nodeItems = [];
+  const itemsById = new Map();
   data.nodes.forEach((n) => {
-    const color = (FLOORS.find((f) => f.id === n.floor) || FLOORS[0]).color;
-    const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.85, roughness: 0.35, metalness: 0.2 });
-    const mesh = new THREE.Mesh(nodeGeo, mat);
-    mesh.position.copy(pos.get(n.id));
-    mesh.userData.node = n;
-    group.add(mesh);
-    const label = makeLabel(n.title);
-    label.position.copy(mesh.position).add(new THREE.Vector3(0, 0.34, 0));
-    group.add(label);
-    nodeItems.push({ mesh, label, node: n });
+    const fi = FLOORS.findIndex((f) => f.id === n.floor);
+    const floor = FLOORS[fi] || FLOORS[0];
+    const fIndex = Math.max(0, fi);
+    const coreScale = 0.11 + fIndex * 0.014;
+    const p = pos.get(n.id);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: floor.color, emissive: floor.color, emissiveIntensity: 0.9,
+      roughness: 0.32, metalness: 0.18,
+    });
+    const core = new THREE.Mesh(nodeGeo, mat);
+    core.position.copy(p);
+    core.scale.setScalar(coreScale);
+    group.add(core);
+
+    const glowMat = new THREE.SpriteMaterial({
+      map: glowTex, color: floor.color, transparent: true, opacity: 0.44,
+      depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    });
+    const glow = new THREE.Sprite(glowMat);
+    const glowScale = 0.54 + fIndex * 0.15;
+    glow.position.copy(p);
+    glow.scale.set(glowScale, glowScale, 1);
+    glow.renderOrder = 3;
+    group.add(glow);
+
+    const label = makeLabelSprite(n.title, colors[fIndex]);
+    scene.add(label);
+
+    const item = {
+      node: n, pos: p, core, glow, label,
+      coreScale, glowScale, glowOpacity: 0.44,
+      world: new THREE.Vector3(), dir: new THREE.Vector3(), dist: 0,
+      amp: 0, labelAlpha: 0,
+    };
+    core.userData.item = item;
+    glow.userData.item = item;
+    nodeItems.push(item);
+    itemsById.set(n.id, item);
   });
 
-  const edgeColor = new THREE.Color(0x9a7a3a);
+  const adjacency = new Map();
+  data.edges.forEach((e) => {
+    if (!adjacency.has(e.source)) adjacency.set(e.source, []);
+    if (!adjacency.has(e.target)) adjacency.set(e.target, []);
+    adjacency.get(e.source).push(e.target);
+    adjacency.get(e.target).push(e.source);
+  });
+
+  const labelOf = new Map(data.nodes.map((n) => [n.id, n.title]));
+
+  // 关系线：二次贝塞尔弧线 + 加色混合 + 两端淡出
+  const edgeItems = [];
+  const radialSegments = 5;
+  const EDGE_R = 13.6; // 关系线落在所有星壳之外的“天球”上，屏幕上仍与节点对齐
   data.edges.forEach((e) => {
     const a = pos.get(e.source);
     const b = pos.get(e.target);
     if (!a || !b) return;
-    const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
-    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.45 }));
-    group.add(line);
+    const da = a.clone().normalize().multiplyScalar(EDGE_R);
+    const db = b.clone().normalize().multiplyScalar(EDGE_R);
+    const angle = Math.acos(Math.max(-1, Math.min(1, a.clone().normalize().dot(b.clone().normalize()))));
+    // 控制点向天球外侧 + 侧向偏出：屏幕上是弯弧，而不是穿过视线的直线
+    let midDir = new THREE.Vector3().addVectors(da, db);
+    if (midDir.lengthSq() < 1e-6) {
+      midDir = new THREE.Vector3(0, 1, 0).cross(da);
+      if (midDir.lengthSq() < 1e-6) midDir = new THREE.Vector3(1, 0, 0).cross(da);
+    }
+    midDir.normalize();
+    let side = new THREE.Vector3().crossVectors(da, db);
+    if (side.lengthSq() < 1e-6) side = new THREE.Vector3(0, 1, 0).cross(da);
+    if (side.lengthSq() < 1e-6) side = new THREE.Vector3(1, 0, 0).cross(da);
+    side.normalize();
+    const ctrl = midDir.multiplyScalar(EDGE_R * 1.28)
+      .add(side.multiplyScalar(EDGE_R * 0.42));
+    const curve = new THREE.QuadraticBezierCurve3(da, ctrl, db);
+    const tubularSegments = angle > 1.8 ? 46 : 34;
+    const radius = angle > 1.2 ? 0.048 : 0.058;
+    const geo = new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, false);
+    const base = new THREE.Color(0x9a7a3a);
+    const colorArr = new Float32Array(geo.attributes.position.count * 3);
+    const perSeg = radialSegments + 1;
+    for (let vi = 0; vi < geo.attributes.position.count; vi++) {
+      const t = Math.floor(vi / perSeg) / tubularSegments;
+      let f = Math.min(1, t * 7, (1 - t) * 7);
+      f = f * f * (3 - 2 * f);
+      const k = 0.06 + 0.94 * f;
+      colorArr[vi * 3] = base.r * k;
+      colorArr[vi * 3 + 1] = base.g * k;
+      colorArr[vi * 3 + 2] = base.b * k;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colorArr, 3));
+    const baseOpacity = angle > 2.1 ? 0.22 : angle > 1.2 ? 0.32 : 0.5;
+    const mat = new THREE.MeshBasicMaterial({
+      vertexColors: true, transparent: true, opacity: baseOpacity,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.renderOrder = 2;
+    group.add(mesh);
+    edgeItems.push({ source: e.source, target: e.target, curve, material: mat, baseOpacity });
   });
 
-  // 移动端隐藏标签
-  const compact = container.clientWidth < 620;
-  nodeItems.forEach((it) => { it.label.visible = !compact; });
+  // 每条边一颗沿曲线缓慢移动的流星
+  const meteorPos = new Float32Array(edgeItems.length * 3);
+  const meteorCol = new Float32Array(edgeItems.length * 3);
+  const meteorGeo = new THREE.BufferGeometry();
+  meteorGeo.setAttribute('position', new THREE.BufferAttribute(meteorPos, 3).setUsage(THREE.DynamicDrawUsage));
+  meteorGeo.setAttribute('color', new THREE.BufferAttribute(meteorCol, 3).setUsage(THREE.DynamicDrawUsage));
+  const meteorMat = new THREE.PointsMaterial({
+    map: dotTex, size: 0.16, sizeAttenuation: true, vertexColors: true,
+    transparent: true, opacity: 0.95, depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const meteors = new THREE.Points(meteorGeo, meteorMat);
+  meteors.frustumCulled = false;
+  meteors.renderOrder = 4;
+  group.add(meteors);
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
+  const pickTargets = nodeItems.flatMap((it) => [it.core, it.glow]);
   let dragging = false;
   let moved = 0;
   let lastX = 0;
   let lastY = 0;
-  let hovered = null;
+  let hoveredItem = null;
   let anim = 0;
+  let running = false;
+  let lastNow = 0;
+  let lookAnim = null;
+  let focusItem = null;
+  let focusUntil = 0;
+  let missTimer = 0;
+  let compact = container.clientWidth < 620;
+
+  const FRONT_COS = Math.cos(46 * Math.PI / 180);
+  const NEAR_DIST = 8.8;
+  const SEP_COS = Math.cos(10 * Math.PI / 180);
 
   const pick = (clientX, clientY) => {
     const rect = container.getBoundingClientRect();
     pointer.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects(nodeItems.map((it) => it.mesh), false);
-    return hits.length ? hits[0].object : null;
+    const hits = raycaster.intersectObjects(pickTargets, false);
+    for (const hit of hits) {
+      const item = hit.object.userData.item;
+      if (item) return item;
+    }
+    return null;
+  };
+
+  const setHover = (item) => {
+    if (hoveredItem === item) return;
+    hoveredItem = item;
+    edgeItems.forEach((ed) => {
+      const lit = item && (ed.source === item.node.id || ed.target === item.node.id);
+      ed.material.opacity = lit ? 0.95 : ed.baseOpacity;
+      ed.material.color.set(lit ? 0xffe2ae : 0xffffff);
+    });
+    renderer.domElement.style.cursor = item ? 'pointer' : (dragging ? 'grabbing' : 'grab');
+  };
+
+  const showTip = (e, item) => {
+    const n = item.node;
+    const near = (adjacency.get(n.id) || []).slice(0, 4).map((id) => labelOf.get(id) || id);
+    tip.innerHTML = `<b>${esc(n.title)}</b>${(n.tags || []).slice(0, 4).join(' · ')}<em>${near.length ? '相连：' + esc(near.join('、')) : '暂无连线'}</em>`;
+    tip.style.display = 'block';
+    tip.style.left = Math.min(window.innerWidth - 310, e.clientX + 16) + 'px';
+    tip.style.top = Math.min(window.innerHeight - 120, e.clientY + 16) + 'px';
   };
 
   const onPointerDown = (e) => {
@@ -177,99 +527,303 @@ export async function showStarMap() {
     moved = 0;
     lastX = e.clientX;
     lastY = e.clientY;
+    lookAnim = null;
+    focusItem = null;
+    focusUntil = 0;
     renderer.domElement.setPointerCapture?.(e.pointerId);
+    renderer.domElement.style.cursor = 'grabbing';
+    tip.style.display = 'none';
   };
+
   const onPointerMove = (e) => {
     if (dragging) {
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       moved += Math.abs(dx) + Math.abs(dy);
-      group.rotation.y += dx * 0.006;
-      group.rotation.x = Math.max(-1.1, Math.min(1.1, group.rotation.x + dy * 0.004));
+      yaw += dx * 0.0062;
+      pitch = Math.max(-1.2, Math.min(1.2, pitch + dy * 0.0042));
       lastX = e.clientX;
       lastY = e.clientY;
       tip.style.display = 'none';
       return;
     }
-    const hit = pick(e.clientX, e.clientY);
-    if (hit) {
-      if (hovered && hovered !== hit) { hovered.scale.setScalar(1); }
-      hovered = hit;
-      hit.scale.setScalar(1.45);
-      const n = hit.userData.node;
-      const near = data.edges
-        .filter((ed) => ed.source === n.id || ed.target === n.id)
-        .map((ed) => (ed.source === n.id ? ed.target : ed.source))
-        .slice(0, 4);
-      tip.innerHTML = `<b>${n.title}</b>${(n.tags || []).slice(0, 4).join(' · ')}<em>${near.length ? '相连：' + near.join('、') : '暂无连线'}</em>`;
-      tip.style.display = 'block';
-      tip.style.left = Math.min(window.innerWidth - 310, e.clientX + 16) + 'px';
-      tip.style.top = Math.min(window.innerHeight - 120, e.clientY + 16) + 'px';
-      renderer.domElement.style.cursor = 'pointer';
-    } else {
-      if (hovered) { hovered.scale.setScalar(1); hovered = null; }
+    if (e.target !== renderer.domElement) {
+      setHover(null);
       tip.style.display = 'none';
-      renderer.domElement.style.cursor = dragging ? 'grabbing' : 'grab';
+      return;
     }
+    const item = pick(e.clientX, e.clientY);
+    setHover(item);
+    if (item) showTip(e, item);
+    else tip.style.display = 'none';
   };
+
   const onPointerUp = (e) => {
+    if (!dragging) return;
     dragging = false;
+    renderer.domElement.style.cursor = hoveredItem ? 'pointer' : 'grab';
     if (moved < 6) {
-      const hit = pick(e.clientX, e.clientY);
-      if (hit && typeof window.openBookFirst === 'function') {
-        const id = hit.userData.node.id;
+      const item = pick(e.clientX, e.clientY);
+      if (item && typeof window.openBookFirst === 'function') {
+        const id = item.node.id;
         close();
         window.openBookFirst(id);
       }
     }
   };
+
+  const onPointerCancel = () => {
+    dragging = false;
+    renderer.domElement.style.cursor = 'grab';
+  };
+
   const onWheel = (e) => {
     e.preventDefault();
     camera.fov = Math.max(35, Math.min(95, camera.fov + e.deltaY * 0.03));
     camera.updateProjectionMatrix();
   };
+
   const onResize = () => {
     const w = container.clientWidth;
     const h = container.clientHeight;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(w, h);
+    compact = w < 620;
   };
+
   const onKey = (e) => { if (e.key === 'Escape') close(); };
+
+  const onVisibility = () => {
+    if (document.hidden) stopLoop();
+    else startLoop();
+  };
+
+  const resetView = () => {
+    lookAnim = null;
+    focusItem = null;
+    focusUntil = 0;
+    yaw = INITIAL_YAW;
+    pitch = INITIAL_PITCH;
+    camera.fov = INITIAL_FOV;
+    camera.updateProjectionMatrix();
+  };
+
+  const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+
+  const focusStar = (target) => {
+    const p = pos.get(target.id);
+    if (!p) return;
+    const yawTo = Math.atan2(p.x, -p.z);
+    const r = Math.hypot(p.x, p.z);
+    const pitchTo = Math.max(-1.25, Math.min(1.25, Math.atan2(-p.y, r)));
+    lookAnim = {
+      fromYaw: yaw,
+      fromPitch: pitch,
+      toYaw: yaw + wrapAngle(yawTo - yaw),
+      toPitch: pitchTo,
+      start: performance.now(),
+      dur: 950,
+    };
+    focusItem = itemsById.get(target.id) || null;
+    focusUntil = performance.now() + 950 + 1200;
+  };
 
   renderer.domElement.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
+  renderer.domElement.addEventListener('pointercancel', onPointerCancel);
   renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
   window.addEventListener('resize', onResize);
   window.addEventListener('keydown', onKey);
+  document.addEventListener('visibilitychange', onVisibility);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   overlay.querySelector('.mm-star3d-close').addEventListener('click', close);
+  overlay.querySelector('.mm-star3d-reset').addEventListener('click', resetView);
 
+  const findInput = overlay.querySelector('.mm-star3d-find');
+  findInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const q = findInput.value.trim();
+    if (!q) return;
+    const target = data.nodes.find((n) => n.title === q)
+      || data.nodes.find((n) => n.title.includes(q))
+      || data.nodes.find((n) => n.id === q);
+    if (!target) {
+      findInput.classList.add('miss');
+      clearTimeout(missTimer);
+      missTimer = setTimeout(() => findInput.classList.remove('miss'), 900);
+      return;
+    }
+    findInput.classList.remove('miss');
+    findInput.blur();
+    focusStar(target);
+  });
+
+  const euler = new THREE.Euler(0, 0, 0, 'XYZ');
+  const tmpWorld = new THREE.Vector3();
+  const tmpNdc = new THREE.Vector3();
+
+  function updateLabels() {
+    euler.set(pitch, yaw, 0, 'XYZ');
+    camera.updateMatrixWorld();
+    nodeItems.forEach((it) => {
+      tmpWorld.copy(it.pos).applyEuler(euler);
+      it.world.copy(tmpWorld);
+      it.dist = tmpWorld.length();
+      it.dir.copy(tmpWorld).normalize();
+      it.label.position.copy(tmpWorld);
+      it.label.position.y += 0.52;
+    });
+
+    for (const it of nodeItems) it._show = false;
+    if (focusItem) focusItem._show = true;
+    if (hoveredItem) hoveredItem._show = true;
+
+    if (!compact) {
+      const cand = [];
+      nodeItems.forEach((it) => {
+        if (it._show) return;
+        if (it.dir.z > -FRONT_COS) return; // 只取正前方
+        if (it.dist > NEAR_DIST) return;
+        const ndc = tmpNdc.copy(it.world).project(camera);
+        const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+        const halfX = (it.label.scale.x / 2) / (it.dist * tanHalf * camera.aspect);
+        const halfY = (it.label.scale.y / 2) / (it.dist * tanHalf);
+        if (Math.abs(ndc.x) + halfX > 0.94 || Math.abs(ndc.y) + halfY > 0.94) return;
+        cand.push(it);
+      });
+      cand.sort((a, b) => (-a.dir.z) - (-b.dir.z) || a.dist - b.dist);
+      const seen = [];
+      if (focusItem) seen.push(focusItem.dir);
+      if (hoveredItem) seen.push(hoveredItem.dir);
+      for (const it of cand) {
+        if (seen.some((d) => d.dot(it.dir) > SEP_COS)) continue;
+        it._show = true;
+        seen.push(it.dir);
+        if (seen.length >= 6) break;
+      }
+    }
+
+    nodeItems.forEach((it) => {
+      const target = it._show ? 1 : 0;
+      it.labelAlpha += (target - it.labelAlpha) * 0.24;
+      if (it.labelAlpha > 0.02) {
+        it.label.visible = true;
+        it.label.material.opacity = 0.94 * it.labelAlpha;
+      } else {
+        it.label.visible = false;
+        it.label.material.opacity = 0;
+      }
+    });
+  }
+
+  function updateNodes(now) {
+    nodeItems.forEach((it) => {
+      const want = it === hoveredItem || it === focusItem ? 1 : 0;
+      it.amp += (want - it.amp) * 0.18;
+      const coreS = it.coreScale * (1 + 0.5 * it.amp);
+      it.core.scale.setScalar(coreS);
+      let pulse = 0;
+      if (it === focusItem) pulse = 0.28 * (0.5 + 0.5 * Math.sin(now * 0.009));
+      const glowS = it.glowScale * (1 + 0.55 * it.amp + pulse);
+      it.glow.scale.set(glowS, glowS, 1);
+      it.glow.material.opacity = it.glowOpacity * (1 + 0.55 * it.amp + pulse);
+    });
+    if (focusItem && now > focusUntil) {
+      focusItem = null;
+    }
+  }
+
+  function updateMeteors(now) {
+    for (let i = 0; i < edgeItems.length; i++) {
+      const t = (now * 0.000032 + i * 0.081) % 1;
+      const pt = edgeItems[i].curve.getPointAt(t);
+      meteorPos[i * 3] = pt.x;
+      meteorPos[i * 3 + 1] = pt.y;
+      meteorPos[i * 3 + 2] = pt.z;
+      const k = 0.16 + 0.84 * Math.sin(Math.PI * t);
+      meteorCol[i * 3] = 1.0 * k;
+      meteorCol[i * 3 + 1] = 0.83 * k;
+      meteorCol[i * 3 + 2] = 0.52 * k;
+    }
+    meteorGeo.attributes.position.needsUpdate = true;
+    meteorGeo.attributes.color.needsUpdate = true;
+  }
+
+  function frame(now) {
+    if (!running) return;
+    anim = requestAnimationFrame(frame);
+
+    if (lookAnim) {
+      const t = Math.min(1, Math.max(0, (now - lookAnim.start) / lookAnim.dur));
+      const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      yaw = lookAnim.fromYaw + (lookAnim.toYaw - lookAnim.fromYaw) * e;
+      pitch = lookAnim.fromPitch + (lookAnim.toPitch - lookAnim.fromPitch) * e;
+      if (t >= 1) lookAnim = null;
+    }
+
+    group.rotation.set(pitch, yaw, 0);
+    updateNodes(now);
+    updateLabels();
+    updateMeteors(now);
+    renderer.render(scene, camera);
+  }
+
+  function startLoop() {
+    if (running) return;
+    running = true;
+    lastNow = performance.now();
+    anim = requestAnimationFrame(frame);
+  }
+
+  function stopLoop() {
+    running = false;
+    if (anim) cancelAnimationFrame(anim);
+    anim = 0;
+  }
+
+  let closed = false;
   function close() {
-    cancelAnimationFrame(anim);
+    if (closed) return;
+    closed = true;
+    stopLoop();
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('resize', onResize);
     window.removeEventListener('keydown', onKey);
-    renderer.dispose();
-    nodeGeo.dispose();
-    nodeItems.forEach((it) => {
-      it.mesh.material.dispose();
-      if (it.label.material.map) it.label.material.map.dispose();
-      it.label.material.dispose();
+    document.removeEventListener('visibilitychange', onVisibility);
+    clearTimeout(missTimer);
+
+    const textures = new Set();
+    const geometries = new Set();
+    scene.traverse((obj) => {
+      // Sprite 的几何是 three 内部共享的，跳过以免影响页面其他 Sprite
+      if (obj.geometry && !obj.isSprite && !geometries.has(obj.geometry)) {
+        geometries.add(obj.geometry);
+        obj.geometry.dispose();
+      }
+      if (obj.material) {
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach((m) => {
+          if (m.map && !textures.has(m.map)) {
+            textures.add(m.map);
+            m.map.dispose();
+          }
+          m.dispose();
+        });
+      }
     });
-    group.children.forEach((c) => { if (c.geometry && c.geometry !== nodeGeo) c.geometry.dispose(); });
+    scene.clear();
+    renderer.dispose();
+    renderer.forceContextLoss?.();
     overlay.remove();
     tip.remove();
   }
 
-  function loop() {
-    anim = requestAnimationFrame(loop);
-    renderer.render(scene, camera);
-  }
-  loop();
-
+  startLoop();
   window.__mmStarNodes = data.nodes.length;
 }
 

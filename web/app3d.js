@@ -677,10 +677,14 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   loading.textContent = '正在开馆……';
   root.appendChild(loading);
 
+  // 移动端 / 低配降级：窄屏（<760px）或低内存（deviceMemory ≤ 4）设备降低像素比并关闭阴影
+  const BASE_DPR = Math.min(2, window.devicePixelRatio || 1);
+  const LOW_SPEC = window.innerWidth < 760
+    || (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setPixelRatio(LOW_SPEC ? Math.min(1.5, BASE_DPR) : BASE_DPR);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !LOW_SPEC;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.7;
@@ -768,6 +772,12 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const beaconLight = new THREE.PointLight(0xff2a2a, 0, 10, 2);
   beaconLight.position.set(8.6, 2.6, 3.2);
   scene.add(beaconLight);
+
+  // 低配：关闭第二盏书架灯与两盏落地灯，减少实时点光数量（不影响桌面端）
+  if (LOW_SPEC) {
+    if (shelfLights[1]) shelfLights[1].visible = false;
+    for (let i = SCONCE_POS.length; i < wallLights.length; i++) wallLights[i].visible = false;
+  }
 
   // ---------- 房间 ----------
   const woodDark = new THREE.MeshStandardMaterial({ color: 0x523a24, roughness: 0.82, metalness: 0.05 });
@@ -1594,18 +1604,21 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       coneOpacity = style === 'L3' ? 0.065 : 0.07;
     }
     // 体积光锥：Additive + 低透明度 + 不写深度
+    // 低配：只给半数吊灯生成光锥（透明叠绘减半），分段数同时减半
     const coneH = CHANDELIER_POS.y - 0.6;
-    const cone = new THREE.Mesh(
-      new THREE.ConeGeometry(2.25, coneH, 28, 1, true),
-      new THREE.MeshBasicMaterial({
-        color: coneColor, transparent: true, opacity: coneOpacity,
-        depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
-      })
-    );
-    cone.position.y = -coneH / 2;
-    cone.rotation.z = 0.04;
-    ch.add(cone);
-    volumeCones.push({ mesh: cone, base: coneOpacity, phase: volumeCones.length * 1.6, spin: style === 'L4' ? 0.05 : 0.03 });
+    if (!LOW_SPEC || volumeCones.length % 2 === 0) {
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(2.25, coneH, LOW_SPEC ? 14 : 28, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: coneColor, transparent: true, opacity: coneOpacity,
+          depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+        })
+      );
+      cone.position.y = -coneH / 2;
+      cone.rotation.z = 0.04;
+      ch.add(cone);
+      volumeCones.push({ mesh: cone, base: coneOpacity, phase: volumeCones.length * 1.6, spin: style === 'L4' ? 0.05 : 0.03 });
+    }
     return ch;
   }
 
@@ -1926,8 +1939,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     scene.add(pts);
     return { points: pts, geo, vel, count };
   }
-  const dustNear = buildDust(500, 0.045, 0.06, 0.34, 0xffe0b0);
-  const dustFar = buildDust(1200, 0.016, 0.16, 0.18, 0xd9c8a8);
+  // 低配：粉尘数量减半，降低每帧 BufferAttribute 更新与填充开销
+  const dustNear = buildDust(LOW_SPEC ? 250 : 500, 0.045, 0.06, 0.34, 0xffe0b0);
+  const dustFar = buildDust(LOW_SPEC ? 600 : 1200, 0.016, 0.16, 0.18, 0xd9c8a8);
 
   function updateDust(layer, dt) {
     const arr = layer.geo.attributes.position.array;
@@ -2151,6 +2165,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
   function setFloor(fid, silent = false) {
     currentFloor = fid;
+    clearHover(); // 切层后旧高亮目标可能已隐藏，先还原缩放
     applyAtmos(fid);
     for (const it of bookItems) {
       it.mesh.visible = fid === 'all' || it.book.floor === fid;
@@ -2240,8 +2255,26 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     raycaster.setFromCamera(pointer, camera);
   }
 
+  // 悬停反馈：仅临时放大 1.04 倍，不克隆材质、不新增网格；离开或换目标时还原
+  let hovered = null;
+  function clearHover() {
+    if (!hovered) return;
+    hovered.obj.scale.copy(hovered.scale);
+    hovered = null;
+    el.style.cursor = 'grab';
+  }
+  function applyHover(obj) {
+    if (!obj) { clearHover(); return; }
+    if (hovered && hovered.obj === obj) { el.style.cursor = 'pointer'; return; }
+    clearHover();
+    hovered = { obj, scale: obj.scale.clone() };
+    obj.scale.multiplyScalar(1.04);
+    el.style.cursor = 'pointer';
+  }
+
   function hoverPick(e) {
-    if (tour) return;
+    if (tour || traveling || taking) { clearHover(); return; }
+    if (!isSceneVisible()) { clearHover(); return; }
     setPointer(e.clientX, e.clientY);
     const hits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);
     const hitElev = raycaster.intersectObject(elevator, true);
@@ -2250,9 +2283,26 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const hitLamp = raycaster.intersectObject(lampGroup, true);
     const hitZoom = raycaster.intersectObject(zoomGroup, true);
     const hitDrawer = raycaster.intersectObjects(cabinetDrawers, false);
-    const hitHidden = hiddenBook.visible && raycaster.intersectObject(hiddenBook, false).length > 0;
+    const hitHidden = hiddenBook.visible ? raycaster.intersectObject(hiddenBook, false) : [];
     const hitStolen = raycaster.intersectObjects(stolenCases.filter((c) => c.group.visible).map((c) => c.group), true);
-    el.style.cursor = (hits.length || hitElev.length || hitStar.length || hitFrag.length || hitLamp.length || hitZoom.length || hitDrawer.length || hitHidden || hitStolen.length) ? 'pointer' : 'grab';
+    // 高亮目标与 pick 的拾取优先级保持一致，避免悬停提示与点击结果不一致
+    let target = null;
+    if (hitElev.length) target = elevator;
+    else if (hitStar.length) target = starTable;
+    else if (hitFrag.length) target = hitFrag[0].object;
+    else if (hitHidden.length) target = hiddenBook;
+    else if (hitStolen.length) {
+      let obj = hitStolen[0].object;
+      while (obj && obj.userData.stolenId == null) obj = obj.parent;
+      target = obj || null;
+    } else if (hitLamp.length) target = lampGroup;
+    else if (hitZoom.length) target = zoomGroup;
+    else if (hitDrawer.length) target = hitDrawer[0].object;
+    else if (hits.length) {
+      const item = hits[0].object.userData.item;
+      target = item && !item.animating ? hits[0].object : null;
+    }
+    applyHover(target);
   }
 
   function pick(x, y) {
@@ -2329,6 +2379,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   let traveling = false;
   function takeBook(item) {
     if (taking || tour) return;
+    clearHover(); // 取书动画自行控制 scale，先移除悬停缩放
     taking = true;
     if (window.mmAudioPlay) window.mmAudioPlay('page');
     item.animating = true;
@@ -2458,6 +2509,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   function startTour(stops, handlers = {}) {
     if (!Array.isArray(stops) || !stops.length) return;
     if (traveling || taking) return;
+    clearHover(); // 导览期间不接受悬停，先还原旧高亮
     if (tour) endTour();
     for (const k in keys) keys[k] = false;
     const home = { pos: player.pos.clone(), tYaw: player.tYaw, tPitch: player.tPitch };
@@ -2475,6 +2527,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   async function travelTo(fid) {
     if (tour || traveling || taking) return;
+    clearHover(); // 转场期间还原悬停缩放
     traveling = true;
     hint.style.opacity = '0';
     const startPos = camera.position.clone();
@@ -2512,6 +2565,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // ---------- 复位（从阅读页回到房间时调用） ----------
   function reset() {
     if (tour) endTour();
+    clearHover();
     taking = false;
     for (const item of bookItems) {
       item.animating = false;
@@ -2572,9 +2626,27 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
 
   let elapsed = 0;
+  // 3D 可见性：2D 页面（body 含 grid/reading）、后台标签页或容器隐藏时不渲染
+  let sceneHost = null;
+  function isSceneVisible() {
+    if (document.hidden) return false;
+    const body = document.body;
+    if (body && (body.classList.contains('grid') || body.classList.contains('reading'))) return false;
+    if (!sceneHost || !sceneHost.isConnected) sceneHost = document.getElementById('scene3d');
+    if (!sceneHost) return false;
+    if (sceneHost.clientWidth === 0 && sceneHost.clientHeight === 0) return false;
+    const cs = window.getComputedStyle(sceneHost);
+    return cs.display !== 'none' && cs.visibility !== 'hidden';
+  }
+
   function tick(now) {
     requestAnimationFrame(tick);
     const nowMs = now || performance.now();
+    if (!isSceneVisible()) {
+      // 隐藏时只推进时间戳：不 step 物理、不更新粒子、不渲染，恢复时 dt 不跳变
+      lastFrame = nowMs;
+      return;
+    }
     const dt = Math.min(0.06, Math.max(0.001, (nowMs - lastFrame) / 1000));
     lastFrame = nowMs;
     elapsed += dt;
@@ -2654,6 +2726,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // 标签页重新可见时重置时间戳，避免恢复首帧 dt 跳变
+  document.addEventListener('visibilitychange', () => {
+    lastFrame = performance.now();
   });
 
   // ---------- 楼层平面图数据（供 2D 平面图 / 导览） ----------

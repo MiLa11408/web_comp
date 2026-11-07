@@ -92,20 +92,22 @@ await page.keyboard.press('Escape');
 await page.waitForTimeout(400);
 (await page.locator('#mm-star-overlay').count()) === 0 ? ok('星图 Esc 关闭') : bad('星图 Esc 关闭');
 
-// 2. 线索视图
-await page.getByRole('button', { name: '线索' }).click();
-await page.waitForSelector('.rail-line', { timeout: 8000 });
-const lineCount = await page.locator('.rail-line').count();
-const stopCount = await page.locator('.rail-stop').count();
-const branchCount = await page.locator('.rail-branch').count();
-const transferCount = await page.locator('.rs-transfer').count();
-lineCount === 5 ? ok('线索 5 条主线', String(lineCount)) : bad('线索主线数', String(lineCount));
-stopCount >= 40 ? ok('铁路站点数', String(stopCount)) : bad('铁路站点数', String(stopCount));
-branchCount >= 5 ? ok('支线数', String(branchCount)) : bad('支线数', String(branchCount));
-transferCount >= 3 ? ok('换乘站标记', String(transferCount)) : bad('换乘站标记', String(transferCount));
+// 2. 书轨视图（线路图 + 换乘线 + 发车）
+await page.getByRole('button', { name: '书轨' }).click();
+await page.waitForSelector('#rgSvg .rg-stop', { timeout: 8000 });
+const lineCount = await page.locator('.rg-line-chip').count();
+const stopCount = await page.locator('#rgSvg .rg-stop').count();
+const branchCount = await page.locator('#rgSvg path[stroke-dasharray="4 4"]').count();
+const transferCount = await page.locator('#rgSvg .rg-xfer').count();
+lineCount === 5 ? ok('书轨 5 条主线', String(lineCount)) : bad('书轨主线数', String(lineCount));
+stopCount >= 40 ? ok('书轨站点数', String(stopCount)) : bad('书轨站点数', String(stopCount));
+branchCount >= 5 ? ok('书轨支线数', String(branchCount)) : bad('书轨支线数', String(branchCount));
+transferCount >= 3 ? ok('书轨换乘线', String(transferCount)) : bad('书轨换乘线', String(transferCount));
+const trainCount = await page.locator('#rgSvg .rg-train').count();
+trainCount === 5 ? ok('书轨发车动画列车', String(trainCount)) : bad('书轨发车列车数', String(trainCount));
 
 // 3. 点站点开书 → 阅读三栏
-await page.locator('.rail-stop').first().click();
+await page.locator('#rgSvg .rg-stop').first().click();
 await page.waitForSelector('#reader', { timeout: 8000 });
 const paperLen = (await page.locator('.paper').innerText()).length;
 paperLen > 1500 ? ok('阅读页正文长度', String(paperLen)) : bad('阅读页正文长度', String(paperLen));
@@ -114,6 +116,8 @@ const hasNotes = await page.locator('#notesCol').count();
 const hasFloat = await page.locator('.reader-float-close').count();
 (hasRail && hasNotes) ? ok('阅读三栏（左检索/右页边注）') : bad('阅读三栏', `rail=${hasRail} notes=${hasNotes}`);
 hasFloat ? ok('浮动合书键存在') : bad('浮动合书键存在');
+const readNext = await page.locator('.read-next .rn-btn.next').count();
+readNext ? ok('章末「下一章」入口') : bad('章末「下一章」入口');
 
 const toolCount = await page.locator('.reader-tools button').count();
 toolCount >= 3 ? ok('阅读工具条（盖章/批注/读完）', String(toolCount)) : bad('阅读工具条', String(toolCount));
@@ -327,12 +331,12 @@ await mob.evaluate(() => { if (window.gateGuest) window.gateGuest(); else docume
 await mob.waitForTimeout(1600);
 if (await mob.locator('#gate').count()) await mob.evaluate(() => document.getElementById('gate')?.remove());
 await mob.waitForTimeout(300);
-await mob.waitForSelector('button:has-text("线索")', { timeout: 20000 });
+await mob.waitForSelector('button:has-text("书轨")', { timeout: 20000 });
 await mob.waitForFunction(() => typeof window.enterRail === 'function', null, { timeout: 30000 });
-await mob.locator('button:has-text("线索")').first().click();
-await mob.waitForSelector('.rail-line', { timeout: 8000 });
-const mobRail = await mob.locator('.rail-line').count();
-mobRail === 5 ? ok('移动端线索渲染', String(mobRail)) : bad('移动端线索渲染', String(mobRail));
+await mob.locator('button:has-text("书轨")').first().click();
+await mob.waitForSelector('#rgSvg .rg-stop', { timeout: 8000 });
+const mobRail = await mob.locator('#rgSvg .rg-stop').count();
+mobRail >= 40 ? ok('移动端书轨渲染', String(mobRail)) : bad('移动端书轨渲染', String(mobRail));
 if (mobErrors.length) bad('移动端 JS 报错', mobErrors.slice(0, 2).join(' | '));
 else ok('移动端无 JS 报错');
 await mob.close();
