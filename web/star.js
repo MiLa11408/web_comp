@@ -266,7 +266,6 @@ export async function showStarMap() {
 
   function loop() {
     anim = requestAnimationFrame(loop);
-    if (!dragging) group.rotation.y += 0.0016;
     renderer.render(scene, camera);
   }
   loop();

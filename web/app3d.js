@@ -342,8 +342,61 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   starTable.add(tableTop);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.015, 8, 64), new THREE.MeshStandardMaterial({ color: 0xc8a24a, emissive: 0x8a6320, emissiveIntensity: 0.5 }));
   ring.rotation.x = Math.PI / 2;
-  ring.position.y = 0.82;
+  ring.position.y = 0.84;
   starTable.add(ring);
+
+  // 星盘：Canvas 绘制的同心圆、刻度与星图连线
+  const chartCanvas = document.createElement('canvas');
+  chartCanvas.width = 1024;
+  chartCanvas.height = 1024;
+  const g2d = chartCanvas.getContext('2d');
+  g2d.fillStyle = '#241a10';
+  g2d.fillRect(0, 0, 1024, 1024);
+  g2d.strokeStyle = 'rgba(200,162,74,.55)';
+  g2d.lineWidth = 2;
+  for (let i = 1; i <= 4; i++) {
+    g2d.beginPath();
+    g2d.arc(512, 512, i * 112, 0, Math.PI * 2);
+    g2d.stroke();
+  }
+  for (let i = 0; i < 72; i++) {
+    const a = i * Math.PI / 36;
+    const r1 = 470;
+    const r2 = i % 6 === 0 ? 428 : 450;
+    g2d.beginPath();
+    g2d.moveTo(512 + Math.cos(a) * r1, 512 + Math.sin(a) * r1);
+    g2d.lineTo(512 + Math.cos(a) * r2, 512 + Math.sin(a) * r2);
+    g2d.stroke();
+  }
+  const chartPts = [];
+  g2d.fillStyle = '#e2c06a';
+  for (let i = 0; i < 14; i++) {
+    const a = i * 2.39;
+    const r = 120 + ((i * 37) % 330);
+    const x = 512 + Math.cos(a) * r;
+    const y = 512 + Math.sin(a) * r;
+    chartPts.push([x, y]);
+    g2d.beginPath();
+    g2d.arc(x, y, 3.5, 0, Math.PI * 2);
+    g2d.fill();
+  }
+  g2d.strokeStyle = 'rgba(200,162,74,.4)';
+  for (let i = 0; i < chartPts.length - 1; i++) {
+    g2d.beginPath();
+    g2d.moveTo(chartPts[i][0], chartPts[i][1]);
+    g2d.lineTo(chartPts[i + 1][0], chartPts[i + 1][1]);
+    g2d.stroke();
+  }
+  const chartTex = new THREE.CanvasTexture(chartCanvas);
+  chartTex.anisotropy = 4;
+  const chart = new THREE.Mesh(
+    new THREE.CircleGeometry(0.86, 64),
+    new THREE.MeshStandardMaterial({ map: chartTex, roughness: 0.55, metalness: 0.25 })
+  );
+  chart.rotation.x = -Math.PI / 2;
+  chart.position.y = 0.795;
+  starTable.add(chart);
+
   const starDots = [];
   for (let d = 0; d < 10; d++) {
     const dot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xc8a24a, emissiveIntensity: 0.9 }));
@@ -353,12 +406,47 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     starTable.add(dot);
     starDots.push(dot);
   }
+
   const orb = new THREE.Mesh(
     new THREE.SphereGeometry(0.2, 24, 24),
     new THREE.MeshStandardMaterial({ color: 0xc8a24a, emissive: 0xc8a24a, emissiveIntensity: 0.85, transparent: true, opacity: 0.92, roughness: 0.3 })
   );
   orb.position.y = 1.02;
   starTable.add(orb);
+
+  // 三层倾斜铜环 + 玻璃穹顶 + 环绕星点
+  const hoopMat = new THREE.MeshStandardMaterial({ color: 0xc8a24a, metalness: 0.7, roughness: 0.25, emissive: 0x5a4520, emissiveIntensity: 0.25 });
+  [[0.36, Math.PI / 2, 0.2], [0.3, 0.5, 0.9], [0.26, 1.2, 0.3]].forEach(([r, rx, rz]) => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.012, 12, 64), hoopMat);
+    m.position.y = 1.02;
+    m.rotation.x = rx;
+    m.rotation.z = rz;
+    starTable.add(m);
+  });
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(0.44, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshPhysicalMaterial({ color: 0x9fc8e0, transparent: true, opacity: 0.1, roughness: 0.05, metalness: 0.1, side: THREE.DoubleSide })
+  );
+  dome.position.y = 1.02;
+  starTable.add(dome);
+  const domeWire = new THREE.LineSegments(
+    new THREE.WireframeGeometry(new THREE.SphereGeometry(0.442, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)),
+    new THREE.LineBasicMaterial({ color: 0x6f9fb8, transparent: true, opacity: 0.22 })
+  );
+  domeWire.position.y = 1.02;
+  starTable.add(domeWire);
+  const orbitDots = [];
+  for (let d = 0; d < 12; d++) {
+    const a = (d / 12) * Math.PI * 2;
+    const dot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.012, 6, 6),
+      new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xc8a24a, emissiveIntensity: 1 })
+    );
+    dot.position.set(Math.cos(a) * 0.44, 1.02 + Math.sin(a * 1.5) * 0.12, Math.sin(a) * 0.44);
+    starTable.add(dot);
+    orbitDots.push(dot);
+  }
+
   starTable.position.set(0.4, 0, 0.6);
   scene.add(starTable);
 
@@ -683,6 +771,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     setPointer(x, y);
     const elevHits = raycaster.intersectObject(elevator, true);
     if (elevHits.length) {
+      if (window.mmAudioPlay) window.mmAudioPlay('elevator');
       elevPanel.classList.add('show');
       return;
     }
@@ -711,6 +800,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   function takeBook(item) {
     if (taking) return;
     taking = true;
+    if (window.mmAudioPlay) window.mmAudioPlay('page');
     item.animating = true;
     if (item.body) item.body.setEnabled(false);
 
@@ -911,9 +1001,12 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
 
     dust.rotation.y = Math.sin(elapsed * 0.06) * 0.03;
-    ring.rotation.z = elapsed * 0.12;
+    orb.scale.setScalar(1 + Math.sin(elapsed * 0.9) * 0.05);
     for (let d = 0; d < starDots.length; d++) {
       starDots[d].material.emissiveIntensity = 0.6 + 0.35 * Math.sin(elapsed * 1.3 + d);
+    }
+    for (let d = 0; d < orbitDots.length; d++) {
+      orbitDots[d].material.emissiveIntensity = 0.6 + 0.4 * Math.sin(elapsed * 1.6 + d * 1.2);
     }
     renderer.render(scene, camera);
   }

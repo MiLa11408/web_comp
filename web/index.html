@@ -309,6 +309,11 @@
   .frag-drop button.ghost { background: transparent; color: #9a8a6f; border-color: #5a4526; }
   .frag-line { margin: 10px 0 14px; padding: 10px 12px; border-left: 3px solid #8a6320; background: rgba(90,69,31,.12); color: #6b4f1d; font-size: 13px; line-height: 1.8; font-family: "KaiTi", "STKaiti", serif; }
   .frag-line b { color: #5a451f; }
+  .mosaic-row { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed #c9b98f; font-size: 13px; color: #3b3020; }
+  .mosaic-row b { color: #8a6d33; font-family: monospace; font-size: 11px; }
+  .mosaic-row strong { color: #5a451f; font-weight: 600; white-space: nowrap; }
+  .mosaic-row span { color: #4a3a24; line-height: 1.7; }
+  .mosaic-row.missing span { color: #9a8a6f; }
 
   /* ---------- 残页卡与残页弹层 ---------- */
   .ifline-hit { margin-top: 7px; padding-top: 6px; border-top: 1px dashed rgba(143,122,82,.5); color: #e2c06a; font-size: 11.5px; line-height: 1.7; }
@@ -421,10 +426,12 @@
   <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
   <button class="back" style="margin:0" onclick="enterStats()">借阅档案</button>
   <button class="back" style="margin:0" onclick="mmShowStar()">星图</button>
+  <button id="soundBtn" class="back" style="margin:0" onclick="mmToggleSound()">音效：开</button>
 </div>
 <div id="scene3d"></div>
 <div id="app"></div>
 <div id="viewFade"></div>
+<script src="audio.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
@@ -435,10 +442,10 @@ const bookFloors = {};
 const bookCalls = {};
 const LIBRARIANS = { L1: '旧纸馆员', L2: '蓝图馆员', L3: '账簿馆员', L4: '蜡封馆员' };
 const LIB_NOTE = {
-  L1: '旧纸最会骗人——它们只记得自己没被烧掉的那一页。',
-  L2: '蓝图上的线都有第二层含义，别只看粗的那根。',
-  L3: '账目之外的数字，不要记在自己本子上。',
-  L4: '你已经越过目录了。再往里，没有页码。',
+  L1: '旧纸只记得自己没被烧掉的那一页。信它，别全信。',
+  L2: '蓝图上的每根线都画过两遍；第二遍才是给人看的。',
+  L3: '账目之外的数字，别记在自己的本子上。',
+  L4: '你已经越过目录了。再往里没有页码，也没有馆员。',
 };
 const floorInfo = {};
 const chapterFragments = {};
@@ -538,6 +545,17 @@ function mmToast(text) {
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('on'), 2200);
 }
+
+function mmToggleSound() {
+  const on = window.mmAudioToggle ? window.mmAudioToggle() : false;
+  const b = document.getElementById('soundBtn');
+  if (b) b.textContent = '音效：' + (on ? '开' : '关');
+  mmToast(on ? '音效已开。' : '音效已关。');
+}
+(function syncSound() {
+  const b = document.getElementById('soundBtn');
+  if (b && window.mmAudioOn) b.textContent = '音效：' + (window.mmAudioOn() ? '开' : '关');
+})();
 
 function readerKey() {
   let id = localStorage.getItem('mm_reader');
@@ -642,10 +660,10 @@ async function showFragment(id) {
 }
 
 const FRAG_LINES = [
-  '这不是馆里的纸。是域外书籍的残页。……我劝你，忍住好奇。别查，别搜。',
-  '我说过，别查。你还是不听劝。',
-  '第三张了。……馆里的规矩是，级别够了，什么都能读。你已经越过了那条线。',
-  '我把门留着。你读吧，别把纸屑抖在地上。',
+  '别捡。那不是馆里的纸——域外书页，编号不在目录上。我劝你，忍住。别查，也别搜。',
+  '第二张了。我提醒过你。……听见翻页声了吗？不是书在响。',
+  '第三张。馆规写着：级别足够，什么都能读。你已经够级别了，所以我不拦。',
+  '坐吧，灯给你留着。只是别问我结局——残页没有结局，只有下一页。',
 ];
 function fragLine(collected) {
   if (collected <= 1) return FRAG_LINES[0];
@@ -684,6 +702,7 @@ async function pickFragment(id) {
     });
     const d = await r.json();
     if (!r.ok || !d.fragment) return mmToast('纸片滑掉了，再试一次。');
+    if (window.mmAudioPlay) window.mmAudioPlay('frag');
     const el = document.getElementById('fragCount');
     if (el && d.total) el.textContent = `${d.collected}/${d.total}`;
     showFragmentPage(d.fragment, d.collected, d.total, d.isNew);
@@ -728,7 +747,37 @@ async function mmPickSceneFragment() {
 }
 window.mmPickSceneFragment = mmPickSceneFragment;
 
-const DEMO_MAP = { 'b1-c1': 'turing', 'b34-c4': 'chinese-room', 'b5-c1': 'attention' };
+async function showFragmentMosaic() {
+  const data = await loadFragmentData();
+  const stats = await (await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()), { headers: authHeaders() })).json();
+  const mine = (stats.me && stats.me.fragments) || [];
+  const items = (data.fragments || []).slice().sort((a, b) => a.order - b.order);
+  let el = document.getElementById('fragModal');
+  if (!el) { el = document.createElement('div'); el.id = 'fragModal'; document.body.appendChild(el); }
+  el.className = 'frag-modal';
+  el.innerHTML = `
+    <div class="frag-box" style="width:min(720px,94vw)">
+      <div class="frag-kicker">另一条时间线 · 拼合</div>
+      <h3>已收集的残页 · ${mine.length}/${items.length}</h3>
+      <p style="font-size:12px;color:#8a7a5c">按残页编号顺序拼接。缺页的地方只能空着。</p>
+      ${items.map((f) => mine.includes(f.id)
+        ? `<div class="mosaic-row"><b>${esc(f.id)}</b><strong>${esc(f.title)}</strong><span>${esc(f.text.slice(0, 90))}…</span></div>`
+        : `<div class="mosaic-row missing"><b>${esc(f.id)}</b><span>（缺页）</span></div>`).join('')}
+      <div class="frag-line">拼到这里就断了。剩下的不在馆里，也不在任何一本书里。</div>
+      <div class="frag-actions"><button id="fragClose">收起来</button></div>
+    </div>`;
+  el.querySelector('#fragClose').onclick = () => el.remove();
+  el.onclick = (e) => { if (e.target === el) el.remove(); };
+}
+
+const DEMO_MAP = {
+  'b1-c1': 'turing',
+  'b34-c4': 'chinese-room',
+  'b5-c1': 'attention',
+  'b2-c3': 'rules',
+  'b6-c4': 'diffusion',
+  'b5-c7': 'scaling',
+};
 async function mmOpenDemo(kind) {
   try {
     const mod = await import('./demos.js');
@@ -833,8 +882,9 @@ async function showStats() {
       <section class="stat-sec">
         <h3>残页收集程度 · ${myFrags.length}/${totalFrags}</h3>
         <div class="frag-grid">${fragHtml}</div>
+        ${myFrags.length >= 2 ? '<div style="margin-top:12px"><button class="gate-btn" style="flex:0 0 auto;display:inline-block;padding:7px 16px" onclick="showFragmentMosaic()">拼合已收集的残页 →</button></div>' : ''}
       </section>
-      <div class="rail-hintbar">残页藏在本章里：读到对应章节就自动收编。集齐 8 张，另一条时间线才会完整。</div>
+      <div class="rail-hintbar">残页不会自己送上门：留意书页之间掉出的纸片，也别漏了展厅地板上的那几张。</div>
     </div>`;
   } catch (e) {
     console.error('[stats]', e);

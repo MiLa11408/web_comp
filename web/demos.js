@@ -1,4 +1,4 @@
-// web/demos.js · 机忆书库三个可玩演示（图灵测试 / 中文屋 / 注意力示意）
+// web/demos.js · 机忆书库可玩演示（图灵测试 / 中文屋 / 注意力 / 规则系统 / 扩散去噪 / 缩放定律）
 // 自包含：样式注入、弹层创建、关闭与键盘处理都在本文件内。
 
 const STYLE_ID = 'mm-demo-style';
@@ -18,6 +18,21 @@ const DEMO_META = {
     title: '注意力 · 词与词的连线',
     sub: '输入一句中文，切成二元组，再看看每个词把“注意力”分给了谁。',
     foot: '这里的权重是启发式近似，不是模型学到的注意力',
+  },
+  rules: {
+    title: '规则系统 · 一条条抄下来的判断',
+    sub: '勾选症状与条件，看一个迷你专家系统怎样按写死的 IF-THEN 规则串出结论。',
+    foot: '规则由人写死；它不会自己学习',
+  },
+  diffusion: {
+    title: '扩散去噪 · 从噪声里认出书',
+    sub: '一张 64×64 的随机噪声图，每点一次噪声退去一点，逐步浮现出预先画好的书本轮廓。',
+    foot: '示意：真实扩散模型在潜空间里做同样的事',
+  },
+  scaling: {
+    title: '缩放定律 · 三根滑杆',
+    sub: '调参数量、数据量与算力，看一条简化幂律把「能力分」拉到曲线的哪个位置。',
+    foot: '真实缩放定律是经验拟合，这里只是示意',
   },
 };
 
@@ -195,6 +210,81 @@ const CSS = `
   margin: 12px 0 0; padding-top: 9px; border-top: 1px dashed #2c2116;
   color: #8a7a5c; font-size: 11.5px; line-height: 1.7;
 }
+.mm-demo-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 7px; }
+.mm-demo-check {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px; text-align: left;
+  border: 1px solid #3a2f22; background: #211a13; color: #e6d9bd;
+  font-size: 12.5px; line-height: 1.5; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.mm-demo-check:hover { border-color: #8a6320; }
+.mm-demo-check[aria-pressed="true"] {
+  border-color: #c8a24a; background: #2c241a;
+  box-shadow: inset 0 0 0 1px rgba(200,162,74,.25);
+}
+.mm-demo-check-mark {
+  flex: 0 0 auto; width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #6b5a3a; color: #c8a24a;
+  font-family: Consolas, monospace; font-size: 11px;
+}
+.mm-demo-check[aria-pressed="true"] .mm-demo-check-mark {
+  background: #c8a24a; border-color: #c8a24a; color: #14100d;
+}
+.mm-demo-secondary {
+  background: #211a13; border: 1px solid #5a4526; color: #cbb892;
+  padding: 9px 14px; font-size: 12.5px; letter-spacing: 1px; cursor: pointer;
+}
+.mm-demo-secondary:hover { border-color: #c8a24a; color: #c8a24a; }
+.mm-demo-rules { margin-top: 12px; padding: 10px 12px; border: 1px solid #3a2f22; background: #181310; }
+.mm-demo-rules-title {
+  margin-bottom: 6px; color: #c8a24a;
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 11.5px; letter-spacing: 2px;
+}
+.mm-demo-rule {
+  padding: 6px 4px; border-top: 1px dashed #2c2116;
+  color: #a8977a; font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 11.5px; line-height: 1.7; overflow-wrap: anywhere;
+}
+.mm-demo-rule:first-of-type { border-top: none; }
+.mm-demo-rule b { color: #c8a24a; font-weight: 400; margin-right: 7px; }
+.mm-demo-rule.hit { color: #f0e5c8; background: rgba(200,162,74,.08); }
+.mm-demo-conclusion {
+  margin-top: 10px; padding: 11px 13px;
+  border: 1px solid #5a4526;
+  background: linear-gradient(160deg, #241c14, #1c1610);
+}
+.mm-demo-conclusion-label {
+  display: block; margin-bottom: 4px; color: #8a7a5c;
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 10.5px; letter-spacing: 2px;
+}
+.mm-demo-conclusion-value { color: #f0e5c8; font-size: 16px; letter-spacing: 1px; }
+.mm-demo-conclusion-meta { margin: 4px 0 0; color: #9a8a6f; font-size: 12px; line-height: 1.7; }
+.mm-demo-canvas-wrap { display: flex; justify-content: center; }
+.mm-demo-pixel-canvas {
+  display: block; width: 100%; max-width: 340px; aspect-ratio: 1 / 1;
+  image-rendering: pixelated; border: 1px solid #5a4526; background: #0b0908;
+}
+.mm-demo-meters { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mm-demo-meter-label { color: #cbb892; font-family: Consolas, "Microsoft YaHei", monospace; font-size: 12px; }
+.mm-demo-progress { height: 8px; margin-top: 8px; background: #241c14; border: 1px solid #33291d; overflow: hidden; }
+.mm-demo-progress-fill {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, #8a6320, #c8a24a);
+  transition: width .2s ease;
+}
+.mm-demo-range-row { margin-bottom: 12px; }
+.mm-demo-range-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.mm-demo-range-name { color: #cbb892; font-size: 12.5px; }
+.mm-demo-range-value { color: #c8a24a; font-family: Consolas, "Microsoft YaHei", monospace; font-size: 12px; white-space: nowrap; }
+.mm-demo-range { display: block; width: 100%; margin: 0; accent-color: #c8a24a; background: transparent; }
+.mm-demo-scorebox { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 12px; }
+.mm-demo-score { color: #c8a24a; font-family: Consolas, monospace; font-size: 30px; line-height: 1; }
+.mm-demo-score-unit { color: #8a7a5c; font-size: 12px; }
+.mm-demo-chart { display: block; width: 100%; border: 1px solid #3a2f22; background: #181310; }
 .mm-demo-foot {
   display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
   margin-top: 16px; padding-top: 10px; border-top: 1px dashed #3a2f22;
@@ -210,6 +300,8 @@ const CSS = `
   .mm-demo-trace-line { grid-template-columns: 66px minmax(0, 1fr); }
   .mm-demo-inline .mm-demo-primary { width: 100%; }
   .mm-demo-close { width: 30px; height: 30px; }
+  .mm-demo-checks { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .mm-demo-score { font-size: 26px; }
 }
 `;
 
@@ -619,10 +711,507 @@ function buildAttention(root) {
   run();
 }
 
+// ---------- 4. 规则系统走查 ----------
+const RULE_SYMPTOMS = [
+  { id: 'fever', label: '发烧（>38℃）' },
+  { id: 'cough', label: '持续咳嗽' },
+  { id: 'ache', label: '肌肉酸痛' },
+  { id: 'fatigue', label: '乏力' },
+  { id: 'runny', label: '流鼻涕' },
+  { id: 'sneeze', label: '打喷嚏' },
+  { id: 'travel', label: '近期有旅行史' },
+];
+
+const EXPERT_RULES = [
+  {
+    id: 'R1', name: '流感初筛', weight: 2, label: '可能流感',
+    text: 'IF 发烧 AND 咳嗽 THEN 可能流感',
+    when: (f) => f.has('fever') && f.has('cough'),
+  },
+  {
+    id: 'R2', name: '旅行史加权', weight: 2, label: '可能流感',
+    text: 'IF 近期有旅行史 THEN 流感权重 +2',
+    when: (f) => f.has('travel'),
+  },
+  {
+    id: 'R3', name: '全身症状', weight: 2, label: '可能流感',
+    text: 'IF 肌肉酸痛 AND 乏力 THEN 可能流感',
+    when: (f) => f.has('ache') && f.has('fatigue'),
+  },
+  {
+    id: 'R4', name: '普通感冒模式', weight: 2, label: '普通感冒',
+    text: 'IF 流鼻涕 AND 打喷嚏 AND 无发烧 THEN 可能普通感冒',
+    when: (f) => f.has('runny') && f.has('sneeze') && !f.has('fever'),
+  },
+  {
+    id: 'R5', name: '强证据组合', weight: 6, label: '高度怀疑流感',
+    text: 'IF 发烧 AND 咳嗽 AND 旅行史 THEN 高度怀疑流感',
+    when: (f) => f.has('fever') && f.has('cough') && f.has('travel'),
+  },
+  {
+    id: 'R6', name: '证据单薄', weight: 0, label: '证据不足',
+    text: 'IF 命中条件少于 2 条 THEN 证据不足',
+    when: (f) => f.size < 2,
+  },
+];
+
+const RULE_PRESETS = [
+  { name: '流感组合', facts: ['fever', 'cough', 'travel', 'fatigue'] },
+  { name: '普通感冒组合', facts: ['runny', 'sneeze', 'fatigue'] },
+  { name: '全身酸痛组合', facts: ['ache', 'fatigue', 'travel'] },
+  { name: '混合证据', facts: ['fever', 'runny', 'sneeze'] },
+];
+
+function buildRules(root) {
+  root.innerHTML = `
+    <p class="mm-demo-hint">勾选症状/条件，点「开始推理」。命中的规则会按顺序串成一条推理链，权重叠加后给出结论。</p>
+    <div class="mm-demo-checks"></div>
+    <div class="mm-demo-actions">
+      <button type="button" class="mm-demo-primary">开始推理</button>
+      <button type="button" class="mm-demo-secondary mm-demo-next">换一组条件</button>
+      <button type="button" class="mm-demo-secondary mm-demo-showrules" aria-expanded="false">查看规则库</button>
+    </div>
+    <div class="mm-demo-status" style="margin-top:10px"></div>
+    <div class="mm-demo-rules" hidden></div>
+    <div class="mm-demo-result" hidden></div>
+  `;
+
+  const checks = root.querySelector('.mm-demo-checks');
+  const runButton = root.querySelector('.mm-demo-primary');
+  const nextButton = root.querySelector('.mm-demo-next');
+  const rulesButton = root.querySelector('.mm-demo-showrules');
+  const status = root.querySelector('.mm-demo-status');
+  const rulesPanel = root.querySelector('.mm-demo-rules');
+  const result = root.querySelector('.mm-demo-result');
+  const selected = new Set();
+  let presetIndex = -1;
+  let libraryBuilt = false;
+  let lastHitIds = new Set();
+
+  checks.innerHTML = RULE_SYMPTOMS.map((symptom) => `
+    <button type="button" class="mm-demo-check" data-id="${symptom.id}" aria-pressed="false">
+      <span class="mm-demo-check-mark"></span><span>${escHtml(symptom.label)}</span>
+    </button>`).join('');
+
+  function buildLibrary() {
+    rulesPanel.innerHTML = `
+      <div class="mm-demo-rules-title">规则库 · ${EXPERT_RULES.length} 条 IF-THEN</div>
+      ${EXPERT_RULES.map((rule) => `
+        <div class="mm-demo-rule" data-rule="${rule.id}"><b>${rule.id}</b>${escHtml(rule.text)}</div>
+      `).join('')}
+    `;
+    libraryBuilt = true;
+    applyHits();
+  }
+
+  function clearHits() {
+    rulesPanel.querySelectorAll('.mm-demo-rule.hit').forEach((el) => el.classList.remove('hit'));
+  }
+
+  function applyHits() {
+    Array.from(rulesPanel.querySelectorAll('.mm-demo-rule')).forEach((el) => {
+      el.classList.toggle('hit', lastHitIds.has(el.dataset.rule));
+    });
+  }
+
+  function syncChecks() {
+    Array.from(checks.children).forEach((button) => {
+      const on = selected.has(button.dataset.id);
+      button.setAttribute('aria-pressed', String(on));
+      button.querySelector('.mm-demo-check-mark').textContent = on ? '✓' : '';
+    });
+    clearHits();
+    lastHitIds = new Set();
+    result.hidden = true;
+    status.textContent = selected.size
+      ? `已选 ${selected.size} 条条件。点「开始推理」走一遍规则链。`
+      : '还没有勾选条件。';
+  }
+
+  checks.addEventListener('click', (event) => {
+    const button = event.target.closest('.mm-demo-check');
+    if (!button || !checks.contains(button)) return;
+    const id = button.dataset.id;
+    if (selected.has(id)) selected.delete(id);
+    else selected.add(id);
+    syncChecks();
+  });
+
+  function infer() {
+    if (!selected.size) {
+      result.hidden = true;
+      status.textContent = '先勾选至少一条条件，再推理。';
+      return;
+    }
+    const hits = EXPERT_RULES.filter((rule) => rule.when(selected));
+    const groups = new Map();
+    hits.forEach((rule, index) => {
+      const group = groups.get(rule.label) || {
+        label: rule.label, score: 0, maxWeight: -1, lastIndex: -1,
+      };
+      group.score += rule.weight;
+      group.maxWeight = Math.max(group.maxWeight, rule.weight);
+      group.lastIndex = index;
+      groups.set(rule.label, group);
+    });
+    let winner = null;
+    groups.forEach((group) => {
+      if (!winner) {
+        winner = group;
+        return;
+      }
+      if (group.score > winner.score) {
+        winner = group;
+        return;
+      }
+      if (group.score === winner.score
+        && (group.maxWeight > winner.maxWeight
+          || (group.maxWeight === winner.maxWeight && group.lastIndex > winner.lastIndex))) {
+        winner = group;
+      }
+    });
+    const finalLabel = winner ? winner.label : '证据不足';
+    const totalWeight = winner ? winner.score : 0;
+    const chain = hits.length
+      ? hits.map((rule) => `
+        <div class="mm-demo-trace-line">
+          <b>${rule.id}</b>
+          <span>${escHtml(rule.text)}<br>→ ${escHtml(rule.name)} · 权重 +${rule.weight}</span>
+        </div>`).join('')
+      : '<div class="mm-demo-trace-line"><b>（无）</b><span>所有 IF 条件均未成立。</span></div>';
+
+    result.hidden = false;
+    result.innerHTML = `
+      <div class="mm-demo-trace">
+        <div class="mm-demo-trace-title">命中的规则链 · ${hits.length} 条</div>
+        ${chain}
+      </div>
+      <div class="mm-demo-conclusion">
+        <span class="mm-demo-conclusion-label">最终结论</span>
+        <div class="mm-demo-conclusion-value">${escHtml(finalLabel)}</div>
+        <p class="mm-demo-conclusion-meta">证据权重合计 ${totalWeight}${hits.length ? '。结论按命中规则的权重叠加得出。' : '。没有规则命中，系统只能说「证据不足」。'}</p>
+      </div>
+      <p class="mm-demo-point">规则由人写死；它不会自己学习。换一组症状，结果也只是落到已有规则上，命中越多只是权重叠加。</p>
+    `;
+    status.textContent = `命中 ${hits.length} 条规则，得出「${finalLabel}」。`;
+    lastHitIds = new Set(hits.map((rule) => rule.id));
+    if (libraryBuilt) applyHits();
+    result.scrollIntoView({ block: 'nearest' });
+  }
+
+  runButton.addEventListener('click', infer);
+
+  nextButton.addEventListener('click', () => {
+    presetIndex = (presetIndex + 1) % RULE_PRESETS.length;
+    const preset = RULE_PRESETS[presetIndex];
+    selected.clear();
+    preset.facts.forEach((id) => selected.add(id));
+    syncChecks();
+    status.textContent = `已载入「${preset.name}」：${preset.facts.length} 条条件。`;
+    infer();
+  });
+
+  rulesButton.addEventListener('click', () => {
+    if (!libraryBuilt) buildLibrary();
+    const show = rulesPanel.hidden;
+    rulesPanel.hidden = !show;
+    rulesButton.setAttribute('aria-expanded', String(show));
+    rulesButton.textContent = show ? '收起规则库' : '查看规则库';
+  });
+
+  syncChecks();
+}
+
+// ---------- 5. 扩散去噪 ----------
+function buildDiffusion(root) {
+  const GRID = 64;
+  const STEPS = 12;
+
+  root.innerHTML = `
+    <p class="mm-demo-hint">起点是一张 <b>64×64</b> 的随机噪声图。每点一次，噪声退去一部分，预先画好的目标图案逐渐浮现。</p>
+    <div class="mm-demo-canvas-wrap">
+      <canvas class="mm-demo-pixel-canvas" width="${GRID}" height="${GRID}" aria-label="64×64 扩散去噪示意画布"></canvas>
+    </div>
+    <div class="mm-demo-meters">
+      <span class="mm-demo-meter-label mm-demo-step"></span>
+      <span class="mm-demo-meter-label mm-demo-remain"></span>
+    </div>
+    <div class="mm-demo-progress"><span class="mm-demo-progress-fill"></span></div>
+    <div class="mm-demo-actions">
+      <button type="button" class="mm-demo-primary">去噪一步</button>
+      <button type="button" class="mm-demo-secondary">重来</button>
+      <span class="mm-demo-status"></span>
+    </div>
+    <p class="mm-demo-note">示意：真实扩散模型在潜空间里做同样的事——从噪声出发，逐步预测并减去噪声，最后生成图像。</p>
+  `;
+
+  const canvas = root.querySelector('.mm-demo-pixel-canvas');
+  const stepLabel = root.querySelector('.mm-demo-step');
+  const remainLabel = root.querySelector('.mm-demo-remain');
+  const fill = root.querySelector('.mm-demo-progress-fill');
+  const stepButton = root.querySelector('.mm-demo-primary');
+  const resetButton = root.querySelector('.mm-demo-secondary');
+  const status = root.querySelector('.mm-demo-status');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const target = new Float32Array(GRID * GRID);
+  for (let y = 0; y < GRID; y += 1) {
+    for (let x = 0; x < GRID; x += 1) {
+      let value = 0.05;
+      const onPage = (x >= 9 && x <= 30 && y >= 17 && y <= 51)
+        || (x >= 34 && x <= 55 && y >= 17 && y <= 51);
+      if (onPage) {
+        value = 0.36;
+        const onLeft = x >= 10 && x <= 29;
+        const onRight = x >= 35 && x <= 54;
+        if ((onLeft || onRight) && [24, 31, 38, 45].includes(y) && x % 4 !== 0) value = 0.74;
+        if (x === 9 || x === 30 || x === 34 || x === 55 || y === 17 || y === 51) value = 0.96;
+      }
+      if (x >= 31 && x <= 33 && y >= 16 && y <= 52) value = 0.92;
+      if (x >= 43 && x <= 46 && y >= 11 && y <= 17) value = 0.86;
+      target[y * GRID + x] = value;
+    }
+  }
+
+  const noise = new Float32Array(GRID * GRID);
+  const image = ctx.createImageData(GRID, GRID);
+  let step = 0;
+
+  function reseed() {
+    for (let i = 0; i < noise.length; i += 1) noise[i] = Math.random();
+  }
+
+  function paint() {
+    const progress = step / STEPS;
+    const data = image.data;
+    for (let i = 0; i < noise.length; i += 1) {
+      const value = noise[i] * (1 - progress) + target[i] * progress;
+      const offset = i * 4;
+      data[offset] = Math.round(22 + value * 218);
+      data[offset + 1] = Math.round(17 + value * 188);
+      data[offset + 2] = Math.round(13 + value * 140);
+      data[offset + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+    stepLabel.textContent = `第 ${step} 步 / 共 ${STEPS} 步`;
+    remainLabel.textContent = `剩余噪声 ${Math.round((1 - progress) * 100)}%`;
+    fill.style.width = `${Math.round(progress * 100)}%`;
+    if (step >= STEPS) {
+      stepButton.disabled = true;
+      status.textContent = '已收敛：噪声退尽，书本轮廓清晰了。';
+    } else {
+      stepButton.disabled = false;
+      status.textContent = step === 0
+        ? '当前是纯噪声，点「去噪一步」开始。'
+        : '噪声在退去，目标图案正在浮现。';
+    }
+  }
+
+  function restart() {
+    step = 0;
+    reseed();
+    paint();
+  }
+
+  stepButton.addEventListener('click', () => {
+    if (step >= STEPS) return;
+    step += 1;
+    paint();
+  });
+  resetButton.addEventListener('click', restart);
+
+  restart();
+}
+
+// ---------- 6. 缩放定律 ----------
+function buildScaling(root) {
+  const RANGES = {
+    params: { min: 0.1, max: 70 },
+    data: { min: 1, max: 2000 },
+    compute: { min: 1, max: 1000 },
+  };
+  const WEIGHTS = { params: 20, data: 14, compute: 10 };
+  const RAW_MIN = WEIGHTS.params * Math.log10(RANGES.params.min);
+  const RAW_MAX = WEIGHTS.params * Math.log10(RANGES.params.max)
+    + WEIGHTS.data * Math.log10(RANGES.data.max)
+    + WEIGHTS.compute * Math.log10(RANGES.compute.max);
+  const NAMES = { params: '参数量', data: '数据量', compute: '算力' };
+
+  root.innerHTML = `
+    <p class="mm-demo-hint">拖动三根滑杆，按简化幂律实时计算能力分；曲线横轴为参数量（对数刻度），圆点是当前位置。</p>
+    ${['params', 'data', 'compute'].map((key, index) => `
+      <div class="mm-demo-range-row">
+        <div class="mm-demo-range-head">
+          <span class="mm-demo-range-name">${NAMES[key]}</span>
+          <span class="mm-demo-range-value" data-key="${key}"></span>
+        </div>
+        <input type="range" class="mm-demo-range" data-key="${key}" min="0" max="1000"
+          value="${index === 0 ? 649 : index === 1 ? 750 : 667}"
+          aria-label="${NAMES[key]}"${index === 0 ? ' autofocus' : ''}>
+      </div>`).join('')}
+    <div class="mm-demo-scorebox">
+      <span class="mm-demo-score">—</span>
+      <span class="mm-demo-score-unit">/ 100 能力分</span>
+    </div>
+    <div class="mm-demo-bars-title">能力分 vs 参数量（数据量与算力取当前值）</div>
+    <canvas class="mm-demo-chart" width="720" height="250" aria-label="缩放定律曲线"></canvas>
+    <p class="mm-demo-note">示意：score = a·log(参数量) + b·log(数据量) + c·log(算力)。真实缩放定律是经验拟合，这里只是示意。</p>
+  `;
+
+  const inputs = {};
+  const valueLabels = {};
+  root.querySelectorAll('.mm-demo-range').forEach((input) => {
+    inputs[input.dataset.key] = input;
+  });
+  root.querySelectorAll('.mm-demo-range-value').forEach((el) => {
+    valueLabels[el.dataset.key] = el;
+  });
+  const scoreEl = root.querySelector('.mm-demo-score');
+  const chart = root.querySelector('.mm-demo-chart');
+  const ctx = chart.getContext('2d');
+  if (!ctx) return;
+
+  function valueAt(key, t) {
+    const range = RANGES[key];
+    return Math.exp(Math.log(range.min) + (Math.log(range.max) - Math.log(range.min)) * t);
+  }
+
+  function logT(key, value) {
+    const range = RANGES[key];
+    return (Math.log(value) - Math.log(range.min)) / (Math.log(range.max) - Math.log(range.min));
+  }
+
+  function valueOf(key) {
+    return valueAt(key, Number(inputs[key].value) / 1000);
+  }
+
+  function scoreOf(params, data, compute) {
+    const raw = WEIGHTS.params * Math.log10(params)
+      + WEIGHTS.data * Math.log10(data)
+      + WEIGHTS.compute * Math.log10(compute);
+    const score = ((raw - RAW_MIN) / (RAW_MAX - RAW_MIN)) * 100;
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function formatValue(key, value) {
+    if (key === 'data') {
+      return value >= 1000
+        ? `${(value / 1000).toFixed(2)} T tokens`
+        : `${value.toFixed(0)} B tokens`;
+    }
+    if (key === 'params') {
+      return value < 1 ? `${value.toFixed(2)} B` : `${value.toFixed(1)} B`;
+    }
+    return `${value.toFixed(0)} PF-day`;
+  }
+
+  function drawChart(params, data, compute, score) {
+    const width = chart.width;
+    const height = chart.height;
+    const padL = 58;
+    const padR = 20;
+    const padT = 18;
+    const padB = 38;
+    const plotR = width - padR;
+    const plotB = height - padB;
+    const xAt = (t) => padL + t * (plotR - padL);
+    const yAt = (value) => plotB - (value / 100) * (plotB - padT);
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#181310';
+    ctx.fillRect(0, 0, width, height);
+    ctx.font = '18px Consolas, "Microsoft YaHei", monospace';
+    ctx.textBaseline = 'middle';
+
+    [0, 25, 50, 75, 100].forEach((value) => {
+      const y = yAt(value);
+      ctx.strokeStyle = value === 0 ? '#3a2f22' : '#2c2116';
+      ctx.lineWidth = 1;
+      ctx.setLineDash(value === 0 ? [] : [4, 5]);
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(plotR, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#8a7a5c';
+      ctx.textAlign = 'right';
+      ctx.fillText(String(value), padL - 8, y);
+    });
+
+    ctx.strokeStyle = '#3a2f22';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padL, padT, plotR - padL, plotB - padT);
+
+    [[0.1, '0.1B'], [1, '1B'], [10, '10B'], [70, '70B']].forEach(([value, label], index, all) => {
+      const x = xAt(logT('params', value));
+      ctx.fillStyle = '#8a7a5c';
+      ctx.textAlign = index === all.length - 1 ? 'right' : 'center';
+      ctx.fillText(label, x, height - 16);
+    });
+
+    ctx.strokeStyle = '#c8a24a';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i <= 120; i += 1) {
+      const t = i / 120;
+      const pointScore = scoreOf(valueAt('params', t), data, compute);
+      const x = xAt(t);
+      const y = yAt(pointScore);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    const dotX = xAt(logT('params', params));
+    const dotY = yAt(score);
+
+    ctx.strokeStyle = 'rgba(200,162,74,.5)';
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath();
+    ctx.moveTo(dotX, dotY);
+    ctx.lineTo(dotX, plotB);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#c8a24a';
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#14100d';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const alignRight = dotX > plotR - 96;
+    ctx.fillStyle = '#f0e5c8';
+    ctx.font = '18px Consolas, "Microsoft YaHei", monospace';
+    ctx.textAlign = alignRight ? 'right' : 'left';
+    ctx.fillText(`当前 ${score.toFixed(1)}`, dotX + (alignRight ? -12 : 12), dotY - 12);
+  }
+
+  function update() {
+    const params = valueOf('params');
+    const data = valueOf('data');
+    const compute = valueOf('compute');
+    const score = scoreOf(params, data, compute);
+    valueLabels.params.textContent = formatValue('params', params);
+    valueLabels.data.textContent = formatValue('data', data);
+    valueLabels.compute.textContent = formatValue('compute', compute);
+    scoreEl.textContent = score.toFixed(1);
+    drawChart(params, data, compute, score);
+  }
+
+  Object.values(inputs).forEach((input) => input.addEventListener('input', update));
+  update();
+}
+
 const BUILDERS = {
   turing: buildTuring,
   'chinese-room': buildChineseRoom,
   attention: buildAttention,
+  rules: buildRules,
+  diffusion: buildDiffusion,
+  scaling: buildScaling,
 };
 
 export function openDemo(kind) {
