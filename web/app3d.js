@@ -1,7 +1,7 @@
 // app3d.js · 阶段 2：3D 主阅览室（three.js + Rapier）
 // 书架程序化生成、书脊 Canvas 排版、取书翻开动画、黄铜电梯选层、尘埃与星图台。
-import * as THREE from 'three';
-import RAPIER from 'rapier';
+import * as THREE from './vendor/three.module.js';
+import RAPIER from './vendor/rapier.mjs';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const DECAY = ['完好', '轻残', '中残', '高残'];

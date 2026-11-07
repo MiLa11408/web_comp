@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>机忆书库 · 样章预览</title>
+<title>机忆书库 · THE MACHINE MEMORY</title>
 <style>
   :root {
     --bg: #14100d; --panel: #1d1712; --ink: #e6d9bd; --dim: #9a8a6f;
@@ -17,8 +17,8 @@
   header h1 { margin: 0; font-size: 24px; letter-spacing: 4px; color: var(--gold); font-weight: 600; }
   header .sub { color: var(--dim); font-size: 13px; }
   header .note { margin-left: auto; color: #8a7a5c; font-size: 12px; }
-  .search { padding: 14px 30px; display: flex; gap: 10px; align-items: center; }
-  .search input { flex: 0 1 420px; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; font-size: 14px; outline: none; }
+  .search { padding: 14px 30px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .search input { flex: 1 1 320px; min-width: 0; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; font-size: 14px; outline: none; }
   .search input:focus { border-color: var(--gold); }
   .search button { background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; cursor: pointer; font-size: 13px; }
   #app { padding: 10px 30px 60px; }
@@ -150,6 +150,17 @@
   .book-row .tg { color: #b09a72; font-size: 12px; }
   .book-row .ch { color: var(--dim); font-size: 12px; text-align: right; }
 
+  @media (max-width: 700px) {
+    header { padding: 14px 16px 8px; gap: 8px; }
+    header h1 { font-size: 18px; letter-spacing: 2px; }
+    .search { padding: 10px 16px; }
+    .search input { flex: 1 1 100%; }
+    #app { padding: 8px 16px 40px; }
+    .gate-card { padding: 24px 20px 20px; }
+    .gate-title { font-size: 22px; letter-spacing: 4px; }
+    .gate-btn { flex: 1 1 100%; }
+  }
+
   @media (max-width: 1100px) {
     .shelf-view { grid-template-columns: 1fr; }
     .book-row { grid-template-columns: 46px 1fr 84px; }
@@ -162,12 +173,138 @@
     #rail { grid-row: 1; }
     #notesCol { grid-column: 2; position: static; max-height: none; margin-top: 6px; }
   }
+  /* ---------- 入馆登记门厅 ---------- */
+  #gate { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: radial-gradient(900px 520px at 50% 28%, #2a1f14, #0c0906 72%); transition: opacity .55s ease, transform .55s ease; }
+  #gate::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(200,162,74,.045) 0 2px, transparent 2px 88px); pointer-events: none; }
+  #gate.leaving { opacity: 0; transform: scale(1.06); pointer-events: none; }
+  .gate-card { position: relative; width: min(560px, 92vw); max-height: 92vh; overflow-y: auto; border: 1px solid #5a4526; background: linear-gradient(165deg, #1d1610, #14100c); padding: 34px 38px 28px; box-shadow: 0 30px 90px rgba(0,0,0,.7); animation: gateRise .7s cubic-bezier(.2,.8,.3,1) both; }
+  @keyframes gateRise { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
+  .gate-card::after { content: ""; position: absolute; inset: 6px; border: 1px dashed rgba(200,162,74,.26); pointer-events: none; }
+  .gate-kicker { color: #8a7a5c; font-size: 11px; letter-spacing: 4px; }
+  .gate-title { color: var(--gold); font-size: 27px; letter-spacing: 7px; margin: 8px 0 2px; }
+  .gate-en { color: #8a7a5c; font-style: italic; font-size: 12px; letter-spacing: 2px; }
+  .gate-copy { color: #cbb892; font-size: 13px; line-height: 1.85; margin: 15px 0 16px; border-left: 3px solid #6b5a3a; padding-left: 10px; }
+  .gate-row { margin-bottom: 10px; }
+  .gate-row input { width: 100%; background: #241c14; border: 1px solid #3a2f22; color: var(--ink); padding: 10px 12px; font-size: 13px; outline: none; font-family: inherit; }
+  .gate-row input:focus { border-color: var(--gold); }
+  .gate-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .gate-btn { flex: 1 1 120px; padding: 10px 14px; cursor: pointer; font-size: 13px; letter-spacing: 2px; border: 1px solid var(--gold); background: #2c241a; color: var(--gold); font-family: inherit; }
+  .gate-btn:hover { background: #3a2d1c; }
+  .gate-btn.ghost { border-color: #5a4526; color: #cbb892; background: transparent; }
+  .gate-btn.ghost:hover { border-color: var(--gold); color: var(--gold); }
+  .gate-msg { min-height: 18px; color: #d08a5a; font-size: 12px; margin-top: 10px; line-height: 1.6; }
+  .gate-msg.ok { color: #9ec27a; }
+  .gate-foot { margin-top: 14px; border-top: 1px dashed #3a2f22; padding-top: 10px; color: #7d6e55; font-size: 11px; line-height: 1.7; }
+
+  /* ---------- 铁路线视图 ---------- */
+  .rail-view { max-width: 1200px; }
+  .rail-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; color: var(--gold); letter-spacing: 2px; font-size: 14px; margin: 4px 0 6px; }
+  .rail-sub { color: var(--dim); font-size: 12px; letter-spacing: 1px; margin-bottom: 16px; line-height: 1.7; }
+  .rail-line { border: 1px solid var(--line); background: linear-gradient(180deg, #1c1610, #17120d); padding: 14px 16px 10px; margin-bottom: 16px; border-left: 5px solid var(--c); }
+  .rail-line-head { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
+  .rail-line-head b { color: var(--c); font-size: 15px; letter-spacing: 2px; }
+  .rail-line-head span { color: #a8977a; font-size: 12px; line-height: 1.6; flex: 1 1 320px; }
+  .rail-stops { display: flex; align-items: flex-start; overflow-x: auto; padding: 26px 2px 8px; }
+  .rail-stop { position: relative; flex: 0 0 148px; cursor: pointer; padding: 0 6px; }
+  .rail-stop::before { content: ""; position: absolute; left: -6px; right: -6px; top: 33px; height: 5px; background: #4a3a24; border-top: 1px solid var(--c); border-bottom: 1px solid var(--c); opacity: .75; }
+  .rail-stop:first-child::before { left: 50%; }
+  .rail-stop:last-child::before { right: 50%; }
+  .rail-stop:hover .rs-label { color: var(--c); }
+  .rs-year { display: block; color: #8a7a5c; font-family: monospace; font-size: 11px; text-align: center; margin-bottom: 5px; }
+  .rs-node { display: flex; justify-content: center; margin-bottom: 7px; }
+  .rs-dot { width: 13px; height: 13px; border-radius: 50%; background: #1a140f; border: 2px solid var(--c); box-shadow: 0 0 0 3px #1a140f, 0 0 10px rgba(200,162,74,.35); }
+  .rail-stop:hover .rs-dot { background: var(--c); }
+  .rs-label { display: block; color: var(--ink); font-size: 12.5px; text-align: center; line-height: 1.45; }
+  .rs-transfer { font-style: normal; color: var(--gold); font-size: 10px; border: 1px solid #6b5a3a; padding: 0 3px; white-space: nowrap; }
+  .rs-note { display: block; color: #8a7a5c; font-size: 11px; line-height: 1.55; text-align: center; margin-top: 5px; }
+  .rs-book { display: block; color: #6f6046; font-size: 10.5px; text-align: center; margin-top: 4px; font-family: monospace; }
+  .rail-branch { margin: 10px 0 6px 30px; border-left: 2px dashed var(--c); padding-left: 14px; }
+  .rail-branch-head { color: var(--c); font-size: 12px; letter-spacing: 1px; }
+  .rail-branch-head i { font-style: normal; color: #8a7a5c; font-size: 11px; margin-left: 8px; }
+  .rail-hintbar { color: #7d6e55; font-size: 11px; margin-top: 10px; }
 </style>
 </head>
 <body>
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-kicker">MACHINE MEMORY · FRONT DESK</div>
+    <div class="gate-title">机忆书库</div>
+    <div class="gate-en">THE MACHINE MEMORY · AI 知识档案馆</div>
+    <p class="gate-copy">夜里十一点，书库只留前台一盏灯。请出示借书证；如果只是路过，也可以访客身份进去看看——访客照样能读全部书页，只是不能盖章、写批注、记进度。</p>
+    <div class="gate-row">
+      <input id="gateUser" placeholder="借书证号 / 用户名（3–32 字符）" autocomplete="username">
+    </div>
+    <div class="gate-row">
+      <input id="gatePass" type="password" placeholder="口令（至少 8 位）" autocomplete="current-password" onkeydown="if(event.key==='Enter')gateLogin()">
+    </div>
+    <div class="gate-actions">
+      <button class="gate-btn" onclick="gateLogin()">入馆</button>
+      <button class="gate-btn ghost" onclick="gateRegister()">新办借书证</button>
+      <button class="gate-btn ghost" onclick="gateGuest()">以访客身份入馆</button>
+    </div>
+    <div class="gate-msg" id="gateMsg"></div>
+    <div class="gate-foot">馆员提示：这是一座演示用档案馆。借书证只保存在本机浏览器与馆内服务器，不对外发送。</div>
+  </div>
+</div>
+<script>
+(function gateBoot() {
+  const gate = document.getElementById('gate');
+  const msg = document.getElementById('gateMsg');
+  const userIn = document.getElementById('gateUser');
+  const passIn = document.getElementById('gatePass');
+  const say = (text, ok) => { if (msg) { msg.textContent = text; msg.className = 'gate-msg' + (ok ? ' ok' : ''); } };
+  const saved = localStorage.getItem('mm_gate_user');
+  if (saved) userIn.value = saved;
+
+  function closeGate(text) {
+    if (text) say(text, true);
+    gate.classList.add('leaving');
+    setTimeout(() => gate.remove(), 600);
+  }
+  window.gateGuest = () => closeGate('访客入馆。书页可以读，印章就别盖了。');
+  async function post(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    let d = {};
+    try { d = await r.json(); } catch (e) { d = {}; }
+    return { ok: r.ok, d };
+  }
+  window.gateLogin = async () => {
+    const username = userIn.value.trim(), password = passIn.value;
+    if (!username || !password) return say('借书证号和口令都要填。没证的话，点「新办借书证」。');
+    say('正在核对借书证……');
+    try {
+      const { ok, d } = await post('api/login', { username, password });
+      if (!ok) return say(d?.error?.message || '入馆失败，请稍后再试。');
+      localStorage.setItem('mm_token', d.token);
+      localStorage.setItem('mm_gate_user', d.user.username);
+      closeGate(`欢迎回来，${d.user.username}。`);
+    } catch (e) { say('连不上前台，请检查网络或稍后再试。'); }
+  };
+  window.gateRegister = async () => {
+    const username = userIn.value.trim(), password = passIn.value;
+    if (username.length < 3) return say('借书证号至少 3 个字符。');
+    if (password.length < 8) return say('口令至少 8 位。');
+    say('正在制证……');
+    try {
+      const { ok, d } = await post('api/register', { username, password });
+      if (!ok) return say(d?.error?.message || '办证失败，请稍后再试。');
+      localStorage.setItem('mm_token', d.token);
+      localStorage.setItem('mm_gate_user', d.user.username);
+      closeGate(`借书证办好了：${d.user.username}。`);
+    } catch (e) { say('连不上前台，请检查网络或稍后再试。'); }
+  };
+  const token = localStorage.getItem('mm_token');
+  if (token) {
+    fetch('api/me', { headers: { authorization: 'Bearer ' + token } })
+      .then((r) => (r.ok ? r.json() : (localStorage.removeItem('mm_token'), null)))
+      .then((d) => { if (d) { userIn.value = d.user.username; say(`已识别借书证：${d.user.username}。直接入馆，或换号。`, true); } })
+      .catch(() => {});
+  }
+})();
+</script>
 <header>
   <h1>机忆书库 · THE MACHINE MEMORY</h1>
-  <span class="sub">样章预览（阶段 1 · 内容审计视图，非最终 3D 界面）</span>
+  <span class="sub">AI 知识档案馆 · 开架阅览与卡片目录</span>
   <span class="note" id="stat"></span>
 </header>
 <div class="search">
@@ -176,6 +313,7 @@
   <button class="back" style="margin:0" onclick="enter3D()">3D 阅览室</button>
   <button class="back" style="margin:0" onclick="enterShelf()">书架视图</button>
   <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
+  <button class="back" style="margin:0" onclick="enterRail()">铁路线</button>
 </div>
 <div id="scene3d"></div>
 <div id="app"></div>
@@ -196,7 +334,7 @@ let shelfConfig = { booksPerBoard: 3, boardsPerUnit: 2 };
 
 async function ensureShelfConfig() {
   try {
-    const cfg = await (await fetch('/api/shelves')).json();
+    const cfg = await (await fetch('api/shelves')).json();
     if (cfg && Number(cfg.booksPerBoard) > 0 && Number(cfg.boardsPerUnit) > 0) shelfConfig = cfg;
   } catch (e) { console.warn('[shelves] 配置加载失败，使用默认值', e); }
   return shelfConfig;
@@ -205,8 +343,8 @@ async function ensureShelfConfig() {
 async function loadMeta() {
   try {
     const [floors, frags] = await Promise.all([
-      fetch('/api/floors').then((r) => r.json()),
-      fetch('/api/fragments').then((r) => r.json()),
+      fetch('api/floors').then((r) => r.json()),
+      fetch('api/fragments').then((r) => r.json()),
     ]);
     floors.forEach((f) => { floorInfo[f.id] = f; });
     iflineInfo = frags.ifline || null;
@@ -255,7 +393,7 @@ let catalogCache = [];
 async function ensureFloors() {
   if (!floorInfo.L1) {
     try {
-      const fs = await (await fetch('/api/floors')).json();
+      const fs = await (await fetch('api/floors')).json();
       fs.forEach((f) => { floorInfo[f.id] = f; });
     } catch (e) { console.warn('[floors] 加载失败', e); }
   }
@@ -264,7 +402,7 @@ async function ensureFloors() {
 
 async function ensureCatalog() {
   if (!catalogCache.length) {
-    catalogCache = await (await fetch('/api/catalog')).json();
+    catalogCache = await (await fetch('api/catalog')).json();
     window.mmAdoptBooks(catalogCache);
   }
   return catalogCache;
@@ -286,14 +424,21 @@ function openBookFirst(id) {
 
 // 视图切换（黑场淡入淡出）
 let viewBusy = false;
+let pendingSwap = null;
 function fadeSwap(fn) {
-  if (viewBusy) return;
+  if (viewBusy) { pendingSwap = fn; return; }
   viewBusy = true;
+  window.mmViewBusy = true;
   const f = $('#viewFade');
-  const done = () => {
-    setTimeout(() => { f.classList.remove('on'); setTimeout(() => { viewBusy = false; }, 420); }, 80);
+  const finish = () => {
+    viewBusy = false;
+    window.mmViewBusy = false;
+    if (pendingSwap) { const p = pendingSwap; pendingSwap = null; fadeSwap(p); }
   };
-  if (!f) { Promise.resolve(fn()).finally(() => { viewBusy = false; }); return; }
+  const done = () => {
+    setTimeout(() => { f.classList.remove('on'); setTimeout(finish, 420); }, 80);
+  };
+  if (!f) { Promise.resolve(fn()).finally(finish); return; }
   f.classList.add('on');
   setTimeout(async () => {
     try { await fn(); } catch (e) { console.error('[view] 切换失败', e); }
@@ -303,6 +448,65 @@ function fadeSwap(fn) {
 function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
 function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() { fadeSwap(() => backToRoom()); }
+function enterRail() { fadeSwap(() => showRail()); }
+
+let railCache = null;
+async function ensureRail() {
+  if (!railCache) railCache = await (await fetch('api/rail')).json();
+  return railCache;
+}
+
+async function showRail() {
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在铺设轨道……</div>';
+  const [rail, catalog] = await Promise.all([ensureRail(), ensureCatalog()]);
+  if (!rail || !Array.isArray(rail.lines)) {
+    app.innerHTML = '<div class="empty">铁路线数据还没铺好，先去书架视图看看。</div>';
+    return;
+  }
+  const bookIndex = {};
+  catalog.forEach((b) => { bookIndex[b.id] = b; });
+  const transfers = {};
+  const bump = (s) => { transfers[s.book] = (transfers[s.book] || 0) + 1; };
+  rail.lines.forEach((l) => { l.stops.forEach(bump); (l.branches || []).forEach((br) => br.stops.forEach(bump)); });
+
+  const stopHtml = (s, color) => {
+    const b = bookIndex[s.book] || {};
+    const xfer = transfers[s.book] > 1;
+    return `
+    <div class="rail-stop" style="--c:${color}" onclick="openBookFirst('${s.book}')" title="打开《${esc(b.title || s.book)}》">
+      <span class="rs-year">${esc(String(s.year))}</span>
+      <span class="rs-node"><i class="rs-dot"></i></span>
+      <span class="rs-label">${esc(s.label)}${xfer ? ' <em class="rs-transfer">⇄ 换乘</em>' : ''}</span>
+      <span class="rs-note">${esc(s.note || '')}</span>
+      <span class="rs-book">${esc(b.call || '')} · ${esc(b.title || '')}</span>
+    </div>`;
+  };
+
+  const branchesHtml = (line) => (line.branches || []).map((br) => `
+    <div class="rail-branch" style="--c:${br.color || line.color}">
+      <div class="rail-branch-head">↳ ${esc(br.name)}<i>从 ${esc(String(br.from))} 站分出 · ${esc(br.desc || '')}</i></div>
+      <div class="rail-stops">${br.stops.map((s) => stopHtml(s, br.color || line.color)).join('')}</div>
+    </div>`).join('');
+
+  const linesHtml = rail.lines.map((l) => `
+    <section class="rail-line" style="--c:${l.color}">
+      <div class="rail-line-head"><b>${esc(l.name)}</b><span>${esc(l.desc || '')}</span></div>
+      <div class="rail-stops">${l.stops.map((s) => stopHtml(s, l.color)).join('')}</div>
+      ${branchesHtml(l)}
+    </section>`).join('');
+
+  app.innerHTML = `
+  <div class="rail-view">
+    <div class="rail-head"><span>${esc(rail.title || '铁路线')}</span>
+      <span class="head-links"><a onclick="enterOverview()">书架总览 →</a> · <a onclick="enterShelf()">书架视图 →</a></span>
+    </div>
+    <div class="rail-sub">${esc(rail.subtitle || '')} 点任意站点直接打开对应的书；⇄ 表示同一本书在两条线上都出现过，可以互相换乘。</div>
+    ${linesHtml}
+    <div class="rail-hintbar">线路只取主干站，完整细节在书里。轨道铺到 2026 年 11 月为止，再往后只能靠你自己找。</div>
+  </div>`;
+}
 
 async function showShelves(floor) {
   shelfFloor = floor || (window.mm3d && window.mm3d.getFloor ? window.mm3d.getFloor() : shelfFloor) || 'all';
@@ -389,7 +593,7 @@ async function showOverview() {
     </section>`;
   }).join('');
   app.innerHTML = `
-    <div class="overview-head">书架总览 · ${catalog.length} 本书 · 已入库 ${totalChapters}/96 章
+    <div class="overview-head">书架总览 · ${catalog.length} 本书 · 已入库 ${totalChapters} 章
       <span class="head-links"><a onclick="enterShelf()">书架视图 →</a></span>
     </div>
     <div class="overview">${sections}</div>`;
@@ -428,7 +632,7 @@ function splitNotes(content) {
 
 async function showChapter(id) {
   document.body.classList.add('reading');
-  const r = await (await fetch('/api/chapters/' + id)).json();
+  const r = await (await fetch('api/chapters/' + id)).json();
   const m = r.meta;
   const { main, notes } = splitNotes(r.content);
   state.chapterMain = main;
@@ -584,7 +788,7 @@ function onRailInput() {
   clearTimeout(globalTimer);
   globalTimer = setTimeout(async () => {
     if (!q) { state.global = []; renderRailResults(); return; }
-    const r = await (await fetch('/api/search?q=' + encodeURIComponent(q) + '&limit=8')).json();
+    const r = await (await fetch('api/search?q=' + encodeURIComponent(q) + '&limit=8')).json();
     state.global = r.results;
     renderRailResults();
   }, 320);
@@ -624,7 +828,7 @@ async function doSearch() {
   if (!q) return;
   document.body.classList.add('grid');
   app.innerHTML = '<div class="empty">正在翻查卡片目录……</div>';
-  const r = await (await fetch('/api/search?q=' + encodeURIComponent(q))).json();
+  const r = await (await fetch('api/search?q=' + encodeURIComponent(q))).json();
   if (!r.results.length) { app.innerHTML = '<div class="empty">目录里没有查到「' + esc(q) + '」，试试别的词（神经网络 / 符号主义 / 蛋白质）</div>'; return; }
   app.innerHTML = '<div class="results">' + r.results.map((h) => `
     <div class="hit" onclick="showChapter('${h.id}')">
@@ -646,7 +850,7 @@ let hideTimer = null;
 qIn.addEventListener('input', async () => {
   const v = qIn.value.trim();
   if (!v) { sugBox.innerHTML = ''; return; }
-  const r = await (await fetch('/api/suggest?q=' + encodeURIComponent(v))).json();
+  const r = await (await fetch('api/suggest?q=' + encodeURIComponent(v))).json();
   clearTimeout(hideTimer);
   sugBox.innerHTML = r.items.map((i) => `<div class="sug-item" data-text="${esc(i.text)}"><span>${esc(i.text)}</span><i>${esc(i.type)}</i></div>`).join('');
 });
@@ -658,27 +862,19 @@ qIn.addEventListener('blur', () => { hideTimer = setTimeout(() => { sugBox.inner
 qIn.addEventListener('focus', () => clearTimeout(hideTimer));
 
 // 初始状态：3D 阅览室由下方 module 启动；失败则回退书架列表
-fetch('/api/health').then((r) => r.json()).then((h) => {
+fetch('api/health').then((r) => r.json()).then((h) => {
   const stat = $('#stat');
-  if (stat) stat.textContent = `已入库 ${h.chapters}/96 章`;
+  if (stat) stat.textContent = `已入库 ${h.chapters} 章`;
 }).catch(() => {});
 </script>
-<script type="importmap">
-{
-  "imports": {
-    "three": "/vendor/three.module.js",
-    "rapier": "/vendor/rapier.mjs"
-  }
-}
-</script>
 <script type="module">
-import { init3D } from '/app3d.js';
+import { init3D } from './app3d.js';
 (async () => {
   try {
     const [catalog, floors, shelves] = await Promise.all([
-      fetch('/api/catalog').then((r) => r.json()),
-      fetch('/api/floors').then((r) => r.json()),
-      fetch('/api/shelves').then((r) => r.json()).catch(() => ({ booksPerBoard: 3, boardsPerUnit: 2 })),
+      fetch('api/catalog').then((r) => r.json()),
+      fetch('api/floors').then((r) => r.json()),
+      fetch('api/shelves').then((r) => r.json()).catch(() => ({ booksPerBoard: 3, boardsPerUnit: 2 })),
     ]);
     window.mmAdoptBooks(catalog);
     window.mm3d = await init3D({

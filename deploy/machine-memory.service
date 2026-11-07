@@ -1,0 +1,24 @@
+[Unit]
+Description=Machine Memory · THE MACHINE MEMORY AI library
+Documentation=https://github.com/MiLa11408/web_comp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/machine-memory
+Environment=NODE_ENV=production
+Environment=PORT=3300
+Environment=HOST=127.0.0.1
+Environment=MM_DATA_DIR=/opt/machine-memory/.data
+ExecStart=/usr/bin/node server/src/index.js
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

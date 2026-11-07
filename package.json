@@ -10,12 +10,16 @@
     "dev": "node --watch server/src/index.js",
     "start": "node server/src/index.js",
     "verify": "node tools/verify.mjs",
-    "verify:links": "node tools/verify.mjs --links"
+    "verify:links": "node tools/verify.mjs --links",
+    "test:e2e": "node tests/e2e.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
     "fastify": "^5.2.0",
     "three": "^0.187.0",
     "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.0"
   }
 }

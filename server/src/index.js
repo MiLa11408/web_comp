@@ -246,7 +246,8 @@ function setCookie(reply, token) {
 
 // ---------- 启动 ----------
 const port = Number(process.env.PORT) || 3300;
-app.listen({ port, host: '0.0.0.0' }).catch((err) => {
+const host = process.env.HOST || '0.0.0.0';
+app.listen({ port, host }).catch((err) => {
   app.log.error(err);
   process.exit(1);
 });
