@@ -6,9 +6,10 @@ import RAPIER from './vendor/rapier.mjs';
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const DECAY = ['完好', '轻残', '中残', '高残'];
 
-// 房间尺寸：在旧 19×14×6.5 基础上放大 1.5 倍（28.5×21×9.75）
+// 房间尺寸：28.5×21，层高压到 6.6（原 9.75）
+// 压低层高是为了让藻井、吊灯、高窗进入正常视野，而不是飘在一片黑里
 const ROOM = {
-  w: 28.5, d: 21, h: 9.75,
+  w: 28.5, d: 21, h: 6.6,
   backZ: -6.9, sideX: 14.25,
   minX: 12.6, minZ: -4.45, maxZ: 9.4,
 };
@@ -849,7 +850,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     scene.add(side);
     wallMeshes.push(side);
   }
-  const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x241c16, roughness: 1 });
+  const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x382a1d, roughness: 0.98, emissive: 0x241a11, emissiveIntensity: 0.55 });
   const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), ceilingMat);
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.y = ROOM.h;
@@ -885,6 +886,196 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   addPainting(-ROOM.sideX + 0.08, 4.9, 2.6, Math.PI / 2, 1.25, 0.9);
   addPainting(0, 5.7, ROOM.backZ + 0.04, 0, 1.7, 1.15);
 
+  // ---------- 建筑细节：护墙板 / 高窗 / 壁柱 / 藻井 ----------
+  const detailTrimMat = new THREE.MeshStandardMaterial({ color: 0x2e2418, roughness: 0.72, metalness: 0.1 });
+  const wainscotMat = new THREE.MeshStandardMaterial({ color: 0x3a2b1c, roughness: 0.86, metalness: 0.04 });
+  const pilasterMat = new THREE.MeshStandardMaterial({ color: 0x33261a, roughness: 0.78, metalness: 0.06 });
+  const panelGeo = new THREE.BoxGeometry(1, 1, 0.05);
+  const chairRailGeo = new THREE.BoxGeometry(1, 0.09, 0.14);
+
+  // 护墙板：墙裙 + 竖向格条 + 腰线（贴在三面墙内侧）
+  function addWainscot(cx, cz, length, rotY) {
+    const g = new THREE.Group();
+    const dado = new THREE.Mesh(panelGeo, wainscotMat);
+    dado.scale.set(length, 0.92, 1);
+    dado.position.y = 0.47;
+    g.add(dado);
+    const rail = new THREE.Mesh(chairRailGeo, detailTrimMat);
+    rail.scale.x = length;
+    rail.position.y = 0.98;
+    g.add(rail);
+    const n = Math.max(2, Math.round(length / 1.35));
+    const stile = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.86, 0.055), detailTrimMat);
+    for (let i = 0; i <= n; i++) {
+      const s = stile.clone();
+      s.position.set(-length / 2 + (length / n) * i, 0.46, 0.012);
+      g.add(s);
+    }
+    g.position.set(cx, 0, cz);
+    g.rotation.y = rotY;
+    scene.add(g);
+  }
+  addWainscot(0, ROOM.backZ + 0.06, ROOM.w - 0.5, 0);
+  addWainscot(ROOM.sideX - 0.06, 0.6, ROOM.d - 1.2, -Math.PI / 2);
+  addWainscot(-ROOM.sideX + 0.06, 0.6, ROOM.d - 1.2, Math.PI / 2);
+
+  // 壁柱：侧墙分三段，柱头柱脚各压一道线
+  const pilasterGeo = new THREE.BoxGeometry(0.42, 4.1, 0.26);
+  const pilasterCapGeo = new THREE.BoxGeometry(0.56, 0.14, 0.34);
+  for (const sx of [-1, 1]) {
+    for (const pz of [-8.6, -1.0, 2.8, 8.8]) {
+      const col = new THREE.Mesh(pilasterGeo, pilasterMat);
+      col.position.set(sx * (ROOM.sideX - 0.16), 2.05, pz);
+      col.castShadow = true;
+      scene.add(col);
+      for (const cy of [0.36, 3.9]) {
+        const cap = new THREE.Mesh(pilasterCapGeo, detailTrimMat);
+        cap.position.set(sx * (ROOM.sideX - 0.16), cy, pz);
+        scene.add(cap);
+      }
+    }
+  }
+
+  // 高窗：拱形发光玻璃 + 黄铜窗棂 + 窗台，窗光在地面留一片淡影
+  function makeWindowTexture() {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 384;
+    const x = c.getContext('2d');
+    const grad = x.createLinearGradient(0, 0, 0, 384);
+    grad.addColorStop(0, '#f0d8a0');
+    grad.addColorStop(0.55, '#c9a86a');
+    grad.addColorStop(1, '#6b5636');
+    x.fillStyle = grad;
+    x.fillRect(0, 0, 256, 384);
+    // 远处树影与窗框投影
+    x.fillStyle = 'rgba(30,22,14,.35)';
+    for (let i = 0; i < 16; i++) {
+      const bx = (i * 53) % 256;
+      const bh = 40 + ((i * 37) % 90);
+      x.fillRect(bx, 384 - bh, 18 + (i % 4) * 9, bh);
+    }
+    x.fillStyle = 'rgba(20,14,9,.55)';
+    x.fillRect(0, 0, 10, 384);
+    x.fillRect(246, 0, 10, 384);
+    return new THREE.CanvasTexture(c);
+  }
+  const windowTex = makeWindowTexture();
+  const windowMat = new THREE.MeshBasicMaterial({ map: windowTex, color: 0xffe6b8, fog: false });
+  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x1f1913, roughness: 0.7, metalness: 0.2 });
+  const glowTexCanvas = document.createElement('canvas');
+  glowTexCanvas.width = 128; glowTexCanvas.height = 128;
+  (() => {
+    const gx = glowTexCanvas.getContext('2d');
+    const rg = gx.createRadialGradient(64, 64, 4, 64, 64, 64);
+    rg.addColorStop(0, 'rgba(255,220,150,.55)');
+    rg.addColorStop(0.5, 'rgba(255,210,140,.2)');
+    rg.addColorStop(1, 'rgba(255,200,130,0)');
+    gx.fillStyle = rg;
+    gx.fillRect(0, 0, 128, 128);
+  })();
+  const windowGlowTex = new THREE.CanvasTexture(glowTexCanvas);
+  const windowGlowMat = new THREE.MeshBasicMaterial({
+    map: windowGlowTex, transparent: true, opacity: 0.7, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false, side: THREE.DoubleSide,
+  });
+
+  function addWindow(sx, z) {
+    const g = new THREE.Group();
+    const W = 1.7;
+    const H = 2.5;
+    const R = W / 2;
+    const body = new THREE.Mesh(new THREE.PlaneGeometry(W, H), windowMat);
+    body.position.y = H / 2;
+    g.add(body);
+    const arch = new THREE.Mesh(new THREE.CircleGeometry(R, 24, 0, Math.PI), windowMat);
+    arch.position.y = H;
+    g.add(arch);
+    // 外框 + 窗棂
+    const frameMat = windowFrameMat;
+    const fw = 0.08;
+    for (const side of [-1, 1]) {
+      const v = new THREE.Mesh(new THREE.BoxGeometry(fw, H, 0.1), frameMat);
+      v.position.set(side * (W / 2 + fw / 2), H / 2, 0.02);
+      g.add(v);
+    }
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(W + 0.42, 0.12, 0.3), detailTrimMat);
+    sill.position.set(0, -0.02, 0.06);
+    g.add(sill);
+    const mullV = new THREE.Mesh(new THREE.BoxGeometry(0.05, H + R * 0.5, 0.06), frameMat);
+    mullV.position.set(0, (H + R * 0.5) / 2, 0.04);
+    g.add(mullV);
+    for (const my of [H * 0.34, H * 0.68]) {
+      const mullH = new THREE.Mesh(new THREE.BoxGeometry(W, 0.05, 0.06), frameMat);
+      mullH.position.set(0, my, 0.04);
+      g.add(mullH);
+    }
+    const archRing = new THREE.Mesh(new THREE.TorusGeometry(R + 0.025, 0.045, 8, 24, Math.PI), frameMat);
+    archRing.position.set(0, H, 0.02);
+    g.add(archRing);
+    // 室内一侧的柔光
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(W * 2.6, H * 2.0), windowGlowMat);
+    glow.position.set(0, H * 0.55, 0.08);
+    g.add(glow);
+    g.position.set(sx * (ROOM.sideX - 0.09), 2.55, z);
+    g.rotation.y = sx > 0 ? -Math.PI / 2 : Math.PI / 2;
+    scene.add(g);
+    // 地面光斑
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(W * 2.4, 3.2), windowGlowMat);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.set(sx * (ROOM.sideX - 1.5), 0.02, z);
+    scene.add(pool);
+  }
+  addWindow(1, -4.9);
+  addWindow(1, 6.2);
+  addWindow(-1, -4.9);
+  addWindow(-1, 6.2);
+
+  // 天花藻井：纵横木梁 + 中央圆花 + 四周檐口
+  const ceilBeamMat = new THREE.MeshStandardMaterial({ color: 0x2a2016, roughness: 0.9, metalness: 0.04, emissive: 0x1a120b, emissiveIntensity: 0.5 });
+  const beamLongGeo = new THREE.BoxGeometry(0.22, 0.24, ROOM.d - 1.6);
+  const beamCrossGeo = new THREE.BoxGeometry(ROOM.w - 1.6, 0.24, 0.22);
+  // 梁底藏灯：很细的一条暖光，只为了让藻井不是一片黑
+  const coveMat = new THREE.MeshBasicMaterial({
+    color: 0xffc37a, transparent: true, opacity: 0.16, depthWrite: false,
+    blending: THREE.AdditiveBlending, fog: false,
+  });
+  const coveLongGeo = new THREE.BoxGeometry(0.06, 0.02, ROOM.d - 1.8);
+  const coveCrossGeo = new THREE.BoxGeometry(ROOM.w - 1.8, 0.02, 0.06);
+  for (const bx of [-9.4, -4.7, 4.7, 9.4]) {
+    const b = new THREE.Mesh(beamLongGeo, ceilBeamMat);
+    b.position.set(bx, ROOM.h - 0.12, 0);
+    scene.add(b);
+    const cove = new THREE.Mesh(coveLongGeo, coveMat);
+    cove.position.set(bx, ROOM.h - 0.25, 0);
+    scene.add(cove);
+  }
+  for (const bz of [-4.6, 0, 4.6]) {
+    const b = new THREE.Mesh(beamCrossGeo, ceilBeamMat);
+    b.position.set(0, ROOM.h - 0.12, bz);
+    scene.add(b);
+    const cove = new THREE.Mesh(coveCrossGeo, coveMat);
+    cove.position.set(0, ROOM.h - 0.25, bz);
+    scene.add(cove);
+  }
+  // 四周檐口：把天花与墙面接住
+  const ceilTrim = new THREE.Mesh(new THREE.BoxGeometry(ROOM.w, 0.2, 0.2), detailTrimMat);
+  ceilTrim.position.set(0, ROOM.h - 0.1, ROOM.backZ + 0.12);
+  scene.add(ceilTrim);
+  for (const sx of [-1, 1]) {
+    const sideTrim = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, ROOM.d), detailTrimMat);
+    sideTrim.position.set(sx * (ROOM.sideX - 0.12), ROOM.h - 0.1, 0);
+    scene.add(sideTrim);
+  }
+  // 中央圆花：吊灯从这里垂下
+  const rose1 = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.5, 0.1, 32), detailTrimMat);
+  rose1.position.set(CHANDELIER_POS.x, ROOM.h - 0.06, CHANDELIER_POS.z);
+  scene.add(rose1);
+  const rose2 = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.035, 8, 40), new THREE.MeshStandardMaterial({ color: 0x8a6a2f, metalness: 0.6, roughness: 0.35 }));
+  rose2.rotation.x = Math.PI / 2;
+  rose2.position.set(CHANDELIER_POS.x, ROOM.h - 0.1, CHANDELIER_POS.z);
+  scene.add(rose2);
+
+
   // ---------- 书架 ----------
   // 共享几何：立柱 / 层板 / 檐口 / 铜边
   const shelfPostGeo = new THREE.BoxGeometry(0.1, 3.3, 0.52);
@@ -898,6 +1089,24 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const shelfCorniceTopGeo = new THREE.BoxGeometry(3.54, 0.07, 0.7);
   const shelfEdgeGeo = new THREE.BoxGeometry(3.12, 0.018, 0.018);
   const shelfEdgeMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.35, metalness: 0.7 });
+  const shelfLabelGeo = new THREE.BoxGeometry(0.26, 0.05, 0.016);
+  const shelfLabelMat = new THREE.MeshStandardMaterial({ color: 0xb08a4a, metalness: 0.6, roughness: 0.38, emissive: 0x3a2a10, emissiveIntensity: 0.18 });
+  // 檐口齿饰：用一张重复贴图代替几十个小方块
+  const dentilCanvas = document.createElement('canvas');
+  dentilCanvas.width = 128;
+  dentilCanvas.height = 16;
+  (() => {
+    const dx = dentilCanvas.getContext('2d');
+    dx.fillStyle = '#241a12';
+    dx.fillRect(0, 0, 128, 16);
+    dx.fillStyle = '#463322';
+    for (let i = 0; i < 8; i++) dx.fillRect(i * 16 + 3, 2, 10, 12);
+  })();
+  const dentilTex = new THREE.CanvasTexture(dentilCanvas);
+  dentilTex.wrapS = THREE.RepeatWrapping;
+  dentilTex.repeat.set(7, 1);
+  const shelfDentilGeo = new THREE.BoxGeometry(3.42, 0.09, 0.014);
+  const shelfDentilMat = new THREE.MeshStandardMaterial({ map: dentilTex, roughness: 0.82, metalness: 0.06 });
   const shelfRedMat = new THREE.LineBasicMaterial({ color: 0x8a2626, transparent: true, opacity: 0.5 });
 
   function createShelf(unit) {
@@ -927,6 +1136,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       const edge = new THREE.Mesh(shelfEdgeGeo, shelfEdgeMat);
       edge.position.set(0, by + 0.038, 0.238);
       g.add(edge);
+      // 层板前沿的黄铜标签夹
+      const label = new THREE.Mesh(shelfLabelGeo, shelfLabelMat);
+      label.position.set(0, by - 0.004, 0.252);
+      g.add(label);
     }
     const top = new THREE.Mesh(shelfTopGeo, wood);
     top.position.set(0, 3.3, 0);
@@ -946,6 +1159,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const corniceTop = new THREE.Mesh(shelfCorniceTopGeo, shelfEdgeMat);
     corniceTop.position.set(0, 3.5, 0);
     g.add(corniceTop);
+    // 檐口齿饰（一张重复贴图，成本低于几十个齿块）
+    const dentil = new THREE.Mesh(shelfDentilGeo, shelfDentilMat);
+    dentil.position.set(0, 3.4, 0.324);
+    g.add(dentil);
     // 红线：书架层板上的细红丝（关系网氛围）
     for (const by of BOARD_Y) {
       const lg = new THREE.BufferGeometry().setFromPoints([
@@ -966,6 +1183,34 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     return g;
   }
   for (const u of SHELF_UNITS) createShelf(u);
+
+  // 滑梯：靠在一组书架前的木梯，铜钩挂住檐口（馆里最像图书馆的一件东西）
+  (() => {
+    const host = SHELF_UNITS.reduce((a, b) => (b.z > a.z ? b : a), SHELF_UNITS[0]);
+    const lad = new THREE.Group();
+    const railGeo = new THREE.BoxGeometry(0.07, 3.5, 0.07);
+    for (const dx of [-0.28, 0.28]) {
+      const r = new THREE.Mesh(railGeo, wood);
+      r.position.set(dx, 1.75, 0);
+      r.castShadow = true;
+      lad.add(r);
+    }
+    const rungGeo = new THREE.BoxGeometry(0.6, 0.05, 0.07);
+    for (let i = 0; i < 8; i++) {
+      const rung = new THREE.Mesh(rungGeo, woodDark);
+      rung.position.set(0, 0.3 + i * 0.4, 0);
+      lad.add(rung);
+    }
+    for (const dx of [-0.28, 0.28]) {
+      const hook = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.018, 6, 12), shelfEdgeMat);
+      hook.position.set(dx, 3.48, -0.04);
+      hook.rotation.x = Math.PI / 2;
+      lad.add(hook);
+    }
+    lad.position.set(host.x + 1.02, 0, host.z + 0.78);
+    lad.rotation.x = -0.14;
+    scene.add(lad);
+  })();
 
   // ---------- 书 ----------
   const BOOK_W = [0.16, 0.21, 0.26];
@@ -1617,6 +1862,29 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       coneColor = style === 'L3' ? 0xffb066 : 0xffc37a;
       coneOpacity = style === 'L3' ? 0.065 : 0.07;
     }
+    // 烛盘 + 水晶坠：细节层，低配直接跳过
+    if (!LOW_SPEC && style !== 'L2') {
+      const cR = style === 'L4' ? 0.72 : (style === 'L3' ? 0.82 : 0.86);
+      const panMat = style === 'L4' ? propMats.iron : brassMat;
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        put(ch, cylG(0.1, 0.075, 0.025, 10), panMat, Math.cos(a) * cR, 0.05, Math.sin(a) * cR);
+      }
+      const ringR = style === 'L3' ? 0.95 : (style === 'L4' ? 0.9 : 1.0);
+      const crysMat = new THREE.MeshStandardMaterial({
+        color: 0xe8f0ff, metalness: 0.8, roughness: 0.12, transparent: true, opacity: 0.78,
+        emissive: 0x2a3a4a, emissiveIntensity: 0.45,
+      });
+      const crystals = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.042, 0), crysMat, 20);
+      const cm = new THREE.Matrix4();
+      for (let i = 0; i < 20; i++) {
+        const a = (i / 20) * Math.PI * 2;
+        cm.makeTranslation(Math.cos(a) * ringR, -0.11, Math.sin(a) * ringR);
+        crystals.setMatrixAt(i, cm);
+      }
+      crystals.instanceMatrix.needsUpdate = true;
+      ch.add(crystals);
+    }
     // 体积光锥：Additive + 低透明度 + 不写深度
     // 低配：只给半数吊灯生成光锥（透明叠绘减半），分段数同时减半
     const coneH = CHANDELIER_POS.y - 0.6;
@@ -2240,6 +2508,20 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     rugMat.color.setHex(th.rug);
     paintingFrameMat.color.setHex(th.painting);
     paintingMat.color.setHex(th.paintingCanvas);
+    // 建筑细节跟随楼层主题：护墙板、壁柱、梁、窗光
+    detailTrimMat.color.setHex(th.trim);
+    wainscotMat.color.setHex(th.shelfDark);
+    pilasterMat.color.setHex(th.trim);
+    ceilBeamMat.color.setHex(th.shelfDark);
+    // 极暗的主题色在顶上会糊成一片黑，给一点自发光把木梁托出来
+    ceilingMat.emissive.setHex(th.ceiling);
+    ceilingMat.emissive.multiplyScalar(2.0);
+    ceilBeamMat.emissive.setHex(th.shelfDark);
+    ceilBeamMat.emissive.multiplyScalar(0.6);
+    windowFrameMat.color.setHex(th.trim);
+    const winTint = { all: 0xffe6b8, L1: 0xffe0a8, L2: 0xa8d4f0, L3: 0xffce8a, L4: 0xb9a4ff };
+    windowMat.color.setHex(winTint[fid] || winTint.all);
+    windowGlowMat.color.setHex(winTint[fid] || winTint.all);
 
     wood.color.setHex(th.shelf);
     wood.metalness = th.metal;
