@@ -327,6 +327,68 @@
   .frag-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
   .frag-actions button { background: #2c241a; color: #e2c06a; border: 1px solid #8a6320; padding: 7px 14px; cursor: pointer; font-size: 12.5px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
   .frag-actions button.ghost { background: transparent; color: #5a451f; border-color: #b9a778; }
+
+  /* ---------- 楼层平面图 ---------- */
+  .plan-wrap { max-width: 1080px; margin: 0 auto; }
+  .plan-head { color: var(--gold); letter-spacing: 2px; font-size: 14px; margin: 4px 0 12px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .plan-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .plan-tabs .back { margin: 0; color: #9a8a6f; border-color: #5a4526; background: transparent; }
+  .plan-tabs .back:hover { border-color: var(--gold); color: var(--gold); }
+  .plan-tabs .back.active { color: var(--gold); border-color: var(--gold); background: rgba(200,162,74,.14); }
+  .plan-tabs .plan-hint { color: #7d6e55; font-size: 11.5px; margin-left: auto; }
+  .plan-canvas { overflow-x: auto; border: 1px solid #5a4526; background: #0f0b08; padding: 6px; }
+  .plan-svg { display: block; width: 100%; min-width: 560px; height: auto; background: #efe3c6; }
+  .plan-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: #cbb892; margin: 12px 0; }
+  .plan-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .plan-legend i { width: 12px; height: 12px; display: inline-block; border: 1px solid #8a6320; }
+  .plan-legend i.lg-shelf { background: rgba(200,162,74,.35); }
+  .plan-legend i.lg-elev { background: #8a6320; }
+  .plan-legend i.lg-star { border-radius: 50%; background: rgba(200,162,74,.25); }
+  .plan-legend i.lg-cab { background: #6b5a3a; }
+  .plan-legend i.lg-prop { border-style: dashed; background: transparent; }
+  .plan-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 10px; }
+  .plan-foot .plan-note { color: #7d6e55; font-size: 11.5px; }
+  .plan-enter { background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; cursor: pointer; font-size: 13px; letter-spacing: 1px; }
+  .plan-enter:hover { background: #3a2f22; }
+
+  /* ---------- 馆内导览 ---------- */
+  #tourCard { position: fixed; inset: 0; z-index: 88; display: none; pointer-events: auto; }
+  #tourCard .tour-card { position: absolute; right: 20px; bottom: 20px; width: min(430px, calc(100vw - 40px)); background: rgba(24,18,12,.97); border: 1px solid var(--gold); box-shadow: 0 22px 70px rgba(0,0,0,.75); padding: 15px 18px 14px; pointer-events: auto; }
+  .tour-kicker { color: #8a7a5c; font-size: 11px; letter-spacing: 2px; }
+  .tour-kicker span { color: var(--gold); }
+  .tour-card h3 { margin: 6px 0 8px; color: var(--gold); font-family: "Songti SC", "SimSun", serif; font-size: 19px; letter-spacing: 1px; }
+  .tour-card p { margin: 0 0 12px; color: #d8c89e; font-family: "KaiTi", "STKaiti", serif; font-size: 14px; line-height: 1.85; }
+  .tour-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .tour-actions button { background: #2c241a; color: var(--gold); border: 1px solid #8a6320; padding: 6px 12px; cursor: pointer; font-size: 12px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .tour-actions button:hover { border-color: var(--gold); }
+  .tour-actions .tour-end { color: #b9a778; border-color: #5a4526; background: transparent; }
+
+  /* ---------- 章节总结卡 ---------- */
+  .chapter-card { background: linear-gradient(160deg, #221a13, #1a140f); border: 1px solid #8a6320; padding: 12px 13px 11px; margin: 16px 0 12px; box-shadow: inset 0 0 0 1px rgba(200,162,74,.12); font-family: "Songti SC", "SimSun", serif; min-width: 0; overflow-wrap: anywhere; }
+  .chapter-card .cc-kicker { color: #8a7a5c; font-size: 10px; letter-spacing: 1.5px; }
+  .chapter-card .cc-title { color: var(--gold); font-size: 15px; line-height: 1.5; margin: 5px 0 2px; overflow-wrap: anywhere; }
+  .chapter-card .cc-year { color: #b09a72; font-size: 11px; letter-spacing: 1px; margin-bottom: 9px; }
+  .chapter-card .cc-block { border-top: 1px dashed #3a2f22; padding-top: 7px; margin-top: 7px; }
+  .chapter-card .cc-label { color: #8a7a5c; font-size: 10px; letter-spacing: 2px; margin-bottom: 3px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .chapter-card .cc-people, .chapter-card .cc-sources { margin: 0; padding-left: 16px; color: #cbb892; font-size: 11.5px; line-height: 1.65; }
+  .chapter-card .cc-people li, .chapter-card .cc-sources li { overflow-wrap: anywhere; }
+  .chapter-card .cc-quote { color: #e2c06a; font-family: "KaiTi", "STKaiti", serif; font-size: 12.5px; line-height: 1.75; }
+  .chapter-card .cc-dispute { color: #b9a778; font-size: 11.5px; line-height: 1.7; }
+  .chapter-card .cc-export { width: 100%; margin-top: 10px; background: #2c241a; color: var(--gold); border: 1px solid #8a6320; padding: 7px 10px; cursor: pointer; font-size: 12px; letter-spacing: 1px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .chapter-card .cc-export:hover { border-color: var(--gold); }
+
+  /* ---------- 残页齐了 ---------- */
+  .frag-unlock { margin: 12px 0 14px; padding: 14px 16px 13px; background: #211a13; border: 1px solid #8a6320; box-shadow: inset 0 0 0 1px rgba(200,162,74,.15); font-family: "KaiTi", "STKaiti", serif; }
+  .frag-unlock .fu-kicker { color: #8a7a5c; font-size: 10.5px; letter-spacing: 3px; font-family: "Consolas", monospace; }
+  .frag-unlock h4 { margin: 6px 0 8px; color: #e2c06a; font-family: "Songti SC", "SimSun", serif; font-size: 17px; letter-spacing: 1px; }
+  .frag-unlock p { margin: 0; color: #cbb892; font-size: 13px; line-height: 1.9; }
+
+  @media (max-width: 700px) {
+    #tourCard .tour-card { left: 12px; right: 12px; bottom: 12px; width: auto; }
+    .plan-tabs .plan-hint { display: none; }
+    .plan-svg { min-width: 520px; }
+    .chapter-card { padding: 10px 11px; }
+  }
 </style>
 </head>
 <body>
@@ -422,6 +484,8 @@
   <button class="back" style="margin:0" onclick="enter3D()">3D 阅览室</button>
   <button class="back" style="margin:0" onclick="enterShelf()">书架视图</button>
   <button class="back" style="margin:0" onclick="enterOverview()">书架总览</button>
+  <button class="back" style="margin:0" onclick="enterPlan()">楼层平面图</button>
+  <button class="back" style="margin:0" onclick="mmStartTour()">导览</button>
   <button class="back" style="margin:0" onclick="enterRail()">线索</button>
   <button class="back" style="margin:0" onclick="enterTimeline()">时间轴</button>
   <button class="back" style="margin:0" onclick="enterStats()">借阅档案</button>
@@ -764,6 +828,12 @@ async function showFragmentMosaic() {
         ? `<div class="mosaic-row"><b>${esc(f.id)}</b><strong>${esc(f.title)}</strong><span>${esc(f.text.slice(0, 90))}…</span></div>`
         : `<div class="mosaic-row missing"><b>${esc(f.id)}</b><span>（缺页）</span></div>`).join('')}
       <div class="frag-line">拼到这里就断了。剩下的不在馆里，也不在任何一本书里。</div>
+      ${mine.length === items.length ? `
+      <div class="frag-unlock">
+        <div class="fu-kicker">L4 · 未编目地库</div>
+        <h4>蜡封馆员 · 结局批注</h4>
+        <p>你把这十二张纸拼完了。它们确实指向另一条时间线，但那一页从来没有被写出来——不是被撕掉，是根本没写。别去找结局了，馆里没有；把纸片放回原处，它们属于没有发生的那一年。作为交换，L4 的门今晚为你留一条缝。</p>
+      </div>` : ''}
       <div class="frag-actions"><button id="fragClose">收起来</button></div>
     </div>`;
   el.querySelector('#fragClose').onclick = () => el.remove();
@@ -933,7 +1003,11 @@ async function openBookFirst(id) {
 // 视图切换（黑场淡入淡出）
 let viewBusy = false;
 let pendingSwap = null;
+let tourActive = false;
+let planFloor = 'all';
+let planSeq = 0;
 function fadeSwap(fn) {
+  if (tourActive) return;
   if (viewBusy) { pendingSwap = fn; return; }
   viewBusy = true;
   window.mmViewBusy = true;
@@ -958,6 +1032,376 @@ function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() { fadeSwap(() => backToRoom()); }
 function enterRail() { fadeSwap(() => showRail()); }
 function enterTimeline() { fadeSwap(() => showTimeline()); }
+
+// ---------- 楼层平面图 ----------
+function enterPlan() { fadeSwap(() => showPlan()); }
+
+function planWorldX(wx, sideX) { return ((wx + sideX) / (2 * sideX)) * 1000; }
+function planWorldY(wz) { return ((wz + 7.2) / (10.2 + 7.2)) * 760; }
+
+function planFallbackPlan(catalog) {
+  const capacity = 6; // 3 本 / 板 × 2 板，与 app3d 默认容量一致
+  const units = Math.max(1, Math.ceil(catalog.length / capacity));
+  const rows = Math.ceil(units / 6);
+  const base = Math.floor(units / rows);
+  const extra = units % rows;
+  const spacing = 4.4;
+  const shelves = [];
+  for (let r = 0; r < rows; r++) {
+    const count = base + (r < extra ? 1 : 0);
+    const startX = -((count - 1) * spacing) / 2;
+    const z = -5.4 + r * 2.9;
+    for (let i = 0; i < count; i++) {
+      const idx = shelves.length;
+      shelves.push({ x: startX + i * spacing, z, bookIds: catalog.filter((b, bi) => bi % units === idx).map((b) => b.id) });
+    }
+  }
+  return {
+    room: { w: 28.5, d: 21, sideX: 14.25, backZ: -6.9, minZ: -1.5, maxZ: 9.4 },
+    shelves,
+    elevator: { x: -12.8, z: -0.6 },
+    star: { x: 0.4, z: 0.9 },
+    cabinet: { x: 10.5, z: 2.4 },
+    lamp: { x: 2.6, z: 2.6 },
+    hidden: { x: 0.6, z: 7.4 },
+  };
+}
+
+function planShelfInfo(ids, catalog, floor) {
+  const list = (ids || []).map((id) => catalog.find((b) => b.id === id)).filter(Boolean);
+  const kept = floor === 'all' ? list : list.filter((b) => b.floor === floor);
+  const letters = Array.from(new Set(kept.map((b) => String(b.call || '?').charAt(0)))).sort();
+  return {
+    n: kept.length,
+    range: letters.length > 1 ? `${letters[0]}–${letters[letters.length - 1]}` : (letters[0] || ''),
+  };
+}
+
+function planEnter3D(floor) {
+  if (window.mm3d && typeof window.mm3d.setFloor === 'function') {
+    try { window.mm3d.setFloor(floor || 'all', true); } catch (e) { console.warn('[plan] 3D 切层失败', e); }
+  }
+  enter3D();
+}
+
+function planOpenShelf(floor) {
+  const target = floor === 'all'
+    ? (window.mm3d && typeof window.mm3d.getFloor === 'function' ? window.mm3d.getFloor() : 'all')
+    : floor;
+  enterShelf(target);
+}
+
+async function showPlan(floor = 'all') {
+  const seq = ++planSeq;
+  planFloor = floor || 'all';
+  document.body.classList.remove('reading');
+  document.body.classList.add('grid');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在展开楼层平面图……</div>';
+  const [catalog, floors] = await Promise.all([ensureCatalog(), ensureFloors()]);
+  if (seq !== planSeq) return;
+
+  let plan = null;
+  try {
+    if (window.mm3d && typeof window.mm3d.getPlan === 'function') plan = window.mm3d.getPlan();
+  } catch (e) {
+    console.warn('[plan] getPlan 不可用，使用静态布局', e);
+    plan = null;
+  }
+  if (!plan || !plan.room || !Array.isArray(plan.shelves)) plan = planFallbackPlan(catalog);
+
+  const shelves = plan.shelves.slice();
+  if (shelves.every((s) => !s.bookIds || !s.bookIds.length)) {
+    shelves.forEach((s, i) => {
+      s.bookIds = catalog.filter((b, bi) => bi % shelves.length === i).map((b) => b.id);
+    });
+  }
+  const room = plan.room || {};
+  const sideX = Number(room.sideX) || 14.25;
+  const backZ = Number.isFinite(room.backZ) ? room.backZ : -6.9;
+  const px = (wx) => planWorldX(wx, sideX);
+  const py = (wz) => planWorldY(wz);
+  const fx = (n) => Number(n).toFixed(1);
+
+  const floorIds = floors.length ? floors.map((f) => f.id) : ['L1', 'L2', 'L3', 'L4'];
+  const chips = ['all', ...floorIds].map((id) => `
+    <button class="back${planFloor === id ? ' active' : ''}" style="margin:0" onclick="showPlan('${id}')">${id === 'all' ? '全馆' : esc(id)}</button>`).join('');
+  const curFloor = planFloor === 'all' ? null : (floorInfo[planFloor] || floors.find((f) => f.id === planFloor));
+  const floorName = planFloor === 'all' ? '全馆' : `${planFloor} · ${(curFloor && curFloor.name) || '未命名楼层'}`;
+
+  const shelfW = 112, shelfH = 46;
+  const shelfSvg = shelves.map((s) => {
+    const info = planShelfInfo(s.bookIds, catalog, planFloor);
+    const x = px(s.x), y = py(s.z);
+    const lit = info.n > 0;
+    return `<g style="cursor:pointer" onclick="planOpenShelf('${planFloor}')">
+      <rect x="${fx(x - shelfW / 2)}" y="${fx(y - shelfH / 2)}" width="${shelfW}" height="${shelfH}" rx="3"
+        fill="${lit ? 'rgba(200,162,74,.30)' : 'rgba(200,162,74,.06)'}" stroke="${lit ? '#8a6320' : '#b9a778'}"
+        stroke-width="${lit ? 2 : 1}" opacity="${lit ? 1 : '.5'}"/>
+      <rect x="${fx(x - shelfW / 2 + 10)}" y="${fx(y - shelfH / 2 + 7)}" width="${shelfW - 20}" height="${shelfH - 14}"
+        fill="none" stroke="${lit ? '#c8a24a' : '#c9b98f'}" stroke-width="0.7" opacity=".65"/>
+      <text x="${fx(x)}" y="${fx(y - 3)}" text-anchor="middle" font-size="14" font-family="Songti SC, SimSun, serif"
+        fill="${lit ? '#5a451f' : '#9a8a6f'}">${info.n ? info.n + ' 本' : '—'}</text>
+      <text x="${fx(x)}" y="${fx(y + 14)}" text-anchor="middle" font-size="12" font-family="Consolas, monospace"
+        fill="${lit ? '#8a6d33' : '#9a8a6f'}">${lit ? esc(info.range || '—') : '—'}</text>
+    </g>`;
+  }).join('');
+
+  const elevator = plan.elevator || { x: -12.8, z: -0.6 };
+  const star = plan.star || { x: 0.4, z: 0.9 };
+  const cabinet = plan.cabinet || { x: 10.5, z: 2.4 };
+  const lamp = plan.lamp || { x: 2.6, z: 2.6 };
+  const hidden = plan.hidden || { x: 0.6, z: 7.4 };
+
+  const FLOOR_PROPS = {
+    L1: { name: '旧纸堆', x: -9.6, z: 0.6, kind: 'pile' },
+    L2: { name: '工具墙', x: 13.9, z: -0.6, kind: 'wall' },
+    L3: { name: '账本架', x: 10.8, z: -3.6, kind: 'rack' },
+    L4: { name: '帷幕', x: 0, z: -6.55, kind: 'drape' },
+  };
+  const propKeys = planFloor === 'all' ? ['L1', 'L2', 'L3', 'L4'] : [planFloor];
+  const propSvg = propKeys.filter((k) => FLOOR_PROPS[k]).map((k) => {
+    const p = FLOOR_PROPS[k];
+    const x = px(p.x), y = py(p.z);
+    if (p.kind === 'pile') {
+      return `<g opacity=".9">
+        <rect x="${fx(x - 17)}" y="${fx(y - 6)}" width="16" height="5" fill="#c9b98f" stroke="#8a6320" stroke-width=".8" transform="rotate(-8 ${fx(x - 9)} ${fx(y - 3)})"/>
+        <rect x="${fx(x - 3)}" y="${fx(y - 2)}" width="17" height="6" fill="#d8c89e" stroke="#8a6320" stroke-width=".8" transform="rotate(5 ${fx(x + 5)} ${fx(y + 1)})"/>
+        <rect x="${fx(x - 10)}" y="${fx(y + 4)}" width="15" height="5" fill="#bfae83" stroke="#8a6320" stroke-width=".8"/>
+        <text x="${fx(x)}" y="${fx(y + 22)}" text-anchor="middle" font-size="11" fill="#5a451f">旧纸堆</text>
+      </g>`;
+    }
+    if (p.kind === 'wall') {
+      const lx = Math.min(x, 978);
+      return `<g opacity=".9">
+        <rect x="${fx(lx - 6)}" y="${fx(y - 30)}" width="8" height="60" fill="rgba(63,107,138,.35)" stroke="#3f6b8a" stroke-width="1"/>
+        <path d="M${fx(lx - 1)} ${fx(y - 22)} V${fx(y + 22)}" stroke="#3f6b8a" stroke-width=".8"/>
+        <text x="${fx(lx - 14)}" y="${fx(y + 4)}" text-anchor="end" font-size="11" fill="#3f6b8a">工具墙</text>
+      </g>`;
+    }
+    if (p.kind === 'rack') {
+      return `<g opacity=".9">
+        <rect x="${fx(x - 20)}" y="${fx(y - 24)}" width="40" height="48" fill="rgba(122,90,74,.22)" stroke="#7a5a4a" stroke-width="1.2"/>
+        <path d="M${fx(x - 16)} ${fx(y - 8)} H${fx(x + 16)} M${fx(x - 16)} ${fx(y + 8)} H${fx(x + 16)}" stroke="#7a5a4a" stroke-width=".8"/>
+        <text x="${fx(x)}" y="${fx(y + 38)}" text-anchor="middle" font-size="11" fill="#5a451f">账本架</text>
+      </g>`;
+    }
+    return `<g opacity=".9">
+      <path d="M${fx(x - 32)} ${fx(y - 6)} Q${fx(x - 20)} ${fx(y + 4)} ${fx(x - 10)} ${fx(y - 6)} Q${fx(x)} ${fx(y + 4)} ${fx(x + 10)} ${fx(y - 6)} Q${fx(x + 20)} ${fx(y + 4)} ${fx(x + 32)} ${fx(y - 6)}"
+        fill="rgba(90,74,106,.22)" stroke="#5a4a6a" stroke-width="1.4"/>
+      <text x="${fx(x)}" y="${fx(y + 16)}" text-anchor="middle" font-size="11" fill="#5a4a6a">帷幕</text>
+    </g>`;
+  }).join('');
+
+  const carpet = `
+    <rect x="${fx(px(0) - 140)}" y="${fx(py(3.8) - 114)}" width="280" height="228" fill="rgba(138,99,32,.07)" stroke="#b9a778" stroke-width="1.2"/>
+    <rect x="${fx(px(0) - 128)}" y="${fx(py(3.8) - 104)}" width="256" height="208" fill="none" stroke="#c9b98f" stroke-width=".9" stroke-dasharray="7 5" opacity=".8"/>`;
+
+  const elevatorSvg = `
+    <g>
+      <rect x="${fx(px(elevator.x) - 34)}" y="${fx(py(elevator.z) - 42)}" width="68" height="84" rx="4" fill="rgba(138,99,32,.22)" stroke="#8a6320" stroke-width="2"/>
+      <path d="M${fx(px(elevator.x))} ${fx(py(elevator.z) - 32)} V${fx(py(elevator.z) + 32)}" stroke="#8a6320" stroke-width="1.2"/>
+      <path d="M${fx(px(elevator.x) - 8)} ${fx(py(elevator.z) - 14)} h16 M${fx(px(elevator.x) - 8)} ${fx(py(elevator.z) + 14)} h16" stroke="#8a6320" stroke-width="1"/>
+      <text x="${fx(px(elevator.x))}" y="${fx(py(elevator.z) + 58)}" text-anchor="middle" font-size="12" fill="#5a451f">电梯</text>
+    </g>`;
+  const starSvg = `
+    <g>
+      <circle cx="${fx(px(star.x))}" cy="${fx(py(star.z))}" r="44" fill="rgba(200,162,74,.15)" stroke="#8a6320" stroke-width="2"/>
+      <circle cx="${fx(px(star.x))}" cy="${fx(py(star.z))}" r="31" fill="none" stroke="#b9a778" stroke-width="1.1"/>
+      <circle cx="${fx(px(star.x))}" cy="${fx(py(star.z))}" r="16" fill="none" stroke="#8a6320" stroke-width=".9"/>
+      <circle cx="${fx(px(star.x))}" cy="${fx(py(star.z) - 22)}" r="3" fill="#8a6320"/>
+      <circle cx="${fx(px(star.x) + 22)}" cy="${fx(py(star.z))}" r="3" fill="#8a6320"/>
+      <circle cx="${fx(px(star.x))}" cy="${fx(py(star.z) + 22)}" r="3" fill="#8a6320"/>
+      <circle cx="${fx(px(star.x) - 22)}" cy="${fx(py(star.z))}" r="3" fill="#8a6320"/>
+      <text x="${fx(px(star.x))}" y="${fx(py(star.z) + 62)}" text-anchor="middle" font-size="12" fill="#5a451f">星图台</text>
+    </g>`;
+  const cabinetSvg = `
+    <g>
+      <rect x="${fx(px(cabinet.x) - 29)}" y="${fx(py(cabinet.z) - 40)}" width="58" height="78" rx="2" fill="rgba(107,90,58,.25)" stroke="#6b5a3a" stroke-width="1.6"/>
+      <path d="M${fx(px(cabinet.x))} ${fx(py(cabinet.z) - 34)} V${fx(py(cabinet.z) + 32)}" stroke="#6b5a3a" stroke-width=".8"/>
+      <path d="M${fx(px(cabinet.x) - 22)} ${fx(py(cabinet.z) - 14)} H${fx(px(cabinet.x) + 22)} M${fx(px(cabinet.x) - 22)} ${fx(py(cabinet.z) + 12)} H${fx(px(cabinet.x) + 22)}" stroke="#6b5a3a" stroke-width=".8"/>
+      <text x="${fx(px(cabinet.x))}" y="${fx(py(cabinet.z) + 56)}" text-anchor="middle" font-size="12" fill="#5a451f">卡片柜</text>
+    </g>`;
+  const lampSvg = `
+    <g>
+      <circle cx="${fx(px(lamp.x))}" cy="${fx(py(lamp.z))}" r="11" fill="rgba(200,162,74,.28)" stroke="#8a6320" stroke-width="1.4"/>
+      <path d="M${fx(px(lamp.x) - 18)} ${fx(py(lamp.z) - 18)} L${fx(px(lamp.x) - 12)} ${fx(py(lamp.z) - 12)} M${fx(px(lamp.x) + 18)} ${fx(py(lamp.z) - 18)} L${fx(px(lamp.x) + 12)} ${fx(py(lamp.z) - 12)}" stroke="#8a6320" stroke-width="1"/>
+      <text x="${fx(px(lamp.x) + 17)}" y="${fx(py(lamp.z) + 4)}" font-size="11" fill="#8a6d33">台灯</text>
+    </g>`;
+  const hiddenSvg = `
+    <g>
+      <path d="M${fx(px(hidden.x))} ${fx(py(hidden.z) - 15)} L${fx(px(hidden.x) + 15)} ${fx(py(hidden.z))} L${fx(px(hidden.x))} ${fx(py(hidden.z) + 15)} L${fx(px(hidden.x) - 15)} ${fx(py(hidden.z))} Z"
+        fill="rgba(59,48,32,.35)" stroke="#3b3020" stroke-width="1.4"/>
+      <text x="${fx(px(hidden.x))}" y="${fx(py(hidden.z) + 32)}" text-anchor="middle" font-size="11" fill="#3b3020">暗格</text>
+    </g>`;
+
+  const legendProps = (planFloor === 'all' ? ['L1', 'L2', 'L3', 'L4'] : [planFloor])
+    .filter((k) => FLOOR_PROPS[k])
+    .map((k) => `<span><i class="lg-prop"></i>${FLOOR_PROPS[k].name}</span>`).join('');
+
+  app.innerHTML = `
+  <div class="plan-wrap">
+    <div class="plan-head">
+      <span>楼层平面图 · ${esc(floorName)}</span>
+      <span class="head-links"><a onclick="enterOverview()">书架总览 →</a> · <a onclick="enter3D()">回到阅览室 →</a></span>
+    </div>
+    <div class="plan-tabs">
+      ${chips}
+      <span class="plan-hint">点书架进入书架视图；底部按钮直接进入 3D。</span>
+    </div>
+    <div class="plan-canvas">
+      <svg class="plan-svg" viewBox="0 0 1000 760" role="img" aria-label="机忆书库楼层平面图">
+        <defs>
+          <filter id="planRough" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="9" result="noise"/>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.6" xChannelSelector="R" yChannelSelector="G"/>
+          </filter>
+        </defs>
+        <rect x="0" y="0" width="1000" height="760" fill="#efe3c6"/>
+        <g filter="url(#planRough)">
+          <rect x="6" y="8" width="988" height="744" rx="16" fill="none" stroke="#5a451f" stroke-width="3"/>
+          <path d="M6 ${fx(py(backZ))} H994" stroke="#5a451f" stroke-width="6" stroke-linecap="round"/>
+          ${carpet}
+        </g>
+        <path d="M432 752 H568" stroke="#efe3c6" stroke-width="7"/>
+        <text x="500" y="742" text-anchor="middle" font-size="12" fill="#8a6d33">入口</text>
+        ${shelfSvg}
+        ${elevatorSvg}
+        ${starSvg}
+        ${cabinetSvg}
+        ${lampSvg}
+        ${hiddenSvg}
+        ${propSvg}
+      </svg>
+    </div>
+    <div class="plan-legend">
+      <span><i class="lg-shelf"></i>书架（高亮 = 本层有书）</span>
+      <span><i class="lg-elev"></i>电梯</span>
+      <span><i class="lg-star"></i>星图台</span>
+      <span><i class="lg-cab"></i>卡片柜</span>
+      ${legendProps}
+    </div>
+    <div class="plan-foot">
+      <span class="plan-note">书架里的数字是本章可读样张数；索书号范围按首字母标注。</span>
+      <button class="plan-enter" onclick="planEnter3D('${planFloor}')">进入本层 3D</button>
+    </div>
+  </div>`;
+}
+
+// ---------- 馆内导览 ----------
+const TOUR_STOPS = [
+  {
+    title: '① 入口', floor: 'all', x: 0, y: 1.68, z: 9.1, lookX: 0, lookY: 1.5, lookZ: -4,
+    text: '夜里十一点，前台只留一盏灯。往里走，地板会记住你的脚步声，但不会告诉任何人你从哪来。',
+  },
+  {
+    title: '② 书架', floor: 'all', x: 0, y: 1.68, z: 3.2, lookX: 0, lookY: 1.6, lookZ: -5.4,
+    text: '八组书架，四十八本书，把四层的记忆分门别类排好。书脊上的烫金字不是装饰，是提醒：有些名字一旦被读出来，就会开始发生。',
+  },
+  {
+    title: '③ 电梯', floor: 'all', x: -9.4, y: 1.68, z: 0.6, lookX: -12.8, lookY: 1.6, lookZ: -0.6,
+    text: '黄铜电梯只停四层，每一层的灯色都不一样。旧纸、蓝图、账簿、蜡封——越往下，纸越不愿意开口。',
+  },
+  {
+    title: '④ 星图台', floor: 'all', x: 0.4, y: 1.68, z: 4.6, lookX: 0.4, lookY: 1.0, lookZ: 0.9,
+    text: '铜盘上钉着许多年份，转一圈，整座馆的历史就按自己的顺序排好。那颗悬着的球别碰，它不属于任何一层。',
+  },
+  {
+    title: '⑤ 卡片目录', floor: 'all', x: 7.9, y: 1.68, z: 3.6, lookX: 10.5, lookY: 1.5, lookZ: 2.4,
+    text: '卡片柜是馆里最诚实的地方，每张卡都写着谁在哪一年说过什么。先看标签，再问自己到底想找哪一句。',
+  },
+  {
+    title: '⑥ L4 帷幕', floor: 'L4', x: 0, y: 1.68, z: 6.2, lookX: 0, lookY: 2.2, lookZ: -2.5,
+    text: '帷幕后面是未编目地库，蜡封馆员今晚值班。别问门后有什么，问了她也只会把灯调暗一点。',
+  },
+];
+let tourIndex = 0;
+
+function mmTourCardEl() {
+  let el = document.getElementById('tourCard');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tourCard';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function mmTourRenderCard(i) {
+  const stop = TOUR_STOPS[i];
+  if (!stop) return;
+  tourIndex = i;
+  const el = mmTourCardEl();
+  el.innerHTML = `
+    <div class="tour-card">
+      <div class="tour-kicker">馆内导览 · <span>${i + 1}/${TOUR_STOPS.length}</span></div>
+      <h3>${esc(stop.title)}</h3>
+      <p>${esc(stop.text)}</p>
+      <div class="tour-actions">
+        <button onclick="mmTourPrev()">上一步</button>
+        <button onclick="mmTourNext()">下一步</button>
+        <button class="tour-end" onclick="mmEndTour()">结束导览</button>
+      </div>
+    </div>`;
+  el.style.display = 'block';
+}
+
+function mmTourCleanup() {
+  tourActive = false;
+  const el = document.getElementById('tourCard');
+  if (el) el.remove();
+}
+
+function mmTourPrev() {
+  if (!tourActive || !window.mm3d || typeof window.mm3d.tourGo !== 'function') return;
+  try { window.mm3d.tourGo(Math.max(0, tourIndex - 1)); } catch (e) { console.warn('[tour] 上一步失败', e); }
+}
+
+function mmTourNext() {
+  if (!tourActive || !window.mm3d || typeof window.mm3d.tourGo !== 'function') return;
+  try { window.mm3d.tourGo(tourIndex + 1); } catch (e) { console.warn('[tour] 下一步失败', e); }
+}
+
+function mmEndTour() {
+  if (window.mm3d && typeof window.mm3d.endTour === 'function') {
+    try { window.mm3d.endTour(); } catch (e) { console.warn('[tour] 结束失败', e); }
+  }
+  mmTourCleanup();
+}
+
+async function mmStartTour() {
+  if (tourActive) return;
+  const mm = window.mm3d;
+  if (!mm || typeof mm.startTour !== 'function' || typeof mm.tourGo !== 'function') {
+    mmToast('3D 阅览室还没准备好。');
+    return;
+  }
+  if (document.body.classList.contains('reading') || document.body.classList.contains('grid')) {
+    enter3D();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  }
+  tourActive = true;
+  try {
+    mm.startTour(TOUR_STOPS, {
+      onStep: (i) => mmTourRenderCard(i),
+      onEnd: () => {
+        mmTourCleanup();
+        mmToast('导览结束，馆员退回柜台后。');
+      },
+    });
+  } catch (e) {
+    console.error('[tour] 启动失败', e);
+    mmTourCleanup();
+    mmToast('3D 阅览室还没准备好。');
+    return;
+  }
+  if (typeof mm.isTouring === 'function' && !mm.isTouring()) {
+    mmTourCleanup();
+    mmToast('导览还没能开始，稍等一下再试。');
+    return;
+  }
+  if (!document.getElementById('tourCard')) mmTourRenderCard(0);
+}
 
 async function showTimeline() {
   document.body.classList.add('grid');
@@ -1202,6 +1646,189 @@ function splitNotes(content) {
   return { main, notes };
 }
 
+// ---------- 章节总结卡 ----------
+function mmSectionFirstSentence(md, heading) {
+  const src = String(md || '');
+  const at = src.indexOf('## ' + heading);
+  if (at < 0) return '';
+  const lineEnd = src.indexOf('\n', at);
+  if (lineEnd < 0) return '';
+  const rest = src.slice(lineEnd + 1);
+  const next = rest.search(/\n##\s+/);
+  const body = (next >= 0 ? rest.slice(0, next) : rest).replace(/\s+/g, ' ').trim();
+  if (!body) return '';
+  const hit = body.match(/^(.+?[。！？!?])/);
+  return (hit ? hit[1] : body).trim();
+}
+
+function mmChapterCardData(m, main) {
+  return {
+    title: String(m.title || ''),
+    year: String(m.year || ''),
+    people: (m.people || []).slice(0, 3).map((p) => p.name + (p.org ? '（' + p.org + '）' : '')),
+    quote: mmSectionFirstSentence(main, '一句话'),
+    dispute: mmSectionFirstSentence(main, '争议与局限'),
+    sources: (m.sources || []).slice(0, 3).map((s) => s.title),
+  };
+}
+
+function chapterCardHtml(card, callNo, id) {
+  const people = card.people.length ? card.people : ['档案没有署名'];
+  const sources = card.sources.length ? card.sources : ['——'];
+  return `
+  <div class="chapter-card">
+    <div class="cc-kicker">章节总结卡 · ${esc(callNo)}</div>
+    <div class="cc-title">${esc(card.title)}</div>
+    <div class="cc-year">${esc(card.year)}</div>
+    <div class="cc-block">
+      <div class="cc-label">关键人物</div>
+      <ul class="cc-people">${people.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>
+    </div>
+    <div class="cc-block">
+      <div class="cc-label">一句话</div>
+      <div class="cc-quote">${esc(card.quote || '——')}</div>
+    </div>
+    <div class="cc-block">
+      <div class="cc-label">争议点</div>
+      <div class="cc-dispute">${esc(card.dispute || '——')}</div>
+    </div>
+    <div class="cc-block">
+      <div class="cc-label">来源</div>
+      <ol class="cc-sources">${sources.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+    </div>
+    <button class="cc-export" onclick="downloadChapterCard('${esc(id)}')">导出总结卡 PNG</button>
+  </div>`;
+}
+
+function ccWrapText(ctx, text, maxWidth) {
+  const chars = Array.from(String(text == null ? '' : text));
+  const lines = [];
+  let line = '';
+  for (const ch of chars) {
+    if (ch === '\n') { lines.push(line); line = ''; continue; }
+    if (line && ctx.measureText(line + ch).width > maxWidth) { lines.push(line); line = ch; }
+    else line += ch;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function ccDrawText(ctx, text, x, y, maxWidth, lineHeight, maxLines, font, color, align) {
+  ctx.save();
+  ctx.font = font;
+  ctx.fillStyle = color;
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = 'alphabetic';
+  let lines = ccWrapText(ctx, text, maxWidth);
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+    lines[maxLines - 1] = lines[maxLines - 1].replace(/[，、；。！？]$/, '') + '…';
+  }
+  lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * lineHeight));
+  ctx.restore();
+  return y + lines.length * lineHeight;
+}
+
+function downloadChapterCard(id) {
+  const card = window.__mmCard && window.__mmCard[id];
+  if (!card) { mmToast('总结卡还没装订好。'); return; }
+  const detail = String(id).match(/^(.+)-c(\d+)$/);
+  const bookId = detail ? detail[1] : '';
+  const bookNo = detail ? detail[2].padStart(2, '0') : '';
+  const shelfMark = bookCalls[bookId] || ((catalogCache.find((b) => b.id === bookId) || {}).call) || '?';
+  const callNo = bookId ? `${shelfMark}-${bookNo}` : id;
+
+  const W = 900, H = 1200;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  const SERIF = '"Songti SC","SimSun",serif';
+  const MONO = '"Consolas","Microsoft YaHei",monospace';
+  const LABEL = 'bold 18px ' + SERIF;
+
+  ctx.fillStyle = '#efe3c6';
+  ctx.fillRect(0, 0, W, H);
+  for (let y = 72; y < H; y += 30) {
+    ctx.strokeStyle = 'rgba(90,69,31,.035)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(60, y); ctx.lineTo(W - 60, y); ctx.stroke();
+  }
+  ctx.strokeStyle = '#5a451f'; ctx.lineWidth = 5;
+  ctx.strokeRect(30, 30, W - 60, H - 60);
+  ctx.strokeStyle = '#8a6320'; ctx.lineWidth = 1.2;
+  ctx.strokeRect(46, 46, W - 92, H - 92);
+  ctx.strokeStyle = 'rgba(138,99,32,.7)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(76, 92); ctx.lineTo(76, H - 92); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W - 76, 92); ctx.lineTo(W - 76, H - 92); ctx.stroke();
+  [[76, 100], [W - 76, 100], [76, H - 100], [W - 76, H - 100]].forEach(([cx, cy]) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 5); ctx.lineTo(cx + 5, cy); ctx.lineTo(cx, cy + 5); ctx.lineTo(cx - 5, cy);
+    ctx.closePath(); ctx.fillStyle = '#8a6320'; ctx.fill();
+  });
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8a6d33';
+  ctx.font = '16px ' + MONO;
+  ctx.fillText('机忆书库 · 章节总结卡', W / 2, 98);
+  ctx.font = '11px ' + MONO;
+  ctx.fillText('THE MACHINE MEMORY · CHAPTER CARD', W / 2, 118);
+
+  let y = 186;
+  y = ccDrawText(ctx, card.title, W / 2, y, 700, 56, 2, 'bold 42px ' + SERIF, '#3b3020', 'center');
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#6b5a3a';
+  ctx.font = '20px ' + SERIF;
+  ctx.fillText(`年代 ${card.year || '——'} · 索书号 ${callNo}`, W / 2, y + 30);
+  y += 64;
+  ctx.strokeStyle = '#8a6320'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(150, y); ctx.lineTo(W - 150, y); ctx.stroke();
+  y += 48;
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#8a6d33';
+  ctx.font = LABEL;
+  ctx.fillText('关键人物', 110, y);
+  y += 30;
+  (card.people.length ? card.people : ['档案没有署名']).forEach((p, i) => {
+    y = ccDrawText(ctx, `${i + 1}. ${p}`, 110, y, 680, 30, 1, '19px ' + SERIF, '#4a3a24', 'left');
+    y += 4;
+  });
+  y += 14;
+
+  ctx.fillStyle = '#8a6d33'; ctx.font = LABEL;
+  ctx.fillText('一句话', 110, y);
+  y += 30;
+  y = ccDrawText(ctx, '「' + (card.quote || '——') + '」', 110, y, 680, 34, 4, '22px ' + SERIF, '#5a451f', 'left');
+  y += 16;
+
+  ctx.fillStyle = '#8a6d33'; ctx.font = LABEL;
+  ctx.fillText('争议点', 110, y);
+  y += 30;
+  y = ccDrawText(ctx, card.dispute || '——', 110, y, 680, 28, 4, '18px ' + SERIF, '#6b5a3a', 'left');
+  y += 16;
+
+  ctx.fillStyle = '#8a6d33'; ctx.font = LABEL;
+  ctx.fillText('来源 · 前三条', 110, y);
+  y += 30;
+  (card.sources.length ? card.sources : ['——']).slice(0, 3).forEach((s, i) => {
+    y = ccDrawText(ctx, `${i + 1}. ${s}`, 110, y, 680, 24, 2, '15px ' + SERIF, '#8a7a5c', 'left');
+    y += 4;
+  });
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8a6d33';
+  ctx.font = '14px ' + SERIF;
+  ctx.fillText(`机忆书库 · THE MACHINE MEMORY · ${callNo}`, W / 2, 1128);
+
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = `总结卡-${id}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  mmToast('总结卡已导出。');
+}
+
 async function showChapter(id) {
   document.body.classList.add('reading');
   const r = await (await fetch('api/chapters/' + id)).json();
@@ -1217,6 +1844,9 @@ async function showChapter(id) {
   const fl = floorInfo[bookFloors[m.book]] || null;
   const roman = ['I', 'II', 'III', 'IV'][((fl ? fl.tier : 1) - 1)] || 'I';
   const decayTxt = ['完好', '轻残', '中残', '高残'][fl ? fl.decay : 0] || '完好';
+  const cardData = mmChapterCardData(m, main);
+  window.__mmCard = window.__mmCard || {};
+  window.__mmCard[m.id] = cardData;
   app.innerHTML = `
   <div id="reader">
     <aside id="rail">
@@ -1264,6 +1894,7 @@ async function showChapter(id) {
           <div class="note-text">${esc(n.text)}</div>
           <div class="note-sign">—— ${librarian}</div>
         </div>`).join('') : '<div class="notes-empty">这一章暂时没有页边注</div>'}
+      ${chapterCardHtml(cardData, callNo, m.id)}
       <div id="myNotes"></div>
     </aside>
   </div>

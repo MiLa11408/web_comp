@@ -76,33 +76,135 @@ function injectCss() {
   document.head.appendChild(s);
 }
 
-// ---------- 书脊：Canvas 竖排 ----------
-function spineTexture(book) {
+// ---------- 书脊：Canvas 版式（确定性 variant + L4 未编目） ----------
+const ROMAN_NUMERALS = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ', 'Ⅹ', 'Ⅺ', 'Ⅻ'];
+
+function strHash(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+function seededRand(seed) {
+  let s = (seed || 1) >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+function spineTexture(book, variant = 0, ordinal = 1) {
   const c = document.createElement('canvas');
   c.width = 256;
   c.height = 768;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = book.color || '#4a3a2e';
+  const v = ((Number(variant) % 3) + 3) % 3;
+  const base = new THREE.Color(book.color || '#4a3a2e');
+  const bg = v === 2 ? base.clone().multiplyScalar(0.58) : base.clone();
+  const rnd = seededRand(strHash(`${book.id || ''}|${book.call || ''}|${book.title || ''}`));
+
+  ctx.fillStyle = `#${bg.getHexString()}`;
   ctx.fillRect(0, 0, 256, 768);
-  for (let i = 0; i < 1200; i++) {
-    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.07})`;
-    ctx.fillRect(Math.random() * 256, Math.random() * 768, 2, 2);
+  // 布面颗粒（确定性，刷新不变）
+  for (let i = 0; i < 900; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${0.02 + rnd() * 0.07})`;
+    ctx.fillRect(rnd() * 256, rnd() * 768, 1 + rnd() * 2.4, 1.6);
   }
-  ctx.strokeStyle = '#c8a24a';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(14, 14, 228, 740);
-  ctx.lineWidth = 1;
-  ctx.strokeRect(24, 24, 208, 720);
+  // 上下边缘暗部，增加装帧厚度感
+  const edgeGrad = ctx.createLinearGradient(0, 0, 0, 768);
+  edgeGrad.addColorStop(0, 'rgba(0,0,0,.30)');
+  edgeGrad.addColorStop(0.1, 'rgba(0,0,0,0)');
+  edgeGrad.addColorStop(0.9, 'rgba(0,0,0,0)');
+  edgeGrad.addColorStop(1, 'rgba(0,0,0,.34)');
+  ctx.fillStyle = edgeGrad;
+  ctx.fillRect(0, 0, 256, 768);
 
-  const title = String(book.title || '').replace(/[《》]/g, '');
-  ctx.fillStyle = '#f6ecc9';
-  ctx.textAlign = 'center';
-  ctx.font = 'bold 54px "Songti SC", "SimSun", serif';
-  [...title].slice(0, 10).forEach((ch, i) => ctx.fillText(ch, 128, 90 + i * 64));
+  const call = String(book.call || '');
+  const rawTitle = String(book.title || '').replace(/[《》]/g, '');
 
-  ctx.font = 'bold 24px monospace';
-  ctx.fillStyle = '#e2c06a';
-  ctx.fillText(String(book.call || ''), 128, 716);
+  if (book.floor === 'L4') {
+    // 绝密：不显示完整书名，仅罗马序号 + 未编目
+    ctx.strokeStyle = 'rgba(200,162,74,.5)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18, 18, 220, 732);
+    ctx.fillStyle = 'rgba(200,162,74,.8)';
+    ctx.fillRect(40, 132 + v * 12, 176, 5);
+    const roman = ROMAN_NUMERALS[(Math.max(1, Number(ordinal) || 1) - 1) % ROMAN_NUMERALS.length];
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e6d9bd';
+    ctx.font = 'bold 104px "Times New Roman", "Songti SC", serif';
+    ctx.fillText(roman, 128, 372);
+    ctx.fillStyle = 'rgba(230,217,189,.6)';
+    ctx.font = '20px "Songti SC", "SimSun", serif';
+    ctx.fillText('未编目', 128, 432);
+    ctx.fillStyle = 'rgba(200,162,74,.75)';
+    ctx.fillRect(52, 576, 152, 4);
+    if (v > 0) {
+      ctx.save();
+      ctx.translate(128, 632);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = 'rgba(200,162,74,.72)';
+      ctx.fillRect(-9, -9, 18, 18);
+      ctx.restore();
+    }
+    ctx.fillStyle = 'rgba(200,162,74,.45)';
+    ctx.fillRect(96, 700, 64, 2);
+  } else if (v === 0) {
+    // a. 竖排书名 + 金线框（原版式）
+    ctx.strokeStyle = '#c8a24a';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(14, 14, 228, 740);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(24, 24, 208, 720);
+    ctx.fillStyle = '#f6ecc9';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 54px "Songti SC", "SimSun", serif';
+    [...rawTitle].slice(0, 9).forEach((ch, i) => ctx.fillText(ch, 128, 96 + i * 66));
+    ctx.font = 'bold 24px monospace';
+    ctx.fillStyle = '#e2c06a';
+    ctx.fillText(call, 128, 716);
+  } else if (v === 1) {
+    // b. 横排书名（两行内）+ 上下金色横带 + 索书号
+    ctx.fillStyle = 'rgba(200,162,74,.9)';
+    ctx.fillRect(0, 0, 256, 26);
+    ctx.fillRect(0, 742, 256, 26);
+    ctx.strokeStyle = 'rgba(246,236,201,.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18, 46, 220, 676);
+    const chars = [...rawTitle].slice(0, 14);
+    const mid = Math.ceil(chars.length / 2);
+    const lines = [chars.slice(0, mid).join(''), chars.slice(mid).join('')].filter(Boolean);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f6ecc9';
+    ctx.font = 'bold 46px "Songti SC", "SimSun", serif';
+    lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, 128, 208 + i * 60));
+    ctx.fillStyle = 'rgba(200,162,74,.7)';
+    ctx.fillRect(46, 344, 164, 4);
+    ctx.fillStyle = 'rgba(246,236,201,.3)';
+    for (let i = 0; i < 4; i++) ctx.fillRect(72, 560 + i * 14, 112, 2);
+    ctx.fillStyle = '#e2c06a';
+    ctx.font = 'bold 26px monospace';
+    ctx.fillText(call, 128, 702);
+  } else {
+    // c. 极简标签：仅索书号 + 小菱形，底色更深
+    ctx.strokeStyle = 'rgba(230,217,189,.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(28, 28, 200, 712);
+    ctx.save();
+    ctx.translate(128, 150);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = 'rgba(200,162,74,.85)';
+    ctx.fillRect(-10, -10, 20, 20);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(200,162,74,.65)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(58, 372, 140, 64);
+    ctx.fillStyle = '#e2c06a';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 30px monospace';
+    ctx.fillText(call, 128, 418);
+    ctx.fillStyle = 'rgba(200,162,74,.4)';
+    ctx.fillRect(60, 640, 136, 3);
+  }
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -380,6 +482,176 @@ function makeBlueprintTexture() {
   });
 }
 
+// ---------- 墙面装饰贴图：旧地图 / 剪报 / 账页 / 紫色符印 ----------
+function makeDecorTexture(kind) {
+  if (kind === 'sigil') {
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 256;
+    const g = c.getContext('2d');
+    const rnd = seededRand(31);
+    g.translate(128, 128);
+    g.strokeStyle = 'rgba(178,138,255,.85)';
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.arc(0, 0, 108, 0, Math.PI * 2);
+    g.stroke();
+    g.strokeStyle = 'rgba(150,110,235,.55)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(0, 0, 88, 0, Math.PI * 2);
+    g.stroke();
+    // 外圈符印刻度
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const r1 = i % 3 === 0 ? 92 : 98;
+      const r2 = 108;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      g.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+      g.stroke();
+    }
+    // 内部符文折线 + 菱形
+    g.strokeStyle = 'rgba(196,160,255,.7)';
+    g.lineWidth = 2;
+    g.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.3;
+      g.lineTo(Math.cos(a) * 62, Math.sin(a) * 62);
+    }
+    g.closePath();
+    g.stroke();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * 24, Math.sin(a) * 24);
+      g.lineTo(Math.cos(a) * (54 + rnd() * 14), Math.sin(a) * (54 + rnd() * 14));
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(210,180,255,.9)';
+    g.save();
+    g.rotate(Math.PI / 4);
+    g.fillRect(-8, -8, 16, 16);
+    g.restore();
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  }
+
+  return canvasTexture(512, 512, (g, W, H) => {
+    const rnd = seededRand(kind === 'map' ? 7 : kind === 'news' ? 13 : 23);
+    if (kind === 'map') {
+      g.fillStyle = '#d6c396';
+      g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 46; i++) {
+        g.fillStyle = `rgba(120,95,55,${0.03 + rnd() * 0.05})`;
+        g.fillRect(rnd() * W, rnd() * H, 18 + rnd() * 90, 16 + rnd() * 70);
+      }
+      g.strokeStyle = 'rgba(96,74,42,.32)';
+      g.lineWidth = 1;
+      for (let i = 40; i < W; i += 40) {
+        g.beginPath(); g.moveTo(i, 0); g.lineTo(i, H); g.stroke();
+        g.beginPath(); g.moveTo(0, i); g.lineTo(W, i); g.stroke();
+      }
+      // 海岸线
+      g.strokeStyle = '#5e4826';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(36, 392);
+      for (let x = 36; x <= 476; x += 28) g.lineTo(x, 392 - Math.sin(x / 68) * 44 - rnd() * 16);
+      g.stroke();
+      // 河流
+      g.strokeStyle = 'rgba(70,90,100,.55)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(120, 40);
+      for (let y = 40; y <= 400; y += 24) g.lineTo(120 + Math.sin(y / 40) * 60, y);
+      g.stroke();
+      // 红色勘探路线
+      g.strokeStyle = 'rgba(150,52,40,.72)';
+      g.setLineDash([9, 6]);
+      g.beginPath();
+      g.moveTo(110, 260);
+      g.lineTo(210, 230);
+      g.lineTo(300, 300);
+      g.lineTo(398, 250);
+      g.stroke();
+      g.setLineDash([]);
+      // 地名墨线
+      g.fillStyle = 'rgba(66,50,30,.55)';
+      for (let i = 0; i < 12; i++) {
+        const lx = 70 + (i % 4) * 110;
+        const ly = 90 + Math.floor(i / 4) * 62;
+        g.fillRect(lx, ly, 28 + rnd() * 52, 3);
+      }
+      // 红色圆印
+      g.strokeStyle = 'rgba(140,44,36,.65)';
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(430, 452, 26, 0, Math.PI * 2); g.stroke();
+      g.strokeRect(12, 12, W - 24, H - 24);
+    } else if (kind === 'news') {
+      g.fillStyle = '#cec1a0';
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = '#2a241a';
+      g.fillRect(28, 24, W - 56, 56);
+      g.fillStyle = '#d8cba8';
+      g.font = 'bold 30px "Songti SC", "SimSun", serif';
+      g.textAlign = 'center';
+      g.fillText('旧 闻 剪 报', W / 2, 62);
+      g.strokeStyle = 'rgba(60,50,36,.55)';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(28, 96); g.lineTo(W - 28, 96); g.stroke();
+      g.fillStyle = 'rgba(54,44,32,.5)';
+      for (let col = 0; col < 3; col++) {
+        for (let row = 0; row < 12; row++) {
+          g.fillRect(36 + col * 152, 118 + row * 28, 118 + rnd() * 18, 2);
+        }
+      }
+      g.fillStyle = 'rgba(40,34,24,.75)';
+      g.fillRect(36, 118, 120, 12);
+      g.strokeStyle = 'rgba(140,44,36,.7)';
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(430, 440, 26, 0, Math.PI * 2); g.stroke();
+      g.strokeRect(12, 12, W - 24, H - 24);
+    } else {
+      // 账页 / 报表板：深绿纸 + 铜边 + 横线格
+      g.fillStyle = '#33443a';
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = '#2a382f';
+      g.fillRect(28, 24, W - 56, 52);
+      g.fillStyle = '#cfc39c';
+      g.font = 'bold 24px "Songti SC", "SimSun", serif';
+      g.textAlign = 'left';
+      g.fillText('账 页 · 年 度 结 余', 46, 58);
+      g.strokeStyle = 'rgba(200,185,140,.55)';
+      g.lineWidth = 1.5;
+      for (let y = 110; y < H - 40; y += 34) {
+        g.beginPath(); g.moveTo(36, y); g.lineTo(W - 36, y); g.stroke();
+      }
+      for (const x of [36, 150, 330, 420, W - 36]) {
+        g.beginPath(); g.moveTo(x, 92); g.lineTo(x, H - 36); g.stroke();
+      }
+      g.fillStyle = 'rgba(220,208,170,.55)';
+      for (let row = 0; row < 10; row++) {
+        for (let col = 0; col < 3; col++) {
+          g.fillRect(46 + col * 180, 126 + row * 34, 60 + rnd() * 64, 3);
+        }
+      }
+      g.strokeStyle = 'rgba(160,70,54,.8)';
+      g.lineWidth = 3;
+      g.beginPath(); g.arc(438, 430, 34, 0, Math.PI * 2); g.stroke();
+      g.font = 'bold 20px "Songti SC", "SimSun", serif';
+      g.fillStyle = 'rgba(160,70,54,.8)';
+      g.textAlign = 'center';
+      g.fillText('已核', 438, 437);
+      g.strokeStyle = 'rgba(180,150,90,.5)';
+      g.lineWidth = 2;
+      g.strokeRect(12, 12, W - 24, H - 24);
+    }
+  });
+}
+
 export async function init3D({ container, books, floors, shelfConfig = {}, onOpenBook }) {
   injectCss();
 
@@ -415,6 +687,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     yaw: 0, pitch: -0.03, tYaw: 0, tPitch: -0.03,
   };
   const keys = { w: false, a: false, s: false, d: false };
+  let tour = null;
 
   // 书架容量：内容配置决定每组书架能放多少本，组数由实际书数动态推导
   const booksPerBoard = Math.max(1, Number(shelfConfig.booksPerBoard) || 3);
@@ -649,7 +922,12 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   for (const u of SHELF_UNITS) createShelf(u);
 
   // ---------- 书 ----------
+  const BOOK_W = [0.16, 0.21, 0.26];
+  const BOOK_HS = [0.54, 0.57, 0.60, 0.63];
   const bookItems = [];
+  const floorSeq = {};
+  const goldBandMat = new THREE.MeshStandardMaterial({ color: 0xc8a24a, metalness: 0.72, roughness: 0.28, emissive: 0x3a2a10, emissiveIntensity: 0.25 });
+  const wornMat = new THREE.MeshStandardMaterial({ color: 0x17100a, roughness: 0.96, transparent: true, opacity: 0.7 });
   books.forEach((book, i) => {
     const unitIdx = i % SHELF_UNITS.length;
     const slot = Math.floor(i / SHELF_UNITS.length); // 0..perUnit-1
@@ -658,27 +936,53 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const pos = slot % booksPerBoard;
     const level = (BOARD_Y[board] ?? BOARD_Y[BOARD_Y.length - 1]) + 0.03;
     const sx = (pos - (booksPerBoard - 1) / 2) * 0.72;
-    const basePos = new THREE.Vector3(unit.x + sx, level + BOOK_H / 2 + 0.004, unit.z + 0.05);
-    const baseQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, (Math.random() - 0.5) * 0.08, 0));
+    // 确定性版式：厚度 / 高度 / 版式 / 材质都随书索引变化，刷新不变
+    const variant = i % 3;
+    const thickness = BOOK_W[variant];
+    const height = BOOK_HS[(i + variant) % 4] || BOOK_H;
+    const ordinal = (floorSeq[book.floor] = (floorSeq[book.floor] || 0) + 1);
+    const basePos = new THREE.Vector3(unit.x + sx, level + height / 2 + 0.004, unit.z + 0.05);
+    const jitter = ((strHash(String(book.id || i)) % 1000) / 1000 - 0.5) * 0.08;
+    const baseQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, jitter, 0));
 
     const baseColor = new THREE.Color(book.color || '#4a3a2e');
     const sideMat = new THREE.MeshStandardMaterial({
       color: baseColor.clone().multiplyScalar(0.78),
-      roughness: 0.7, metalness: 0.05,
+      roughness: [0.7, 0.58, 0.82][variant], metalness: [0.05, 0.12, 0.03][variant],
     });
     const spineMat = new THREE.MeshStandardMaterial({
-      map: spineTexture(book), roughness: 0.62, metalness: 0.05,
-      emissive: baseColor.clone().multiplyScalar(0.25), emissiveIntensity: 0.35,
+      map: spineTexture(book, variant, ordinal),
+      roughness: [0.62, 0.48, 0.8][variant], metalness: [0.05, 0.18, 0.02][variant],
+      emissive: baseColor.clone().multiplyScalar(variant === 2 ? 0.18 : 0.25),
+      emissiveIntensity: variant === 2 ? 0.28 : 0.35,
     });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, BOOK_H, 0.40), [sideMat, sideMat, sideMat, sideMat, spineMat, sideMat]);
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, 0.40), [sideMat, sideMat, sideMat, sideMat, spineMat, sideMat]);
     mesh.position.copy(basePos);
     mesh.quaternion.copy(baseQuat);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    // 金色横带：横排版式两条，其余部分书一条
+    if (variant === 1) {
+      for (const [by, bh] of [[height * 0.30, 0.028], [height * 0.17, 0.022]]) {
+        const band = new THREE.Mesh(new THREE.BoxGeometry(thickness + 0.008, bh, 0.014), goldBandMat);
+        band.position.set(0, by, 0.204);
+        mesh.add(band);
+      }
+    } else if (i % 2 === 0) {
+      const band = new THREE.Mesh(new THREE.BoxGeometry(thickness + 0.008, 0.024, 0.014), goldBandMat);
+      band.position.set(0, height * 0.28, 0.204);
+      mesh.add(band);
+    }
+    // 部分书脊底边磨损暗条
+    if (variant === 2 || i % 4 === 0) {
+      const wear = new THREE.Mesh(new THREE.BoxGeometry(thickness + 0.006, 0.026, 0.012), wornMat);
+      wear.position.set(0, -height / 2 + 0.032, 0.204);
+      mesh.add(wear);
+    }
     // 楼层个性：L2 蓝图带 / L3 账签 / L4 封蜡
     if (book.floor === 'L2') {
-      const band = new THREE.Mesh(new THREE.BoxGeometry(0.228, 0.035, 0.408), new THREE.MeshStandardMaterial({ color: 0x7fb6d6, emissive: 0x2a4a5a, emissiveIntensity: 0.45 }));
-      band.position.y = 0.18;
+      const band = new THREE.Mesh(new THREE.BoxGeometry(thickness + 0.010, 0.035, 0.408), new THREE.MeshStandardMaterial({ color: 0x7fb6d6, emissive: 0x2a4a5a, emissiveIntensity: 0.45 }));
+      band.position.y = Math.min(0.18, height * 0.30);
       mesh.add(band);
     } else if (book.floor === 'L3') {
       const tag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.02), new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.55, roughness: 0.35 }));
@@ -686,13 +990,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       mesh.add(tag);
     } else if (book.floor === 'L4') {
       const seal = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 10), new THREE.MeshStandardMaterial({ color: 0x6a4a86, emissive: 0x3a2460, emissiveIntensity: 0.55 }));
-      seal.position.set(0, -0.18, 0.21);
+      seal.position.set(0, -height * 0.30, 0.21);
       mesh.add(seal);
     }
     scene.add(mesh);
 
     const chapterId = (book.chapters && book.chapters[0] && book.chapters[0].id) || null;
-    const item = { mesh, book, basePos, baseQuat, chapterId, body: null, animating: false };
+    const item = { mesh, book, basePos, baseQuat, chapterId, body: null, animating: false, w: thickness, h: height };
     bookItems.push(item);
     mesh.userData.item = item;
   });
@@ -958,6 +1262,14 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const shadeAmberMat = new THREE.MeshStandardMaterial({ color: 0xd8a85a, emissive: 0xff8a30, emissiveIntensity: 0.85, side: THREE.DoubleSide, roughness: 0.5 });
   const shadeRedMat = new THREE.MeshStandardMaterial({ color: 0xc05a5a, emissive: 0xff2020, emissiveIntensity: 1.0, side: THREE.DoubleSide, roughness: 0.55 });
   const blueprintMat = new THREE.MeshStandardMaterial({ map: makeBlueprintTexture(), roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide });
+  // 墙面装饰材质（程序化贴图，不引入外部资源）
+  const decorMapMat = new THREE.MeshStandardMaterial({ map: makeDecorTexture('map'), roughness: 0.94, metalness: 0.02, side: THREE.DoubleSide });
+  const decorNewsMat = new THREE.MeshStandardMaterial({ map: makeDecorTexture('news'), roughness: 0.95, metalness: 0.0, side: THREE.DoubleSide });
+  const decorLedgerMat = new THREE.MeshStandardMaterial({ map: makeDecorTexture('ledger'), roughness: 0.86, metalness: 0.05, side: THREE.DoubleSide });
+  const decorSigilMat = new THREE.MeshBasicMaterial({ map: makeDecorTexture('sigil'), transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  const decorFrameGoldMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.45, metalness: 0.55 });
+  const decorFrameKraftMat = new THREE.MeshStandardMaterial({ color: 0x5a4228, roughness: 0.86, metalness: 0.05 });
+  const decorClipMat = new THREE.MeshStandardMaterial({ color: 0xb08a4a, roughness: 0.35, metalness: 0.7 });
 
   function makePropGroup(name) {
     const g = new THREE.Group();
@@ -1045,6 +1357,27 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       for (const lz of [-0.2, 0.2]) put(g, boxG(0.06, 0.44, 0.06), mat, lx, 0.22, lz);
     }
     put(g, boxG(0.5, 0.6, 0.06), mat, 0, 0.76, -0.22, true);
+    return g;
+  }
+
+  // 墙面装饰：画框 + 纸面（严格贴墙，控制在每层 ≤12 个 mesh）
+  function addWallBoard(parent, x, y, z, rotY, w, h, paperMat, frameMat, clipMat) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    g.rotation.y = rotY;
+    parent.add(g);
+    put(g, boxG(w + 0.13, h + 0.13, 0.055), frameMat, 0, 0, 0, true);
+    put(g, planeG(w, h), paperMat, 0, 0, 0.034);
+    if (clipMat) put(g, boxG(0.24, 0.13, 0.06), clipMat, 0, h / 2 - 0.06, 0.045);
+    return g;
+  }
+  function addWallSigil(parent, x, y, z, rotY, radius) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    g.rotation.y = rotY;
+    parent.add(g);
+    put(g, torusG(radius, 0.018, 8, 48), propMats.violetFlame, 0, 0, 0);
+    put(g, circleG(radius * 0.86, 32), decorSigilMat, 0, 0, 0.014);
     return g;
   }
 
@@ -1189,6 +1522,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   p1.add(bench);
   put(bench, boxG(2.4, 0.08, 0.5), wood, 0, 0.45, 0, true);
   for (const lx of [-1.0, 1.0]) put(bench, boxG(0.1, 0.45, 0.44), woodDark, lx, 0.22, 0);
+  // 墙面装饰：旧地图 / 报纸剪贴
+  addWallBoard(p1, -4.7, 5.7, ROOM.backZ + 0.05, 0, 1.35, 0.95, decorMapMat, decorFrameGoldMat);
+  addWallBoard(p1, 5.5, 5.4, ROOM.backZ + 0.05, 0, 1.0, 0.75, decorNewsMat, decorFrameGoldMat);
+  addWallBoard(p1, -ROOM.sideX + 0.08, 6.0, -3.9, Math.PI / 2, 1.15, 0.8, decorMapMat, decorFrameGoldMat);
 
   // ===== L2 蓝图工坊 =====
   const p2 = makePropGroup('prop-L2');
@@ -1252,6 +1589,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const pipe = put(wb, cylG(0.06, 0.06, 0.8, 10), propMats.steel, 0.5, 0.88, -0.25 + i * 0.18);
     pipe.rotation.z = Math.PI / 2;
   }
+  // 墙面装饰：蓝图框（蓝色纸面 + 白色网格线）
+  addWallBoard(p2, -5.2, 5.6, ROOM.backZ + 0.05, 0, 1.3, 0.9, blueprintMat, propMats.steel);
+  addWallBoard(p2, 5.2, 6.1, ROOM.backZ + 0.05, 0, 1.1, 0.78, blueprintMat, propMats.steel);
+  addWallBoard(p2, ROOM.sideX - 0.08, 5.7, -4.4, -Math.PI / 2, 1.25, 0.85, blueprintMat, propMats.steel);
 
   // ===== L3 账房 =====
   const p3 = makePropGroup('prop-L3');
@@ -1330,6 +1671,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       const coin = put(p3, cylG(0.07, 0.07, 0.02, 12), brassMat, 9.6 + i * 0.18, 0.02 + j * 0.025, -1.4);
     }
   }
+  // 墙面装饰：报表板 / 账页夹 + 铜夹
+  addWallBoard(p3, -5.4, 5.9, ROOM.backZ + 0.05, 0, 1.2, 0.9, decorLedgerMat, decorFrameKraftMat, decorClipMat);
+  addWallBoard(p3, 5.2, 5.4, ROOM.backZ + 0.05, 0, 1.0, 0.75, decorLedgerMat, decorFrameKraftMat, decorClipMat);
+  addWallBoard(p3, -ROOM.sideX + 0.08, 5.8, -4.2, Math.PI / 2, 1.1, 0.82, decorLedgerMat, decorFrameKraftMat, decorClipMat);
 
   // ===== L4 机密地库 =====
   const p4 = makePropGroup('prop-L4');
@@ -1415,6 +1760,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const crate = put(p4, boxG(0.8, 0.7, 0.8), propMats.iron, bx, 0.35, bz, true);
     crate.rotation.y = 0.12;
   }
+  // 墙面装饰：紫色符印圆环 + 暗色帷幕条
+  addWallSigil(p4, ROOM.sideX - 0.08, 6.5, -3.9, -Math.PI / 2, 0.62);
+  addWallSigil(p4, -ROOM.sideX + 0.08, 6.3, -4.7, Math.PI / 2, 0.5);
+  const wallDrapeStrip = put(p4, planeG(0.95, 3.2), propMats.drape, ROOM.sideX - 0.1, 5.5, 4.9);
+  wallDrapeStrip.rotation.y = -Math.PI / 2;
 
   propGroups.L1 = p1;
   propGroups.L2 = p2;
@@ -1492,7 +1842,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
           .setLinearDamping(0.4)
           .setAngularDamping(0.7)
       );
-      world.createCollider(RAPIER.ColliderDesc.cuboid(0.11, BOOK_H / 2, 0.20).setFriction(0.98).setRestitution(0.02), rb);
+      world.createCollider(RAPIER.ColliderDesc.cuboid(item.w / 2, item.h / 2, 0.20).setFriction(0.98).setRestitution(0.02), rb);
       item.body = rb;
     }
   } catch (e) {
@@ -1553,7 +1903,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     L1: { near: 10.5, far: 42, bg: 0x1a130b, amb: 2.5, spot: 6.0, dir: 2.4, dust: 0.42 },
     L2: { near: 9.5, far: 38, bg: 0x0e1620, amb: 2.1, spot: 5.4, dir: 2.1, dust: 0.36 },
     L3: { near: 8.5, far: 34, bg: 0x1a140c, amb: 1.9, spot: 4.8, dir: 1.9, dust: 0.30 },
-    L4: { near: 7.0, far: 28, bg: 0x0b0910, amb: 1.5, spot: 3.8, dir: 1.4, dust: 0.24 },
+    L4: { near: 7.0, far: 28, bg: 0x120f1a, amb: 2.2, spot: 5.2, dir: 1.9, dust: 0.24 },
   };
   // 楼层主题：书架 / 墙面 / 地面 / 尘埃 / 灯光色温（越高层越冷、越神秘）
   const THEME = {
@@ -1602,8 +1952,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       wallInt: 1.1, floorInt: 1.25, exposure: 1.72,
     },
     L4: {
-      shelf: 0x4a3a52, shelfDark: 0x362a3e, metal: 0.55, rough: 0.5,
-      shelfAccent: 0x6a5a7a, shelfMetal: 0.62, shelfRough: 0.45,
+      shelf: 0x55465f, shelfDark: 0x3c3046, metal: 0.3, rough: 0.58,
+      shelfAccent: 0x7a6a8e, shelfMetal: 0.62, shelfRough: 0.45,
       accent: 0xa98cff, acc: 0.9, trim: 0x1c1826, ceiling: 0x171320, rug: 0x2e1f2a,
       painting: 0x4a3a5a, paintingCanvas: 0x9a88b8,
       dustNear: 0xc8b0ff, dustFar: 0x9a88b8,
@@ -1700,11 +2050,16 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   let downY = 0;
 
   el.addEventListener('pointerdown', (e) => {
+    if (tour) return;
     dragging = true;
     lastX = downX = e.clientX;
     lastY = downY = e.clientY;
   });
   window.addEventListener('pointermove', (e) => {
+    if (tour) {
+      dragging = false;
+      return;
+    }
     if (!dragging) {
       hoverPick(e);
       return;
@@ -1717,14 +2072,22 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     player.tPitch = Math.max(-1.15, Math.min(0.85, player.tPitch - dy * 0.0032));
   });
   window.addEventListener('pointerup', (e) => {
+    if (tour) {
+      dragging = false;
+      return;
+    }
     if (!dragging) return;
     dragging = false;
     const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
     if (moved < 6) pick(e.clientX, e.clientY);
   });
-  el.addEventListener('wheel', (e) => { e.preventDefault(); }, { passive: false });
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (tour) return;
+  }, { passive: false });
 
   window.addEventListener('keydown', (e) => {
+    if (tour) return;
     const tag = e.target && e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     const k = e.key.toLowerCase();
@@ -1748,6 +2111,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
 
   function hoverPick(e) {
+    if (tour) return;
     setPointer(e.clientX, e.clientY);
     const hits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);
     const hitElev = raycaster.intersectObject(elevator, true);
@@ -1761,7 +2125,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
 
   function pick(x, y) {
-    if (traveling) return;
+    if (tour || traveling) return;
     setPointer(x, y);
     const elevHits = raycaster.intersectObject(elevator, true);
     if (elevHits.length) {
@@ -1818,7 +2182,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   let taking = false;
   let traveling = false;
   function takeBook(item) {
-    if (taking) return;
+    if (taking || tour) return;
     taking = true;
     if (window.mmAudioPlay) window.mmAudioPlay('page');
     item.animating = true;
@@ -1895,8 +2259,76 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     updateCamera();
   }
 
-  async function travelTo(fid) {
+  // ---------- 导览（供 index.html 调用） ----------
+  function tourRestoreHome() {
+    if (!tour || !tour.home) return;
+    player.pos.copy(tour.home.pos);
+    player.tYaw = tour.home.tYaw;
+    player.tPitch = tour.home.tPitch;
+  }
+
+  function endTour() {
+    const home = tour && tour.home;
+    tour = null;
+    override = null;
+    if (home) {
+      player.pos.copy(home.pos);
+      player.tYaw = home.tYaw;
+      player.tPitch = home.tPitch;
+      player.yaw = home.tYaw;
+      player.pitch = home.tPitch;
+      updateCamera();
+    }
+  }
+
+  function tourGo(i) {
+    if (!tour) return;
+    const idx = Number(i);
+    const stops = tour.stops;
+    if (!Number.isFinite(idx) || idx < 0 || idx >= stops.length) {
+      const handlers = tour.handlers || {};
+      endTour();
+      if (typeof handlers.onEnd === 'function') handlers.onEnd();
+      return;
+    }
+    const stop = stops[idx] || {};
+    const n = (v, d) => (v == null || !Number.isFinite(Number(v)) ? d : Number(v));
+    if (stop.floor && stop.floor !== currentFloor) {
+      setFloor(stop.floor, true);
+      tourRestoreHome();
+    }
+    const toPos = new THREE.Vector3(n(stop.x, 0), n(stop.y, 1.68), n(stop.z, 0));
+    const toLook = new THREE.Vector3(
+      n(stop.lookX, toPos.x),
+      n(stop.lookY, toPos.y),
+      n(stop.lookZ, toPos.z - 1),
+    );
+    const fromPos = camera.position.clone();
+    const fromLook = fromPos.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(4));
+    tour.hold = { pos: toPos, look: toLook };
+    tour.anim = { t0: performance.now(), dur: 900, fromPos, fromLook, toPos, toLook, i: idx };
+  }
+
+  function startTour(stops, handlers = {}) {
+    if (!Array.isArray(stops) || !stops.length) return;
     if (traveling || taking) return;
+    if (tour) endTour();
+    for (const k in keys) keys[k] = false;
+    const home = { pos: player.pos.clone(), tYaw: player.tYaw, tPitch: player.tPitch };
+    tour = { stops, handlers, anim: null, hold: null, home };
+    if (stops[0] && stops[0].floor) {
+      setFloor(stops[0].floor, true);
+      tourRestoreHome();
+    }
+    tourGo(0);
+  }
+
+  function isTouring() {
+    return !!tour;
+  }
+
+  async function travelTo(fid) {
+    if (tour || traveling || taking) return;
     traveling = true;
     hint.style.opacity = '0';
     const startPos = camera.position.clone();
@@ -1933,6 +2365,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // ---------- 复位（从阅读页回到房间时调用） ----------
   function reset() {
+    if (tour) endTour();
     taking = false;
     for (const item of bookItems) {
       item.animating = false;
@@ -1966,7 +2399,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
 
   function movePlayer(dt) {
-    if (traveling || taking) return;
+    if (tour || traveling || taking) return;
     if (document.body.classList.contains('reading') || document.body.classList.contains('grid')) return;
     const speed = 4.2;
     let fx = 0;
@@ -1994,6 +2427,27 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const dt = Math.min(0.06, Math.max(0.001, (nowMs - lastFrame) / 1000));
     lastFrame = nowMs;
     elapsed += dt;
+    // 导览：用 override 驱动相机，动画 900ms easeInOut，到位后停在目标
+    if (tour) {
+      if (tour.anim) {
+        const a = tour.anim;
+        const p = Math.max(0, Math.min(1, (nowMs - a.t0) / a.dur));
+        const e = easeInOut(p);
+        override = {
+          pos: a.fromPos.clone().lerp(a.toPos, e),
+          look: a.fromLook.clone().lerp(a.toLook, e),
+        };
+        if (p >= 1) {
+          const cb = tour.handlers && tour.handlers.onStep;
+          const idx = a.i;
+          tour.anim = null;
+          override = { pos: a.toPos, look: a.toLook };
+          if (typeof cb === 'function') cb(idx);
+        }
+      } else if (tour.hold) {
+        override = { pos: tour.hold.pos, look: tour.hold.look };
+      }
+    }
     if (override) {
       camera.position.copy(override.pos);
       camera.lookAt(override.look);
@@ -2049,11 +2503,34 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  // ---------- 楼层平面图数据（供 2D 平面图 / 导览） ----------
+  function getPlan() {
+    const shelves = SHELF_UNITS.map((u) => ({ x: u.x, z: u.z, bookIds: [] }));
+    bookItems.forEach((it, i) => {
+      const target = shelves[i % SHELF_UNITS.length];
+      if (target) target.bookIds.push(it.book.id || it.book.call || '');
+    });
+    return {
+      room: { w: ROOM.w, d: ROOM.d, sideX: ROOM.sideX, backZ: ROOM.backZ, minZ: ROOM.minZ, maxZ: ROOM.maxZ },
+      shelves,
+      elevator: { x: elevator.position.x, z: elevator.position.z },
+      star: { x: starTable.position.x, z: starTable.position.z },
+      cabinet: { x: cabinet.position.x, z: cabinet.position.z },
+      lamp: { x: lampGroup.position.x, z: lampGroup.position.z },
+      hidden: { x: hiddenBook.position.x, z: hiddenBook.position.z },
+    };
+  }
+
   return {
     reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups, shelfUnits: SHELF_UNITS,
     setHiddenVisible: (v) => { hiddenBook.visible = !!v; },
     getFloor: () => currentFloor,
     toastFloor: () => toast(floorWelcome(currentFloor)),
+    startTour,
+    tourGo,
+    endTour,
+    isTouring,
+    getPlan,
   };
 }
 

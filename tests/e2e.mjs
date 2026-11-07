@@ -42,6 +42,23 @@ await page.waitForTimeout(800);
 const mainVisible = await page.locator('#app').isVisible();
 mainVisible ? ok('主界面可见') : bad('主界面可见');
 
+// 导览（3D 已就绪，直接开场；避免先切 2D 再回 3D 的软件渲染重编译）
+await page.waitForFunction(() => window.mm3d && typeof window.mm3d.startTour === 'function', null, { timeout: 25000 });
+await page.getByRole('button', { name: '导览' }).click();
+await page.waitForSelector('#tourCard .tour-card', { timeout: 15000 });
+await page.waitForTimeout(1400);
+const tour1 = await page.locator('#tourCard h3').innerText();
+tour1.includes('入口') ? ok('导览开场站', tour1) : bad('导览开场站', tour1);
+await page.locator('#tourCard button', { hasText: '下一步' }).click();
+await page.waitForTimeout(1500);
+const tour2 = await page.locator('#tourCard h3').innerText();
+tour2.includes('书架') ? ok('导览下一步', tour2) : bad('导览下一步', tour2);
+await page.locator('#tourCard button', { hasText: '结束导览' }).click();
+await page.waitForTimeout(600);
+const tourGone = await page.locator('#tourCard').count();
+const tourStill = await page.evaluate(() => window.mm3d && window.mm3d.isTouring && window.mm3d.isTouring());
+(!tourGone && !tourStill) ? ok('导览结束清理') : bad('导览结束清理', `card=${tourGone} touring=${tourStill}`);
+
 // 星图（3D）
 await page.getByRole('button', { name: '星图' }).click();
 await page.waitForSelector('#mm-star-overlay', { timeout: 12000 });
@@ -120,6 +137,17 @@ if (noteCount >= 1) {
   } else bad('页边注锚点属性', '无 data-anchor');
 }
 
+// 章节总结卡（阅读页右栏）
+const cardCount = await page.locator('.chapter-card').count();
+const ccPeople = await page.locator('.chapter-card .cc-people li').count();
+const ccSources = await page.locator('.chapter-card .cc-sources li').count();
+const ccQuote = await page.locator('.chapter-card .cc-quote').innerText();
+cardCount === 1 && ccPeople >= 2 && ccSources === 3 && ccQuote.length > 8
+  ? ok('章节总结卡渲染', `${ccPeople}人/${ccSources}来源`)
+  : bad('章节总结卡', `card=${cardCount} people=${ccPeople} sources=${ccSources} quote=${ccQuote.length}`);
+const cardExport = await page.evaluate(() => typeof window.downloadChapterCard === 'function');
+cardExport ? ok('总结卡 PNG 导出入口') : bad('总结卡 PNG 导出入口');
+
 await page.locator('.reader-float-close').first().click();
 await page.waitForTimeout(2000);
 const stillReading = await page.evaluate(() => document.body.classList.contains('reading'));
@@ -178,6 +206,20 @@ const statCards = await page.locator('.stat-card').count();
 const fragChips = await page.locator('.frag-chip').count();
 statCards === 4 ? ok('借阅档案统计卡', String(statCards)) : bad('借阅档案统计卡', String(statCards));
 fragChips >= 8 ? ok('残页收集面板', String(fragChips)) : bad('残页收集面板', String(fragChips));
+
+// 5c. 楼层平面图
+await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
+await page.getByRole('button', { name: '楼层平面图' }).click();
+await page.waitForSelector('.plan-svg', { timeout: 10000 });
+const planShelves = await page.locator('.plan-svg g[onclick]').count();
+planShelves >= 8 ? ok('平面图书架组数', String(planShelves)) : bad('平面图书架组数', String(planShelves));
+const planTabs = await page.locator('.plan-tabs button.back').count();
+planTabs === 5 ? ok('平面图五档选层', String(planTabs)) : bad('平面图选层档位', String(planTabs));
+await page.locator('.plan-tabs button.back', { hasText: 'L4' }).click();
+await page.waitForTimeout(600);
+const l4Lit = await page.evaluate(() => [...document.querySelectorAll('.plan-svg g[onclick] text')]
+  .filter((t) => /\d+ 本/.test(t.textContent || '')).length);
+l4Lit >= 2 ? ok('平面图 L4 高亮书架', String(l4Lit)) : bad('平面图 L4 高亮', String(l4Lit));
 
 // 6. 后端接口：注册 / 登录 / 盖章 / 批注 / 进度
 const api = page.request;
