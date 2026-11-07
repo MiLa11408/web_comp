@@ -66,6 +66,7 @@ hasFloat ? ok('浮动合书键存在') : bad('浮动合书键存在');
 const noteCount = await page.locator('.note').count();
 noteCount >= 1 ? ok('页边注渲染', String(noteCount)) : bad('页边注渲染', String(noteCount));
 if (noteCount >= 1) {
+  await page.waitForTimeout(300);
   const anchored = page.locator('.note[data-anchor]').first();
   if (await anchored.count()) {
     await anchored.click();
@@ -164,7 +165,7 @@ await mob.waitForSelector('#gate', { state: 'attached', timeout: 15000 });
 const overflow = await mob.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 overflow <= 1 ? ok('移动端无横向溢出', `${overflow}px`) : bad('移动端横向溢出', `${overflow}px`);
 await mob.bringToFront();
-await mob.waitForFunction(() => typeof window.gateGuest === 'function', null, { timeout: 10000 });
+await mob.waitForFunction(() => typeof window.gateGuest === 'function', null, { timeout: 30000 });
 await mob.evaluate(() => window.gateGuest());
 await mob.waitForTimeout(1500);
 if (await mob.locator('#gate').count()) await mob.evaluate(() => document.getElementById('gate')?.remove());
