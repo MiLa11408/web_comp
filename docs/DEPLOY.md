@@ -219,6 +219,19 @@ journalctl -u mm-frontier.service -n 30 --no-pager   # 看最近一次结果
 
 拉取失败时会保留上一次的 `frontier.json`，不会把库清空；服务器无外网时可改为本地生成后 `scp` 上去。
 
+## 7.2 /ai/ 反代 CSP（登录按钮无反应的坑）
+
+容器 nginx 的 `/ai/` location 若只写 `script-src 'self'`，浏览器会拦截页面里所有 `onclick` 内联事件：**入馆 / 新办借书证 / 新办借书证按钮点了没反应**，而本地开发服务器没有 CSP，所以本地一切正常。前端大量使用 `onclick`，需要给该 location 放行 `'unsafe-inline'`（同时保留 `'wasm-unsafe-eval'`，Rapier 需要）。
+
+```bash
+sudo bash deploy/apply-ai-csp.sh
+# 或手动：
+sudo docker exec dachuang-frontend-1 sed -i "s/script-src 'self' 'wasm-unsafe-eval'/script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'/" /etc/nginx/conf.d/default.conf
+sudo docker exec dachuang-frontend-1 nginx -t && sudo docker exec dachuang-frontend-1 nginx -s reload
+```
+
+改完用浏览器控制台确认没有 `Executing inline event handler violates...` 报错；验收标准是「新办借书证」能关掉门厅、刷新后能用同一账号「入馆」。**容器重建后配置会丢**，重建后重跑一次脚本；固定副本在 `/opt/machine-memory/deploy/nginx-default.conf.fixed`。
+
 ## 8. 常见问题
 
 | 现象 | 原因 | 处理 |
@@ -229,6 +242,7 @@ journalctl -u mm-frontier.service -n 30 --no-pager   # 看最近一次结果
 | `node:sqlite` 报错 | Node < 22.5 | `nvm install 22` 后重启服务 |
 | 服务反复重启 | `.data` 无写权限 | `chown -R www-data:www-data /opt/machine-memory/.data` |
 | 注册 429 | 触发限流 | 等 30 秒；生产可在 `server/src/auth.js` 调整阈值 |
+| **登录/办证按钮点了没反应** | 容器 nginx 的 `/ai/` CSP 拦截 `onclick` 内联事件（控制台报 `Executing inline event handler violates...`） | 运行 `deploy/apply-ai-csp.sh`，见 7.2 |
 | 端口被占 | 旧进程未退 | `ss -lntp \| grep 3300` 后 kill 对应 PID |
 
 ## 9. 安全与合规
