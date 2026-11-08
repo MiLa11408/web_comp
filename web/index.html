@@ -76,7 +76,7 @@
   .paper.tech { background: #d3dde8; color: #18303e; font-family: "Consolas", "Microsoft YaHei", monospace; }
   .paper.industry { background: #e2dccd; color: #33302a; }
   .paper.frontier { background: #dcc9a3; color: #3a2f1c; }
-  /* 盖在纸上的馆藏章：只增不减，不能取消 */
+  /* 盖在纸上的馆藏章：可以再点按钮撤销 */
   .book-stamp { position: absolute; right: 36px; bottom: 120px; width: 124px; height: 124px; border: 4px double #9c1f1f; border-radius: 50%; color: #9c1f1f; text-align: center; transform: rotate(-12deg); opacity: .88; pointer-events: none; user-select: none; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; box-shadow: inset 0 0 0 3px rgba(156,31,31,.14); }
   .book-stamp::before { content: ''; position: absolute; inset: 8px; border: 2px solid rgba(156,31,31,.5); border-radius: 50%; }
   .book-stamp b { display: block; margin-top: 22px; font-size: 22px; letter-spacing: 6px; }
@@ -89,7 +89,7 @@
   .mm-stamp-burst b { font-size: 22px; letter-spacing: 6px; }
   .mm-stamp-burst span { margin-top: 4px; font-size: 10px; letter-spacing: 2px; }
   @keyframes stampBurst { 0% { opacity: 0; transform: rotate(-6deg) scale(2.4); } 30% { opacity: 1; transform: rotate(-12deg) scale(1); } 70% { opacity: 1; transform: rotate(-12deg) scale(1); } 100% { opacity: 0; transform: rotate(-12deg) scale(.92); } }
-  /* 不可撤销操作的二次确认 */
+  /* 盖章 / 读完 / 撤销操作的二次确认 */
   .mm-confirm { position: fixed; inset: 0; z-index: 112; background: rgba(8,6,4,.78); display: flex; align-items: center; justify-content: center; padding: 20px; }
   .mm-confirm-box { background: #2b1d12; border: 1px solid #c8a24a; box-shadow: 0 24px 80px rgba(0,0,0,.7); max-width: 460px; width: 100%; padding: 22px 24px 18px; }
   .mm-confirm-box h3 { color: #f0d68a; font-size: 15px; letter-spacing: 3px; margin: 0 0 10px; }
@@ -959,16 +959,16 @@ function updateReaderTools(id) {
   const doneBtn = document.getElementById('doneBtn');
   const stateEl = document.getElementById('readState');
   if (stampBtn) {
-    stampBtn.disabled = readerActions.stamped;
-    stampBtn.textContent = readerActions.stamped ? '已盖章 · 不可撤销' : '盖章';
+    stampBtn.disabled = false;
+    stampBtn.textContent = readerActions.stamped ? '已盖章 · 撤销' : '盖章';
     stampBtn.classList.toggle('is-done', readerActions.stamped);
   }
   if (doneBtn) {
-    doneBtn.disabled = readerActions.done;
-    doneBtn.textContent = readerActions.done ? '已读完 · 不可撤销' : '标记读完';
+    doneBtn.disabled = false;
+    doneBtn.textContent = readerActions.done ? '已读完 · 撤销' : '标记读完';
     doneBtn.classList.toggle('is-done', readerActions.done);
   }
-  if (stateEl) stateEl.textContent = readerActions.done ? '本章已读完 · 不可撤销' : (readerActions.stamped ? '已盖章' : '');
+  if (stateEl) stateEl.textContent = readerActions.done ? '本章已读完 · 可撤销' : (readerActions.stamped ? '已盖章 · 可撤销' : '');
 }
 
 function applyStampVisual(id, animate, dateText) {
@@ -1003,9 +1003,23 @@ function mmStampBurst() {
   setTimeout(() => el.remove(), 900);
 }
 
+function removeStampVisual(id) {
+  if (readerActions.id !== id) return;
+  const stamp = document.getElementById('bookStamp');
+  if (stamp) stamp.remove();
+  readerActions.stamped = false;
+  updateReaderTools(id);
+}
+
 function applyDoneVisual(id) {
   if (readerActions.id !== id) return;
   readerActions.done = true;
+  updateReaderTools(id);
+}
+
+function removeDoneVisual(id) {
+  if (readerActions.id !== id) return;
+  readerActions.done = false;
   updateReaderTools(id);
 }
 
@@ -1028,7 +1042,7 @@ async function loadReaderActions(id) {
   } catch (e) { /* 离线或未登录时保持可点击 */ }
 }
 
-function mmConfirmDialog(title, body, onConfirm) {
+function mmConfirmDialog(title, body, onConfirm, okLabel = '确认') {
   document.querySelectorAll('.mm-confirm').forEach((el) => el.remove());
   const mask = document.createElement('div');
   mask.className = 'mm-confirm';
@@ -1036,7 +1050,7 @@ function mmConfirmDialog(title, body, onConfirm) {
     <h3>${esc(title)}</h3><p>${esc(body)}</p>
     <div class="mm-confirm-actions">
       <button type="button" data-cancel>再想想</button>
-      <button type="button" class="primary" data-ok>确认 · 不可撤销</button>
+      <button type="button" class="primary" data-ok>${esc(okLabel)}</button>
     </div>
   </div>`;
   document.body.appendChild(mask);
@@ -1051,16 +1065,23 @@ function mmConfirmDialog(title, body, onConfirm) {
 async function stampChapter(id) {
   if (!localStorage.getItem('mm_token')) return mmToast('访客不能盖章：回首屏办一张借书证。');
   if (readerActions.id !== id) return;
-  if (readerActions.stamped) { mmToast('这一章已经盖过章，不能撤销。'); return; }
+  if (readerActions.stamped) {
+    mmConfirmDialog('撤销盖章', '这一章会撤掉「机忆书库 · 已阅」馆藏章，重新变回未盖章。确认撤销吗？', async () => {
+      const r = await fetch('api/stamps/' + encodeURIComponent(id), { method: 'DELETE', headers: authHeaders() });
+      if (r.ok) { removeStampVisual(id); mmToast('盖章已撤销。'); }
+      else mmToast('撤销失败，稍后再试。');
+    }, '确认撤销');
+    return;
+  }
   const title = window.__mmChapterMeta && window.__mmChapterMeta.title ? `《${window.__mmChapterMeta.title}》` : '这一章';
-  mmConfirmDialog('盖章 · 馆藏章', `${title}会被盖上一枚「机忆书库 · 已阅」章。章一旦盖下就留在纸上，不能取消，也不能重盖。确认吗？`, async () => {
+  mmConfirmDialog('盖章 · 馆藏章', `${title}会被盖上一枚「机忆书库 · 已阅」章。盖下后还可以撤销，但每次操作都需要确认。确认盖章吗？`, async () => {
     const r = await fetch('api/stamps', {
       method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ chapter_id: id, kind: 'chapter' }),
     });
-    if (r.ok) { applyStampVisual(id, true); mmToast('章已盖下，留在这一页上。'); }
+    if (r.ok) { applyStampVisual(id, true); mmToast('章已盖下，可再次点击撤销。'); }
     else mmToast('盖章失败，稍后再试。');
-  });
+  }, '确认盖章');
 }
 
 async function annotateChapter(id) {
@@ -1081,9 +1102,16 @@ async function annotateChapter(id) {
 async function markDone(id) {
   if (!localStorage.getItem('mm_token')) return mmToast('访客不能记进度：回首屏办一张借书证。');
   if (readerActions.id !== id) return;
-  if (readerActions.done) { mmToast('这一章已经标记读完，不能撤销。'); return; }
+  if (readerActions.done) {
+    mmConfirmDialog('撤销读完', '这一章会从「已读完」退回未读完状态。确认撤销吗？', async () => {
+      const r = await fetch('api/progress/' + encodeURIComponent(id), { method: 'DELETE', headers: authHeaders() });
+      if (r.ok) { removeDoneVisual(id); mmToast('读完标记已撤销。'); }
+      else mmToast('撤销失败，稍后再试。');
+    }, '确认撤销');
+    return;
+  }
   const title = window.__mmChapterMeta && window.__mmChapterMeta.title ? `《${window.__mmChapterMeta.title}》` : '这一章';
-  mmConfirmDialog('标记读完', `${title}会被标记为「读完」。标记后不能撤销，也不能重新打开进度。确认吗？`, async () => {
+  mmConfirmDialog('标记读完', `${title}会被标记为「读完」。标记后还可以撤销。确认标记吗？`, async () => {
     const r = await fetch('api/progress', {
       method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ chapter_id: id, state: 'done' }),
@@ -1091,9 +1119,9 @@ async function markDone(id) {
     if (r.ok) {
       mmMarkChapterRead(id);
       applyDoneVisual(id);
-      mmToast('已标记读完，不可撤销。');
+      mmToast('已标记读完，可再次点击撤销。');
     } else mmToast('记录失败，稍后再试。');
-  });
+  }, '确认标记');
 }
 
 async function loadAnnotations(chapterId) {
@@ -1947,7 +1975,7 @@ async function showAbout(highlightTutorial = false) {
         <article class="tut-step"><span class="tut-num">05 / 平面</span><h4>书架视图与总览</h4><p>不想走 3D 就用<b>书架视图</b>按层找书，一格一格看书脊；<b>书架总览</b>一次列出全部书目、索书号、年份、标签与章节进度。</p></article>
         <article class="tut-step"><span class="tut-num">06 / 查找</span><h4>卡片目录的四级排序</h4><p>检索先锁<b>大标题</b>，再锁 <b>tag</b>，再看正文提及次数，最后才是相关内容。<b>前沿书架</b>每天从 arXiv 新纸入库，可按领域筛选并跳回馆内旧书。</p></article>
         <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：5 条主线、55 站，同名书就是换乘站；<b>星图</b>看 48 本书的 30 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
-        <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完。</p></article>
+        <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完，盖章和读完都能再次点击撤销。</p></article>
         <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 的蜡封桌上多了一张盖着红 X 的备忘，记得读它——那不是装饰。</p></article>
         <article class="tut-step"><span class="tut-num">10 / 暗门</span><h4>一扇不在平面图上的门</h4><p>先看 L4 蜡封桌的备忘，再点右墙那幅没有拉直的<b>帷幕</b>把它滑开。后面是一扇没有编号的门；点门进去，十本「假如之书」会等你。选符号 / 神经 / 具身任意一条科技树，点「走假如」就能生成一篇长故事。书架尽头还有一本<b>未写之书</b>：写下「如果没有 X」的假设，它只生成与这个问题相关的小故事。</p></article>
         <article class="tut-step"><span class="tut-num">11 / 手机</span><h4>手机也能逛</h4><p>入馆默认落在书架视图；进 3D 后用左下<b>虚拟摇杆</b>移动，拖动画面转视角，点书抽出、再点翻开。2D 页面会暂停 3D 渲染，省电也省流量。</p></article>
@@ -1972,7 +2000,7 @@ async function showAbout(highlightTutorial = false) {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>107 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索、未写之书与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>110 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索、未写之书、盖章撤销与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>

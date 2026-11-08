@@ -491,6 +491,15 @@ app.post('/api/stamps', auth, async (request, reply) => {
   return reply.code(201).send({ chapter_id, kind });
 });
 
+// 撤销盖章：只删本人的 chapter 章，不动其它藏印
+app.delete('/api/stamps/:chapter_id', auth, async (request, reply) => {
+  const chapterId = String(request.params.chapter_id || '');
+  if (!KNOWN_CHAPTERS.has(chapterId)) return fail(reply, 400, 'BAD_REQUEST', '章节不存在');
+  db.prepare('DELETE FROM stamps WHERE user_id = ? AND chapter_id = ? AND kind = ?')
+    .run(request.user.id, chapterId, 'chapter');
+  return { chapter_id: chapterId, removed: true };
+});
+
 app.get('/api/annotations', auth, async (request) => {
   const { chapter_id } = request.query;
   if (chapter_id) {
@@ -524,6 +533,15 @@ app.post('/api/progress', auth, async (request, reply) => {
              'ON CONFLICT(user_id, chapter_id) DO UPDATE SET state = excluded.state, read_at = excluded.read_at')
     .run(request.user.id, chapter_id, state, nowIso());
   return { chapter_id, state };
+});
+
+// 撤销「读完」：删除本人的本章进度，回到未读完
+app.delete('/api/progress/:chapter_id', auth, async (request, reply) => {
+  const chapterId = String(request.params.chapter_id || '');
+  if (!KNOWN_CHAPTERS.has(chapterId)) return fail(reply, 400, 'BAD_REQUEST', '章节不存在');
+  db.prepare('DELETE FROM progress WHERE user_id = ? AND chapter_id = ?')
+    .run(request.user.id, chapterId);
+  return { chapter_id: chapterId, removed: true };
 });
 
 // ---------- Cookie ----------

@@ -456,7 +456,7 @@ const oracleBad = await api.post(BASE + 'api/oracle', { data: { question: '今�
 const oracleBadBody = await oracleBad.json();
 oracleBadBody.refused === true ? ok('未写之书接口拒绝非假如问题') : bad('未写之书接口拒绝非假如问题', JSON.stringify(oracleBadBody).slice(0, 60));
 
-// 6c. 盖章 / 读完：二次确认、盖上纸面、不可撤销
+// 6c. 盖章 / 读完：二次确认、盖上纸面、可撤销
 await page.evaluate((t) => { localStorage.setItem('mm_token', t); }, token);
 await page.evaluate(() => window.showChapter('b2-c1'));
 await page.waitForSelector('#reader', { timeout: 12000 });
@@ -468,22 +468,52 @@ await page.waitForTimeout(250);
 (await page.locator('.book-stamp').count()) === 0 ? ok('盖章可取消于确认前') : bad('盖章取消', '已提前盖章');
 await page.locator('#stampBtn').click();
 await page.waitForSelector('.mm-confirm', { timeout: 4000 });
+const stampOkLabel = await page.locator('.mm-confirm [data-ok]').innerText();
 await page.locator('.mm-confirm [data-ok]').click();
 await page.waitForSelector('.book-stamp', { timeout: 6000 });
-const stampLocked = await page.locator('#stampBtn').isDisabled();
-stampLocked ? ok('盖章后锁定不可撤销') : bad('盖章后锁定', '按钮仍可点');
-await page.locator('#doneBtn').click();
-await page.waitForSelector('.mm-confirm', { timeout: 4000 });
-await page.locator('.mm-confirm [data-ok]').click();
-await page.waitForTimeout(700);
-const doneLocked = await page.locator('#doneBtn').isDisabled();
-const doneState = await page.locator('#readState').innerText();
-(doneLocked && doneState.includes('不可撤销')) ? ok('读完不可撤销') : bad('读完不可撤销', `${doneLocked}/${doneState}`);
+const stampBtnText = await page.locator('#stampBtn').innerText();
+(stampOkLabel.includes('确认盖章') && stampBtnText.includes('撤销')) ? ok('盖章落纸且可撤销') : bad('盖章落纸', `${stampOkLabel}/${stampBtnText}`);
+// 重开章节，章还在
 await page.evaluate(() => window.showChapter('b2-c1'));
 await page.waitForSelector('#reader', { timeout: 12000 });
 await page.waitForTimeout(600);
 const stampPersist = await page.locator('.book-stamp').count();
-(stampPersist === 1 && await page.locator('#stampBtn').isDisabled()) ? ok('盖章留纸并持久') : bad('盖章持久', String(stampPersist));
+const stampBtnAfterReload = await page.locator('#stampBtn').innerText();
+(stampPersist === 1 && stampBtnAfterReload.includes('撤销')) ? ok('盖章留纸并持久') : bad('盖章持久', `${stampPersist}/${stampBtnAfterReload}`);
+// 点已盖章 → 撤销
+await page.locator('#stampBtn').click();
+await page.waitForSelector('.mm-confirm', { timeout: 4000 });
+const stampRevokeLabel = await page.locator('.mm-confirm [data-ok]').innerText();
+await page.locator('.mm-confirm [data-ok]').click();
+await page.waitForFunction(() => !document.getElementById('bookStamp'), null, { timeout: 5000 });
+const stampBtnRevoked = await page.locator('#stampBtn').innerText();
+(stampRevokeLabel.includes('确认撤销') && stampBtnRevoked === '盖章') ? ok('盖章可撤销') : bad('盖章撤销', `${stampRevokeLabel}/${stampBtnRevoked}`);
+// 标记读完 → 撤销
+await page.locator('#doneBtn').click();
+await page.waitForSelector('.mm-confirm', { timeout: 4000 });
+const doneOkLabel = await page.locator('.mm-confirm [data-ok]').innerText();
+await page.locator('.mm-confirm [data-ok]').click();
+await page.waitForTimeout(700);
+const doneBtnText = await page.locator('#doneBtn').innerText();
+const doneState = await page.locator('#readState').innerText();
+(doneOkLabel.includes('确认标记') && doneBtnText.includes('撤销') && doneState.includes('可撤销'))
+  ? ok('读完标记可撤销') : bad('读完标记', `${doneOkLabel}/${doneBtnText}/${doneState}`);
+await page.locator('#doneBtn').click();
+await page.waitForSelector('.mm-confirm', { timeout: 4000 });
+const doneRevokeLabel = await page.locator('.mm-confirm [data-ok]').innerText();
+await page.locator('.mm-confirm [data-ok]').click();
+await page.waitForTimeout(700);
+const doneBtnRevoked = await page.locator('#doneBtn').innerText();
+const doneStateRevoked = await page.locator('#readState').innerText();
+(doneRevokeLabel.includes('确认撤销') && doneBtnRevoked === '标记读完' && doneStateRevoked === '')
+  ? ok('读完可撤销') : bad('读完撤销', `${doneRevokeLabel}/${doneBtnRevoked}/${doneStateRevoked}`);
+// 撤销后重开仍然干净
+await page.evaluate(() => window.showChapter('b2-c1'));
+await page.waitForSelector('#reader', { timeout: 12000 });
+await page.waitForTimeout(600);
+const stampAfterRevoke = await page.locator('.book-stamp').count();
+const doneAfterRevoke = await page.locator('#doneBtn').innerText();
+(stampAfterRevoke === 0 && doneAfterRevoke === '标记读完') ? ok('撤销状态持久') : bad('撤销持久', `${stampAfterRevoke}/${doneAfterRevoke}`);
 
 // 7. 性能：接口耗时与并发
 const cat = await api.get(BASE + 'api/catalog');
