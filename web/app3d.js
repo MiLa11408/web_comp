@@ -73,9 +73,10 @@ body.reading .mm-root, body.grid .mm-root { display: none; }
   text-align: left; font-size: 13px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
 .mm-elev button:hover { border-color: #c8a24a; color: #c8a24a; }
 .mm-elev button i { font-style: normal; color: #8a7a5c; font-size: 11px; }
-.mm-elev .close { position: absolute; right: 10px; top: 8px; width: auto; margin: 0; padding: 2px 8px;
-  background: none; border: none; color: #8a7a5c; font-size: 14px; }
-.mm-elev .close:hover { color: #c8a24a; }
+.mm-elev .close { position: absolute; right: 8px; top: 8px; width: 34px; height: 34px; margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center; background: #241c14; border: 1px solid #3a2f22;
+  color: #cbb892; font-size: 18px; line-height: 1; z-index: 3; }
+.mm-elev .close:hover { color: #c8a24a; border-color: #c8a24a; background: #2c241a; }
 .mm-elev-btn { position: absolute; right: 22px; bottom: 18px; background: rgba(27,21,16,.92); color: #c8a24a;
   border: 1px solid #c8a24a; padding: 8px 14px; cursor: pointer; font-size: 12.5px; letter-spacing: 1px;
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif; z-index: 25; }
@@ -2548,9 +2549,21 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   root.appendChild(elevBtn);
   const closeBtn = document.createElement('button');
   closeBtn.className = 'close';
+  closeBtn.type = 'button';
   closeBtn.textContent = '×';
-  closeBtn.onclick = () => elevPanel.classList.remove('show');
+  closeBtn.setAttribute('aria-label', '关闭电梯面板');
+  const closeElev = () => elevPanel.classList.remove('show');
+  closeBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); closeElev(); };
   elevPanel.appendChild(closeBtn);
+  // 点面板外或按 Esc 也能退出；避免“叉点不动”的困住感
+  window.addEventListener('pointerdown', (e) => {
+    if (!elevPanel.classList.contains('show')) return;
+    if (elevPanel.contains(e.target) || elevBtn.contains(e.target)) return;
+    closeElev();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeElev();
+  });
   const allBtn = document.createElement('button');
   allBtn.innerHTML = `<span>全馆大厅</span><i>${SHELF_UNITS.length} 组书架 · ${books.length} 本</i>`;
   allBtn.onclick = () => { elevPanel.classList.remove('show'); travelTo('all'); };

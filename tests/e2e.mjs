@@ -1,4 +1,4 @@
-﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
+﻿﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
 // 运行：node tests/e2e.mjs   （需本机 Chrome 或 Edge，服务已在 3300 启动）
 // 可用 BASE=http://127.0.0.1:3300/ 覆盖地址。
 import { chromium } from 'playwright-core';
@@ -41,6 +41,16 @@ ok('访客入馆后门厅移除（二次访问不跳教程）');
 await page.waitForTimeout(800);
 const mainVisible = await page.locator('#app').isVisible();
 mainVisible ? ok('主界面可见') : bad('主界面可见');
+
+// 顶部横栏：可向右收起，再按展开
+await page.locator('#navToggle').click();
+await page.waitForTimeout(550);
+const navCollapsed = await page.locator('#navShell.nav-collapsed').count();
+navCollapsed === 1 ? ok('顶部导航可收起') : bad('顶部导航可收起', String(navCollapsed));
+await page.locator('#navToggle').click();
+await page.waitForTimeout(550);
+const navExpanded = await page.locator('#navShell:not(.nav-collapsed)').count();
+navExpanded === 1 ? ok('顶部导航可展开') : bad('顶部导航可展开', String(navExpanded));
 
 // 导览（3D 已就绪，直接开场；避免先切 2D 再回 3D 的软件渲染重编译）
 await page.waitForFunction(() => window.mm3d && typeof window.mm3d.startTour === 'function', null, { timeout: 25000 });
@@ -374,6 +384,20 @@ await page.locator('#wiStory .ws-actions button', { hasText: '回暗门书架' }
 await page.waitForSelector('.wi-spine', { timeout: 8000 });
 const wiBack = await page.locator('.wi-spine').count();
 wiBack === 10 ? ok('从故事回暗门书架') : bad('从故事回暗门书架', String(wiBack));
+// 第十一本「未写之书」：只接受「如果没有 X」的假设；非假如问题不调用模型
+const oracleCards = await page.locator('.wi-oracle').count();
+oracleCards === 1 ? ok('第十一本未写之书入口', String(oracleCards)) : bad('第十一本未写之书入口', String(oracleCards));
+await page.locator('.wi-oracle').click();
+await page.waitForSelector('.wi-oracle-book', { timeout: 8000 });
+const oracleInput = await page.locator('#oracleQ').count();
+oracleInput ? ok('未写之书提问框') : bad('未写之书提问框');
+await page.fill('#oracleQ', '今天天气怎么样');
+await page.locator('#oracleRun').click();
+await page.waitForSelector('.wi-oracle-error', { timeout: 5000 });
+const oracleRefusal = await page.locator('.wi-oracle-error').innerText();
+oracleRefusal.includes('只写') ? ok('未写之书只接受假如问题') : bad('未写之书只接受假如问题', oracleRefusal.slice(0, 30));
+await page.locator('.wi-oracle-book .wi-back').click();
+await page.waitForSelector('.wi-spine', { timeout: 8000 });
 const doorMesh = await page.evaluate(() => !!(window.mm3d && window.mm3d.secretDoor && window.mm3d.secretVeil && window.mm3d.propGroups && window.mm3d.propGroups.L4));
 doorMesh ? ok('L4 暗门与帷幕实体已挂载') : bad('L4 暗门与帷幕实体已挂载');
 await page.evaluate(() => window.showFragmentMosaic());
@@ -428,6 +452,38 @@ const stolenPost = await api.post(BASE + 'api/collectibles', { ...auth, data: { 
 stolenPost.status() === 201 ? ok('失窃页追回 201') : bad('失窃页追回', String(stolenPost.status()));
 const restlessPost = await api.post(BASE + 'api/collectibles', { ...auth, data: { kind: 'restless', item_id: 'tay', action: 'find', chapter_id: 'b11-c2' } });
 restlessPost.status() === 201 ? ok('躁动书页收容 201') : bad('躁动书页收容', String(restlessPost.status()));
+const oracleBad = await api.post(BASE + 'api/oracle', { data: { question: '今天天气怎么样' } });
+const oracleBadBody = await oracleBad.json();
+oracleBadBody.refused === true ? ok('未写之书接口拒绝非假如问题') : bad('未写之书接口拒绝非假如问题', JSON.stringify(oracleBadBody).slice(0, 60));
+
+// 6c. 盖章 / 读完：二次确认、盖上纸面、不可撤销
+await page.evaluate((t) => { localStorage.setItem('mm_token', t); }, token);
+await page.evaluate(() => window.showChapter('b2-c1'));
+await page.waitForSelector('#reader', { timeout: 12000 });
+await page.waitForTimeout(500);
+await page.locator('#stampBtn').click();
+await page.waitForSelector('.mm-confirm', { timeout: 4000 });
+await page.locator('.mm-confirm [data-cancel]').click();
+await page.waitForTimeout(250);
+(await page.locator('.book-stamp').count()) === 0 ? ok('盖章可取消于确认前') : bad('盖章取消', '已提前盖章');
+await page.locator('#stampBtn').click();
+await page.waitForSelector('.mm-confirm', { timeout: 4000 });
+await page.locator('.mm-confirm [data-ok]').click();
+await page.waitForSelector('.book-stamp', { timeout: 6000 });
+const stampLocked = await page.locator('#stampBtn').isDisabled();
+stampLocked ? ok('盖章后锁定不可撤销') : bad('盖章后锁定', '按钮仍可点');
+await page.locator('#doneBtn').click();
+await page.waitForSelector('.mm-confirm', { timeout: 4000 });
+await page.locator('.mm-confirm [data-ok]').click();
+await page.waitForTimeout(700);
+const doneLocked = await page.locator('#doneBtn').isDisabled();
+const doneState = await page.locator('#readState').innerText();
+(doneLocked && doneState.includes('不可撤销')) ? ok('读完不可撤销') : bad('读完不可撤销', `${doneLocked}/${doneState}`);
+await page.evaluate(() => window.showChapter('b2-c1'));
+await page.waitForSelector('#reader', { timeout: 12000 });
+await page.waitForTimeout(600);
+const stampPersist = await page.locator('.book-stamp').count();
+(stampPersist === 1 && await page.locator('#stampBtn').isDisabled()) ? ok('盖章留纸并持久') : bad('盖章持久', String(stampPersist));
 
 // 7. 性能：接口耗时与并发
 const cat = await api.get(BASE + 'api/catalog');

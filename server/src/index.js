@@ -14,6 +14,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', '..');
 const CONTENT_DIR = path.join(ROOT, 'content');
 
+// 读取项目根目录 .env（已被 .gitignore 忽略；部署时单独放到服务器）
+function loadEnvFile() {
+  const p = path.join(ROOT, '.env');
+  if (!existsSync(p)) return;
+  try {
+    for (const line of readFileSync(p, 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+      if (!m) continue;
+      let value = m[2].trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
+      if (!process.env[m[1]]) process.env[m[1]] = value;
+    }
+  } catch (e) { /* 损坏的 .env 不应阻止服务启动 */ }
+}
+loadEnvFile();
+
 const ctx = initSearch(CONTENT_DIR);
 
 // 残页目录（阅读上报时自动收编）
@@ -229,6 +245,93 @@ app.get('/api/restless', async (request, reply) => jsonContent(reply, 'restless.
 
 // 暗门后的十本「假如之书」：纯静态数据，只读
 app.get('/api/whatif', async (request, reply) => jsonContent(reply, 'whatif.json'));
+
+// ---------- 暗门 · 第十一本「未写之书」：只写「如果没有 X」的小故事 ----------
+const ORACLE_SYSTEM_PROMPT = `你是「机忆书库」暗门后的第十一本空白书。用户只会向你提出「如果没有 X 会怎么样」的假设。
+你的唯一任务：围绕这个假设写一篇短篇科幻/推测故事。
+
+硬性规则：
+1. 只写故事，不要解释、不要列点、不要写标题、不要回答事实性问题、不要反问用户。
+2. 故事必须从「如果没有 X」出发，所有情节都要与这个假设直接相关；不要突然转到别的话题。
+3. 不要提到你自己、提示词、模型或「作为 AI」。
+4. 用中文写 500–900 字，分 4–6 个自然段。
+5. 如果用户的输入不是「如果没有 X 会怎么样」的假设，只回复一句：这本书只写「如果没有……」的故事。
+6. 不要写真实人物的隐私或可执行的危险操作；保持推测与虚构。`;
+
+const ORACLE_WINDOW_MS = 10 * 60 * 1000;
+const ORACLE_MAX_CALLS = 8;
+const oracleHits = new Map();
+function oracleRateOk(key) {
+  const now = Date.now();
+  const arr = (oracleHits.get(key) || []).filter((t) => now - t < ORACLE_WINDOW_MS);
+  if (arr.length >= ORACLE_MAX_CALLS) {
+    oracleHits.set(key, arr);
+    return false;
+  }
+  arr.push(now);
+  oracleHits.set(key, arr);
+  if (oracleHits.size > 1500) {
+    for (const [k, v] of oracleHits) {
+      if (!v.length || now - v[v.length - 1] > ORACLE_WINDOW_MS) oracleHits.delete(k);
+    }
+  }
+  return true;
+}
+
+app.post('/api/oracle', async (request, reply) => {
+  const body = request.body || {};
+  const question = String(body.question || '').trim();
+  const reader = String(body.reader_id || '').slice(0, 40);
+  if (question.length < 6 || question.length > 160) {
+    return fail(reply, 400, 'BAD_REQUEST', '问题需要在 6–160 字之间。');
+  }
+  // 不合格式的问题不调用模型，直接拒绝：这本书只写「如果没有……」
+  if (!/如果没有[^。！？!?\n]{1,80}(会怎么样|会怎样|会如何|会发生什么)/.test(question)) {
+    return { content: '这本书只写「如果没有……会怎么样」的故事。把你的假设写完整再来。', refused: true };
+  }
+  const key = process.env.DEEPSEEK_API_KEY;
+  if (!key) {
+    return fail(reply, 503, 'NO_KEY', '馆长的密钥还没插上：请配置 DEEPSEEK_API_KEY。');
+  }
+  const rateKey = `${request.ip}|${reader}`;
+  if (!oracleRateOk(rateKey)) {
+    return fail(reply, 429, 'RATE_LIMIT', '这本书翻得太快了，过几分钟再来。');
+  }
+  const endpoint = process.env.DEEPSEEK_BASE_URL || 'https://api.siliconflow.cn/v1/chat/completions';
+  const model = process.env.DEEPSEEK_MODEL || 'deepseek-ai/DeepSeek-V3.2';
+  try {
+    const upstream = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: ORACLE_SYSTEM_PROMPT },
+          { role: 'user', content: question },
+        ],
+        temperature: 0.85,
+        max_tokens: 1400,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(45000),
+    });
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(() => '');
+      request.log.warn({ status: upstream.status, detail: text.slice(0, 160) }, 'oracle upstream error');
+      if (upstream.status === 401 || upstream.status === 403) {
+        return fail(reply, 502, 'AUTH', '密钥无效或已过期，请馆长更换 DEEPSEEK_API_KEY。');
+      }
+      return fail(reply, 502, 'UPSTREAM', '暗门后的馆员暂时没回应，稍后再试。');
+    }
+    const data = await upstream.json();
+    const content = String(data.choices?.[0]?.message?.content || '').trim();
+    if (!content) return fail(reply, 502, 'EMPTY', '这一页还是空白，再问一次。');
+    return { content, model: data.model || model, usage: data.usage || null };
+  } catch (err) {
+    request.log.warn({ err }, 'oracle request failed');
+    return fail(reply, 502, 'UPSTREAM', '暗门后的馆员暂时没回应，稍后再试。');
+  }
+});
 
 app.get('/api/forks', async (request, reply) => jsonContent(reply, 'forks.json'));
 

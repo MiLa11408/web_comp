@@ -49,7 +49,24 @@
   .wi-story .ws-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 18px; }
   .wi-story .ws-actions button { background: #241c14; border: 1px solid #5a4526; color: #cbb892; padding: 7px 13px; font-size: 12px; cursor: pointer; font-family: inherit; }
   .wi-story .ws-actions button:hover { border-color: var(--gold); color: var(--gold); }
-  @media (max-width: 700px) { .wi-spine { min-height: 200px; } .wi-cover h2 { font-size: 20px; } }
+  /* 第十一本：未写之书 */
+  .wi-oracle { display: flex; align-items: center; gap: 18px; margin-top: 18px; padding: 16px 18px; background: linear-gradient(100deg, #2a1a14, #17110c); border: 1px solid #6b3a2a; border-left: 7px solid #8a3a2a; cursor: pointer; transition: transform .15s, border-color .15s; }
+  .wi-oracle:hover { transform: translateY(-2px); border-color: #c8a24a; }
+  .wi-oracle-mark { width: 58px; height: 58px; flex: 0 0 auto; border: 2px solid #c8a24a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #f0d68a; font-size: 32px; font-family: "Times New Roman", serif; }
+  .wi-oracle-copy { flex: 1 1 auto; min-width: 0; }
+  .wi-oracle-copy .no { color: #8a7a5c; font-family: "Consolas", monospace; font-size: 10.5px; letter-spacing: 2px; }
+  .wi-oracle-copy h3 { margin: 6px 0 4px; color: #f0d68a; font-size: 16px; font-weight: 500; letter-spacing: 1px; font-family: "Songti SC", "SimSun", serif; }
+  .wi-oracle-copy p { margin: 0; color: #b9a778; font-size: 12px; line-height: 1.75; }
+  .wi-oracle .go { color: #e2c17c; font-size: 11px; white-space: nowrap; letter-spacing: 1px; }
+  .wi-oracle-form { margin-top: 18px; border: 1px solid #3a2f22; background: #1b1510; padding: 16px; }
+  .wi-oracle-form label { display: block; color: #8a7a5c; font-size: 11px; letter-spacing: 2px; margin-bottom: 8px; }
+  #oracleQ { width: 100%; box-sizing: border-box; resize: vertical; min-height: 82px; background: #241c14; border: 1px solid #5a4526; color: #eadbb8; padding: 10px 12px; font-size: 14px; line-height: 1.8; outline: none; font-family: "Songti SC", "SimSun", serif; }
+  #oracleQ:focus { border-color: #c8a24a; }
+  .wi-oracle-runbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .wi-oracle-runbar .wi-run:disabled { opacity: .55; cursor: wait; }
+  .wi-oracle-loading { margin-top: 18px; color: #cbb892; font-size: 13px; letter-spacing: 1px; padding: 12px 0; }
+  .wi-oracle-error { margin-top: 18px; border-left: 3px solid #8a3a2a; background: #2a1a14; color: #e0b9a0; padding: 10px 14px; font-size: 12.5px; line-height: 1.8; }
+  @media (max-width: 700px) { .wi-spine { min-height: 200px; } .wi-cover h2 { font-size: 20px; } .wi-oracle { flex-wrap: wrap; } .wi-oracle .go { width: 100%; text-align: right; } }
   `;
   if (!document.getElementById('wi-style')) {
     const s = document.createElement('style');
@@ -139,12 +156,21 @@
       </article>`).join('');
     return `
     <div class="wi-view">
-      <div class="wi-head"><span>暗门 · 十本假如之书</span>
+      <div class="wi-head"><span>暗门 · 十本假如之书 · 未写之书</span>
         <span class="links"><a onclick="enter3D()">回阅览室 ↗</a><a onclick="enterStats()">借阅档案 ↗</a></span>
       </div>
       <div class="wi-sub">${esc(d.subtitle || '')}</div>
       <div class="wi-shelf">${cards}</div>
-      <div class="wi-tip">${esc(d.note || '')}<br>这十本书不在 48 本馆藏目录里，也不参与检索与书轨；它们只存在于 L4 右墙那扇没有编号的门后。每次「走假如」都会按你选的科技树重新长出一篇故事。</div>
+      <article class="wi-oracle" onclick="mmOpenOracle()">
+        <div class="wi-oracle-mark">?</div>
+        <div class="wi-oracle-copy">
+          <div class="no">第十一本 · 未写之书</div>
+          <h3>「如果没有……会怎么样？」</h3>
+          <p>这本没有正文。写下你的假设，暗门后的馆员只为你写一个与这个问题直接相关的小故事。</p>
+        </div>
+        <div class="go">写下假设 →</div>
+      </article>
+      <div class="wi-tip">${esc(d.note || '')}<br>这十本书不在 48 本馆藏目录里，也不参与检索与书轨；它们只存在于 L4 右墙那扇没有编号的门后。书架尽头还有一本没有正文的「未写之书」：它只回答「如果没有 X」的假设，只写与问题相关的小故事，不回答别的。</div>
     </div>`;
   }
 
@@ -277,5 +303,99 @@
   window.mmWiAgain = function () {
     if (!state.book) return;
     renderBook();
+  };
+
+  // ---------- 第十一本「未写之书」：只写「如果没有 X」的小故事 ----------
+  const ORACLE_RE = /如果没有[^。！？!?\n]{1,80}(会怎么样|会怎样|会如何|会发生什么)/;
+
+  function oracleHtml() {
+    return `
+    <div class="wi-book wi-oracle-book">
+      <button class="wi-back" onclick="mmOpenWhatIfRoom()">← 回暗门书架</button>
+      <div class="wi-cover wi-oracle-cover">
+        <div class="no">第十一本 · 未写之书</div>
+        <h2>如果没有……会怎么样？</h2>
+        <div class="yr">只写你问的那一个假如</div>
+        <p>这本书没有正文。写下你的假设，暗门后的馆员会让它长成一篇短故事。它不会回答别的问题，也不会跑去写别的话题。</p>
+      </div>
+      <div class="wi-oracle-form">
+        <label for="oracleQ">你的假设</label>
+        <textarea id="oracleQ" maxlength="160" rows="3" placeholder="例如：如果没有电，会怎么样？"></textarea>
+        <div class="wi-oracle-runbar">
+          <button class="wi-run" id="oracleRun" onclick="mmOracleRun()">让它写 →</button>
+          <span class="wi-note">只生成与「如果没有 X」直接相关的小故事；其它问题会被拒绝。</span>
+        </div>
+      </div>
+      <div id="oracleStory"></div>
+    </div>`;
+  }
+
+  window.mmOpenOracle = function () {
+    const el = app();
+    if (!el) return;
+    el.innerHTML = oracleHtml();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      const q = document.getElementById('oracleQ');
+      if (q) {
+        q.focus();
+        q.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); window.mmOracleRun(); }
+        });
+      }
+    }, 160);
+  };
+
+  window.mmOracleRun = async function () {
+    const qEl = document.getElementById('oracleQ');
+    const box = document.getElementById('oracleStory');
+    const btn = document.getElementById('oracleRun');
+    if (!qEl || !box || !btn) return;
+    const q = qEl.value.trim();
+    if (!q) {
+      box.innerHTML = '<div class="wi-oracle-error">先把你想要问的「如果没有……」写下来。</div>';
+      qEl.focus();
+      return;
+    }
+    if (!ORACLE_RE.test(q)) {
+      box.innerHTML = '<div class="wi-oracle-error">这本书只写「如果没有……会怎么样」的故事。把你的假设写完整再来。</div>';
+      qEl.focus();
+      return;
+    }
+    const old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '馆员正在写……';
+    box.innerHTML = '<div class="wi-oracle-loading">暗门后的馆员正在把这一页写出来</div>';
+    try {
+      const r = await fetch('api/oracle', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question: q, reader_id: localStorage.getItem('mm_reader') || '' }),
+      });
+      let d = {};
+      try { d = await r.json(); } catch (e) { d = {}; }
+      if (!r.ok) throw new Error((d.error && d.error.message) || '暗门后的馆员暂时没回应。');
+      const content = String(d.content || '').trim();
+      if (!content) throw new Error('这一页还是空白，再问一次。');
+      const paras = content.split(/\n{2,}|\r?\n/).map((p) => p.trim()).filter(Boolean);
+      const modelLabel = /V3\.2/i.test(d.model || '') ? 'DeepSeek V3.2' : (d.model || '未写之书');
+      box.innerHTML = `
+      <div class="wi-story">
+        <div class="ws-kicker">未写之书 · ${esc(modelLabel)}</div>
+        <h3>${esc(q)}</h3>
+        ${paras.map((p) => `<p>${esc(p)}</p>`).join('')}
+        <div class="ws-quote">馆员批注：这本书只回答你问的那一个「如果没有」。它没有写别的，也不打算写。</div>
+        <div class="ws-actions">
+          <button onclick="mmOpenOracle()">再问一个假如</button>
+          <button onclick="mmOpenWhatIfRoom()">回暗门书架</button>
+        </div>
+      </div>`;
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      box.innerHTML = `<div class="wi-oracle-error">${esc(e.message || '暗门后的馆员暂时没回应，稍后再试。')}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = old;
+    }
   };
 })();

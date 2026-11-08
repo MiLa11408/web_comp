@@ -21,8 +21,13 @@
   .search input { flex: 1 1 320px; min-width: 0; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; font-size: 14px; outline: none; }
   .search input:focus { border-color: var(--gold); }
   .search button { position: relative; z-index: 22; background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 8px 16px; cursor: pointer; font-size: 13px; }
-  /* 导航分组：把 12 个入口收成三组，减少首访认知负担 */
-  .nav-groups { position: relative; z-index: 5; padding: 0 30px 12px; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; border-bottom: 1px solid var(--line); }
+  /* 导航分组：把 12 个入口收成三组，可向右收起 */
+  .nav-shell { position: relative; z-index: 5; display: flex; align-items: flex-start; gap: 4px; border-bottom: 1px solid var(--line); }
+  .nav-groups { flex: 1 1 auto; position: relative; z-index: 5; padding: 0 0 12px 30px; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; overflow: hidden; max-height: 360px; transition: max-height .38s cubic-bezier(.3,.8,.3,1), opacity .26s ease, transform .38s cubic-bezier(.3,.8,.3,1), padding .38s; }
+  .nav-shell.nav-collapsed .nav-groups { max-height: 0; opacity: 0; transform: translateX(48px); padding-top: 0; padding-bottom: 0; pointer-events: none; }
+  .nav-toggle { flex: 0 0 auto; margin: 0 18px 10px 0; background: #1f1812; color: #cbb892; border: 1px solid #5a4526; padding: 4px 9px; font-size: 11.5px; letter-spacing: 1px; cursor: pointer; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; border-radius: 2px; transition: color .2s, border-color .2s, background .2s, transform .3s; }
+  .nav-toggle:hover { color: var(--gold); border-color: var(--gold); background: #2c241a; }
+  .nav-shell.nav-collapsed .nav-toggle { color: var(--gold); border-color: var(--gold); }
   .nav-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .ng-label { color: #8a7a5c; font-size: 11px; letter-spacing: 3px; padding-right: 8px; border-right: 1px solid #3a2f22; margin-right: 2px; }
   .nav-group .back { margin: 0; padding: 5px 11px; font-size: 12.5px; color: #cbb892; border-color: #5a4526; background: #1f1812; }
@@ -30,7 +35,7 @@
   .search .back { color: #cbb892; border-color: #5a4526; background: #1f1812; }
   .search .back:hover { color: var(--gold); border-color: var(--gold); }
   #app { padding: 10px 30px 60px; }
-  body.reading .search, body.reading .nav-groups { display: none; }
+  body.reading .search, body.reading .nav-shell { display: none; }
   body.reading #app { padding: 10px 18px 40px; }
 
   /* ---------- 书架 ---------- */
@@ -47,29 +52,52 @@
   /* ---------- 阅读三栏 ---------- */
   #reader { display: grid; grid-template-columns: 300px minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
   #reader.rail-collapsed { grid-template-columns: 46px minmax(0, 1fr) 280px; }
-  #rail { position: sticky; top: 10px; background: #1a140f; border: 1px solid var(--line); padding: 10px; min-height: 70vh; max-height: calc(100vh - 30px); display: flex; flex-direction: column; }
+  #rail { position: sticky; top: 10px; background: linear-gradient(180deg, #3a291a, #2b1d12); border: 1px solid #6b5333; padding: 10px; min-height: 70vh; max-height: calc(100vh - 30px); display: flex; flex-direction: column; }
   #railBody { overflow-y: auto; flex: 1; }
   #reader.rail-collapsed #railBody, #reader.rail-collapsed .rail-title { display: none; }
-  #railToggle { background: #2c241a; border: 1px solid var(--gold); color: var(--gold); cursor: pointer; font-size: 13px; padding: 3px 8px; align-self: flex-start; margin-bottom: 8px; }
-  .rail-title { color: var(--gold); font-size: 13px; letter-spacing: 2px; margin: 4px 0 8px; }
-  #railQ { width: 100%; background: #241c14; border: 1px solid var(--line); color: var(--ink); padding: 7px 10px; font-size: 13px; outline: none; }
+  #railToggle { background: #4a3524; border: 1px solid var(--gold); color: #f0d68a; cursor: pointer; font-size: 13px; padding: 3px 8px; align-self: flex-start; margin-bottom: 8px; }
+  .rail-title { color: #f0d68a; font-size: 13px; letter-spacing: 2px; margin: 4px 0 8px; }
+  #railQ { width: 100%; background: #4a3524; border: 1px solid #7a5a3a; color: #f4e6cc; padding: 7px 10px; font-size: 13px; outline: none; }
+  #railQ::placeholder { color: #b9a07a; }
   #railQ:focus { border-color: var(--gold); }
   #railResults { margin-top: 10px; }
-  .rail-sec { color: var(--dim); font-size: 11px; letter-spacing: 1px; margin: 12px 0 6px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
-  .rail-hint { color: #7d6e55; font-size: 12px; padding: 8px 2px; }
-  .find-item { background: #211a13; border-left: 2px solid #6b5a3a; padding: 6px 8px; margin-bottom: 6px; font-size: 12px; color: #cbb892; cursor: pointer; line-height: 1.5; }
-  .find-item:hover { border-left-color: var(--gold); color: var(--ink); }
-  .find-item.active { border-left-color: var(--gold); background: #2c241a; }
-  .rail-hit { background: #211a13; border: 1px solid var(--line); padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
-  .rail-hit:hover { border-color: var(--gold); }
-  .rail-hit b { display: block; color: var(--gold); font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
-  .rail-hit span { color: var(--dim); font-size: 11.5px; line-height: 1.5; }
-  .rail-hit mark { background: #b78a2f; color: #171310; padding: 0 1px; }
+  .rail-sec { color: #d8b98a; font-size: 11px; letter-spacing: 1px; margin: 12px 0 6px; border-bottom: 1px dashed #6b5333; padding-bottom: 4px; }
+  .rail-hint { color: #c8ad84; font-size: 12px; padding: 8px 2px; }
+  .find-item { background: #3d2b1a; border-left: 2px solid #a0782f; padding: 6px 8px; margin-bottom: 6px; font-size: 12px; color: #f0dcb8; cursor: pointer; line-height: 1.5; }
+  .find-item:hover { border-left-color: #e2c17c; color: #fff4dc; }
+  .find-item.active { border-left-color: #e2c17c; background: #4a3524; }
+  .rail-hit { background: #3d2b1a; border: 1px solid #6b5333; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
+  .rail-hit:hover { border-color: #c8a24a; }
+  .rail-hit b { display: block; color: #f0d68a; font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
+  .rail-hit span { color: #d0b488; font-size: 11.5px; line-height: 1.5; }
+  .rail-hit mark { background: #c8a24a; color: #2b1d12; padding: 0 1px; }
 
-  .paper { max-width: 780px; margin: 0 auto; background: var(--paper-history); color: #2c2318; padding: 40px 52px 56px; box-shadow: 0 24px 80px rgba(0,0,0,.55); border-radius: 2px; font-family: "Songti SC", "STSong", "SimSun", serif; font-size: 16px; line-height: 1.95; }
+  .paper { position: relative; max-width: 780px; margin: 0 auto; background: var(--paper-history); color: #2c2318; padding: 40px 52px 56px; box-shadow: 0 24px 80px rgba(0,0,0,.55); border-radius: 2px; font-family: "Songti SC", "STSong", "SimSun", serif; font-size: 16px; line-height: 1.95; }
   .paper.tech { background: #d3dde8; color: #18303e; font-family: "Consolas", "Microsoft YaHei", monospace; }
   .paper.industry { background: #e2dccd; color: #33302a; }
   .paper.frontier { background: #dcc9a3; color: #3a2f1c; }
+  /* 盖在纸上的馆藏章：只增不减，不能取消 */
+  .book-stamp { position: absolute; right: 36px; bottom: 120px; width: 124px; height: 124px; border: 4px double #9c1f1f; border-radius: 50%; color: #9c1f1f; text-align: center; transform: rotate(-12deg); opacity: .88; pointer-events: none; user-select: none; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; box-shadow: inset 0 0 0 3px rgba(156,31,31,.14); }
+  .book-stamp::before { content: ''; position: absolute; inset: 8px; border: 2px solid rgba(156,31,31,.5); border-radius: 50%; }
+  .book-stamp b { display: block; margin-top: 22px; font-size: 22px; letter-spacing: 6px; }
+  .book-stamp span { display: block; margin-top: 3px; font-size: 10px; letter-spacing: 3px; }
+  .book-stamp i { display: block; margin-top: 5px; font-style: normal; font-size: 9px; letter-spacing: 1px; color: #8a1a1a; }
+  .book-stamp.fresh { animation: stampPress .55s cubic-bezier(.18,.9,.3,1.25) both; }
+  @keyframes stampPress { 0% { opacity: 0; transform: rotate(-6deg) scale(2.1); } 55% { opacity: 1; transform: rotate(-12deg) scale(.92); } 100% { opacity: .88; transform: rotate(-12deg) scale(1); } }
+  /* 盖章瞬间的屏幕中央落章动画：不依赖滚动位置 */
+  .mm-stamp-burst { position: fixed; left: 50%; top: 42%; z-index: 111; width: 118px; height: 118px; margin: -59px 0 0 -59px; border: 4px double #9c1f1f; border-radius: 50%; color: #9c1f1f; background: rgba(232,220,192,.92); display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; transform: rotate(-12deg); opacity: 0; animation: stampBurst .82s cubic-bezier(.18,.9,.3,1.2) both; box-shadow: 0 12px 30px rgba(0,0,0,.45); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .mm-stamp-burst b { font-size: 22px; letter-spacing: 6px; }
+  .mm-stamp-burst span { margin-top: 4px; font-size: 10px; letter-spacing: 2px; }
+  @keyframes stampBurst { 0% { opacity: 0; transform: rotate(-6deg) scale(2.4); } 30% { opacity: 1; transform: rotate(-12deg) scale(1); } 70% { opacity: 1; transform: rotate(-12deg) scale(1); } 100% { opacity: 0; transform: rotate(-12deg) scale(.92); } }
+  /* 不可撤销操作的二次确认 */
+  .mm-confirm { position: fixed; inset: 0; z-index: 112; background: rgba(8,6,4,.78); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .mm-confirm-box { background: #2b1d12; border: 1px solid #c8a24a; box-shadow: 0 24px 80px rgba(0,0,0,.7); max-width: 460px; width: 100%; padding: 22px 24px 18px; }
+  .mm-confirm-box h3 { color: #f0d68a; font-size: 15px; letter-spacing: 3px; margin: 0 0 10px; }
+  .mm-confirm-box p { color: #cbb892; font-size: 13px; line-height: 1.9; margin: 0 0 18px; }
+  .mm-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .mm-confirm-actions button { background: #3a291a; border: 1px solid #6b5333; color: #cbb892; padding: 7px 14px; cursor: pointer; font-size: 12px; font-family: inherit; }
+  .mm-confirm-actions button.primary { border-color: #c8a24a; color: #f0d68a; }
+  .mm-confirm-actions button:hover { border-color: var(--gold); color: var(--gold); }
   .paper h1 { font-size: 25px; border-bottom: 2px solid #6b5a3a; padding-bottom: 10px; }
   .paper h2 { font-size: 19px; margin-top: 32px; color: #5a451f; }
   .paper a { color: #3f5f8a; }
@@ -397,6 +425,8 @@
   .reader-tools { max-width: 780px; margin: 0 auto 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .reader-tools button { background: #241c14; color: var(--gold); border: 1px solid #6b5a3a; padding: 6px 12px; cursor: pointer; font-size: 12px; letter-spacing: 1px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
   .reader-tools button:hover { border-color: var(--gold); }
+  .reader-tools button:disabled { opacity: .58; cursor: not-allowed; border-color: #5a4526; color: #8a7a5c; background: #1e1711; }
+  .reader-tools button.is-done { color: #d8b98a; border-color: #6b5333; }
   .reader-tools span { color: #8a7a5c; font-size: 11px; margin-left: auto; }
   #mmToast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(10px); z-index: 100; background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 9px 18px; font-size: 13px; letter-spacing: 1px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
   #mmToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -732,25 +762,28 @@
   <button class="back" style="margin:0" onclick="enterAbout()">关于本馆</button>
   <button id="soundBtn" class="back" style="margin:0" onclick="mmToggleSound()">音效：关</button>
 </div>
-<nav class="nav-groups" aria-label="馆内导航">
-  <div class="nav-group"><span class="ng-label">阅览</span>
-    <button class="back" onclick="enter3D()">3D 阅览室</button>
-    <button class="back" onclick="enterShelf()">书架视图</button>
-    <button class="back" onclick="enterOverview()">书架总览</button>
-    <button class="back" onclick="enterPlan()">楼层平面图</button>
-  </div>
-  <div class="nav-group"><span class="ng-label">查找</span>
-    <button class="back" onclick="enterRail()">书轨</button>
-    <button class="back" onclick="mmShowStar()">星图</button>
-    <button class="back" onclick="enterTimeline()">时间轴</button>
-    <button class="back" onclick="enterFrontier()">前沿书架</button>
-    <button class="back" onclick="mmStartTour()">导览</button>
-  </div>
-  <div class="nav-group"><span class="ng-label">档案与玩法</span>
-    <button class="back" onclick="enterStolen()">失窃页</button>
-    <button class="back" onclick="enterStats()">借阅档案</button>
-  </div>
-</nav>
+<div class="nav-shell" id="navShell">
+  <nav class="nav-groups" aria-label="馆内导航">
+    <div class="nav-group"><span class="ng-label">阅览</span>
+      <button class="back" onclick="enter3D()">3D 阅览室</button>
+      <button class="back" onclick="enterShelf()">书架视图</button>
+      <button class="back" onclick="enterOverview()">书架总览</button>
+      <button class="back" onclick="enterPlan()">楼层平面图</button>
+    </div>
+    <div class="nav-group"><span class="ng-label">查找</span>
+      <button class="back" onclick="enterRail()">书轨</button>
+      <button class="back" onclick="mmShowStar()">星图</button>
+      <button class="back" onclick="enterTimeline()">时间轴</button>
+      <button class="back" onclick="enterFrontier()">前沿书架</button>
+      <button class="back" onclick="mmStartTour()">导览</button>
+    </div>
+    <div class="nav-group"><span class="ng-label">档案与玩法</span>
+      <button class="back" onclick="enterStolen()">失窃页</button>
+      <button class="back" onclick="enterStats()">借阅档案</button>
+    </div>
+  </nav>
+  <button id="navToggle" class="nav-toggle" type="button" onclick="mmToggleNav()" aria-label="收起导航" title="收起 / 展开导航">‹ 收起</button>
+</div>
 <div id="scene3d"></div>
 <div id="app"></div>
 <div id="viewFade"></div>
@@ -775,6 +808,8 @@ const floorInfo = {};
 const chapterFragments = {};
 let iflineInfo = null;
 let shelfConfig = { booksPerBoard: 3, boardsPerUnit: 2 };
+// 当前章节的盖章 / 读完状态：一旦为 true，就不再允许撤销
+const readerActions = { id: '', stamped: false, done: false };
 
 async function ensureShelfConfig() {
   try {
@@ -918,13 +953,114 @@ async function logRead(chapterId) {
   } catch (e) { /* 离线也能读 */ }
 }
 
+function updateReaderTools(id) {
+  if (readerActions.id !== id) return;
+  const stampBtn = document.getElementById('stampBtn');
+  const doneBtn = document.getElementById('doneBtn');
+  const stateEl = document.getElementById('readState');
+  if (stampBtn) {
+    stampBtn.disabled = readerActions.stamped;
+    stampBtn.textContent = readerActions.stamped ? '已盖章 · 不可撤销' : '盖章';
+    stampBtn.classList.toggle('is-done', readerActions.stamped);
+  }
+  if (doneBtn) {
+    doneBtn.disabled = readerActions.done;
+    doneBtn.textContent = readerActions.done ? '已读完 · 不可撤销' : '标记读完';
+    doneBtn.classList.toggle('is-done', readerActions.done);
+  }
+  if (stateEl) stateEl.textContent = readerActions.done ? '本章已读完 · 不可撤销' : (readerActions.stamped ? '已盖章' : '');
+}
+
+function applyStampVisual(id, animate, dateText) {
+  if (readerActions.id !== id) return;
+  const paper = document.getElementById('paperBox');
+  if (!paper) return;
+  let stamp = document.getElementById('bookStamp');
+  if (!stamp) {
+    stamp = document.createElement('div');
+    stamp.id = 'bookStamp';
+    stamp.className = 'book-stamp';
+    const date = dateText ? new Date(dateText) : new Date();
+    const dateLabel = Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('zh-CN');
+    stamp.innerHTML = `<b>已 阅</b><span>机忆书库 · 馆藏章</span><i>${esc(dateLabel)}</i>`;
+    paper.appendChild(stamp);
+  }
+  if (animate) {
+    stamp.classList.remove('fresh');
+    void stamp.offsetWidth;
+    stamp.classList.add('fresh');
+    mmStampBurst();
+  }
+  readerActions.stamped = true;
+  updateReaderTools(id);
+}
+
+function mmStampBurst() {
+  const el = document.createElement('div');
+  el.className = 'mm-stamp-burst';
+  el.innerHTML = '<b>已 阅</b><span>机忆书库 · 馆藏章</span>';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function applyDoneVisual(id) {
+  if (readerActions.id !== id) return;
+  readerActions.done = true;
+  updateReaderTools(id);
+}
+
+async function loadReaderActions(id) {
+  if (!localStorage.getItem('mm_token')) return;
+  try {
+    const headers = authHeaders();
+    const [stamps, progress] = await Promise.all([
+      fetch('api/stamps', { headers }).then((r) => (r.ok ? r.json() : [])),
+      fetch('api/progress', { headers }).then((r) => (r.ok ? r.json() : [])),
+    ]);
+    if (readerActions.id !== id) return;
+    const stampItem = Array.isArray(stamps) ? stamps.find((s) => s.chapter_id === id && s.kind === 'chapter') : null;
+    const doneItem = Array.isArray(progress) ? progress.find((p) => p.chapter_id === id && p.state === 'done') : null;
+    readerActions.stamped = !!stampItem;
+    readerActions.done = !!doneItem;
+    if (stampItem) applyStampVisual(id, false, stampItem.created_at);
+    if (doneItem) applyDoneVisual(id);
+    updateReaderTools(id);
+  } catch (e) { /* 离线或未登录时保持可点击 */ }
+}
+
+function mmConfirmDialog(title, body, onConfirm) {
+  document.querySelectorAll('.mm-confirm').forEach((el) => el.remove());
+  const mask = document.createElement('div');
+  mask.className = 'mm-confirm';
+  mask.innerHTML = `<div class="mm-confirm-box" role="dialog" aria-modal="true">
+    <h3>${esc(title)}</h3><p>${esc(body)}</p>
+    <div class="mm-confirm-actions">
+      <button type="button" data-cancel>再想想</button>
+      <button type="button" class="primary" data-ok>确认 · 不可撤销</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+  const close = () => mask.remove();
+  mask.querySelector('[data-cancel]').onclick = close;
+  mask.querySelector('[data-ok]').onclick = async () => { close(); await onConfirm(); };
+  mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+  const onKey = (e) => { if (e.key === 'Escape') { close(); window.removeEventListener('keydown', onKey); } };
+  window.addEventListener('keydown', onKey);
+}
+
 async function stampChapter(id) {
   if (!localStorage.getItem('mm_token')) return mmToast('访客不能盖章：回首屏办一张借书证。');
-  const r = await fetch('api/stamps', {
-    method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ chapter_id: id, kind: 'chapter' }),
+  if (readerActions.id !== id) return;
+  if (readerActions.stamped) { mmToast('这一章已经盖过章，不能撤销。'); return; }
+  const title = window.__mmChapterMeta && window.__mmChapterMeta.title ? `《${window.__mmChapterMeta.title}》` : '这一章';
+  mmConfirmDialog('盖章 · 馆藏章', `${title}会被盖上一枚「机忆书库 · 已阅」章。章一旦盖下就留在纸上，不能取消，也不能重盖。确认吗？`, async () => {
+    const r = await fetch('api/stamps', {
+      method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ chapter_id: id, kind: 'chapter' }),
+    });
+    if (r.ok) { applyStampVisual(id, true); mmToast('章已盖下，留在这一页上。'); }
+    else mmToast('盖章失败，稍后再试。');
   });
-  mmToast(r.ok ? '已盖章。' : '盖章失败，稍后再试。');
 }
 
 async function annotateChapter(id) {
@@ -944,16 +1080,20 @@ async function annotateChapter(id) {
 
 async function markDone(id) {
   if (!localStorage.getItem('mm_token')) return mmToast('访客不能记进度：回首屏办一张借书证。');
-  const r = await fetch('api/progress', {
-    method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ chapter_id: id, state: 'done' }),
+  if (readerActions.id !== id) return;
+  if (readerActions.done) { mmToast('这一章已经标记读完，不能撤销。'); return; }
+  const title = window.__mmChapterMeta && window.__mmChapterMeta.title ? `《${window.__mmChapterMeta.title}》` : '这一章';
+  mmConfirmDialog('标记读完', `${title}会被标记为「读完」。标记后不能撤销，也不能重新打开进度。确认吗？`, async () => {
+    const r = await fetch('api/progress', {
+      method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ chapter_id: id, state: 'done' }),
+    });
+    if (r.ok) {
+      mmMarkChapterRead(id);
+      applyDoneVisual(id);
+      mmToast('已标记读完，不可撤销。');
+    } else mmToast('记录失败，稍后再试。');
   });
-  if (r.ok) {
-    mmMarkChapterRead(id);
-    const s = document.getElementById('readState');
-    if (s) s.textContent = '已读完';
-    mmToast('已标记读完。');
-  } else mmToast('记录失败，稍后再试。');
 }
 
 async function loadAnnotations(chapterId) {
@@ -1443,8 +1583,8 @@ function collectStatsHtml() {
       <div class="restless-grid">${restlessChips || '<div class="rail-hint">这一册里没有躁动书页。</div>'}</div>
     </section>
     <section class="stat-sec">
-      <h3>暗门 · 十本假如之书<button class="stat-mini" onclick="goL4()">去 L4 找线索</button></h3>
-      <div class="rail-hint">L4 的蜡封桌上多了一张盖着红 X 的备忘；右墙的帷幕今天没有拉直。先读备忘，再点帷幕把它拉开。门后十本书不在馆藏目录里，选符号 / 神经 / 具身任意一条科技树即可生成长篇科幻推测。</div>
+      <h3>暗门 · 十本假如之书 + 未写之书<button class="stat-mini" onclick="goL4()">去 L4 找线索</button></h3>
+      <div class="rail-hint">L4 的蜡封桌上多了一张盖着红 X 的备忘；右墙的帷幕今天没有拉直。先读备忘，再点帷幕把它拉开。门后十本书不在馆藏目录里，选符号 / 神经 / 具身任意一条科技树即可生成长篇科幻推测；书架尽头还有一本未写之书，只回答「如果没有 X」的假设。</div>
     </section>`;
 }
 
@@ -1791,6 +1931,7 @@ async function showAbout(highlightTutorial = false) {
         <span class="about-fact"><b>9</b>件失窃页</span>
         <span class="about-fact"><b>12</b>页躁动书页</span>
         <span class="about-fact"><b>10</b>本假如之书</span>
+        <span class="about-fact"><b>1</b>本未写之书</span>
         <span class="about-fact"><b>6</b>个可玩演示</span>
         <span class="about-fact"><b>30</b>条星图连线</span>
         <span class="about-fact"><b>每日</b>前沿入库</span>
@@ -1808,7 +1949,7 @@ async function showAbout(highlightTutorial = false) {
         <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：5 条主线、55 站，同名书就是换乘站；<b>星图</b>看 48 本书的 30 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
         <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完。</p></article>
         <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 的蜡封桌上多了一张盖着红 X 的备忘，记得读它——那不是装饰。</p></article>
-        <article class="tut-step"><span class="tut-num">10 / 暗门</span><h4>一扇不在平面图上的门</h4><p>先看 L4 蜡封桌的备忘，再点右墙那幅没有拉直的<b>帷幕</b>把它滑开。后面是一扇没有编号的门；点门进去，十本「假如之书」会等你。选符号 / 神经 / 具身任意一条科技树，点「走假如」就能生成一篇长故事。</p></article>
+        <article class="tut-step"><span class="tut-num">10 / 暗门</span><h4>一扇不在平面图上的门</h4><p>先看 L4 蜡封桌的备忘，再点右墙那幅没有拉直的<b>帷幕</b>把它滑开。后面是一扇没有编号的门；点门进去，十本「假如之书」会等你。选符号 / 神经 / 具身任意一条科技树，点「走假如」就能生成一篇长故事。书架尽头还有一本<b>未写之书</b>：写下「如果没有 X」的假设，它只生成与这个问题相关的小故事。</p></article>
         <article class="tut-step"><span class="tut-num">11 / 手机</span><h4>手机也能逛</h4><p>入馆默认落在书架视图；进 3D 后用左下<b>虚拟摇杆</b>移动，拖动画面转视角，点书抽出、再点翻开。2D 页面会暂停 3D 渲染，省电也省流量。</p></article>
       </div>
       <div class="tut-actions">
@@ -1831,7 +1972,7 @@ async function showAbout(highlightTutorial = false) {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>97 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>107 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索、未写之书与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>
@@ -1925,7 +2066,7 @@ async function showStats() {
     // 今日可做：把隐藏玩法摊成一张能照着做的清单（每类最多两条，避免被失窃页刷屏）
     const todoStolen = [];
     const todoRestless = [];
-    const todoFork = [{ label: '暗门线索 · 十本假如之书', hint: 'L4 蜡封桌备忘 / 右墙帷幕', act: 'goL4()', btn: '去 L4' }];
+    const todoFork = [{ label: '暗门线索 · 假如之书与未写之书', hint: 'L4 蜡封桌备忘 / 右墙帷幕', act: 'goL4()', btn: '去 L4' }];
     COLLECT.stolen.forEach((it) => {
       if (collectStateOf('stolen', it.id) !== 'recovered') {
         todoStolen.push({ label: `失窃页 ${it.no} · ${it.title}`, hint: `${it.floor} 展柜`, act: 'enterStolen()', btn: '去展柜' });
@@ -2049,6 +2190,21 @@ function goL4() {
   }, 100);
 }
 window.goL4 = goL4;
+// 顶部导航收起 / 展开：默认展开，状态记在本机
+function mmToggleNav(force) {
+  const shell = document.getElementById('navShell');
+  if (!shell) return;
+  const collapsed = typeof force === 'boolean' ? force : !shell.classList.contains('nav-collapsed');
+  shell.classList.toggle('nav-collapsed', collapsed);
+  const btn = document.getElementById('navToggle');
+  if (btn) {
+    btn.textContent = collapsed ? '展开 ›' : '‹ 收起';
+    btn.setAttribute('aria-label', collapsed ? '展开导航' : '收起导航');
+  }
+  try { localStorage.setItem('mm_nav_collapsed', collapsed ? '1' : '0'); } catch (e) { /* 忽略 */ }
+}
+window.mmToggleNav = mmToggleNav;
+try { if (localStorage.getItem('mm_nav_collapsed') === '1') mmToggleNav(true); } catch (e) { /* 忽略 */ }
 // 书轨用更短的转场：快速进入这张线路图
 function enterRail() { fadeSwap(() => showRail(), { hard: true, hide3d: true, out: 260 }); }
 function enterTimeline() { fadeSwap(() => showTimeline()); }
@@ -3223,6 +3379,9 @@ async function showChapter(id) {
   if (!catalogCache.length) { try { await ensureCatalog(); } catch (e) { /* 目录失败时退化为只显示章号 */ } }
   const m = r.meta;
   window.__mmChapterMeta = m;
+  readerActions.id = m.id;
+  readerActions.stamped = false;
+  readerActions.done = false;
   const { main, notes } = splitNotes(r.content);
   state.chapterMain = main;
   state.findMarks = []; state.global = [];
@@ -3274,9 +3433,9 @@ async function showChapter(id) {
     </aside>
     <main>
       <div class="reader-tools">
-        <button onclick="stampChapter('${esc(m.id)}')">盖章</button>
+        <button id="stampBtn" onclick="stampChapter('${esc(m.id)}')">盖章</button>
         <button onclick="annotateChapter('${esc(m.id)}')">批注</button>
-        <button onclick="markDone('${esc(m.id)}')">标记读完</button>
+        <button id="doneBtn" onclick="markDone('${esc(m.id)}')">标记读完</button>
         ${DEMO_MAP[m.id] ? `<button onclick="mmOpenDemo('${DEMO_MAP[m.id]}')">可玩演示</button>` : ''}
         <span id="readState"></span>
       </div>
@@ -3317,6 +3476,8 @@ async function showChapter(id) {
   </div>
   <button class="reader-float-close" onclick="enter3D()">← 合上书</button>`;
   renderMd(main, $('#paperBody'));
+  updateReaderTools(m.id);
+  loadReaderActions(m.id);
   logRead(m.id);
   loadAnnotations(m.id);
   // 读到章末 → 记为「读过」；若本章有失窃页，缺口线索此刻才显形
