@@ -747,7 +747,7 @@
     <button class="back" onclick="mmStartTour()">导览</button>
   </div>
   <div class="nav-group"><span class="ng-label">档案与玩法</span>
-    <button class="back" onclick="enterForks()">分岔</button>
+    <button class="back" onclick="enterWhatIf()">暗门</button>
     <button class="back" onclick="enterStolen()">失窃页</button>
     <button class="back" onclick="enterStats()">借阅档案</button>
   </div>
@@ -756,6 +756,7 @@
 <div id="app"></div>
 <div id="viewFade"></div>
 <script src="audio.js"></script>
+<script src="whatif.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
 const app = $('#app');
@@ -1411,7 +1412,6 @@ async function mmRefreshCollectSurfaces() {
   }
   if (app.querySelector('.stolen-view')) { await showStolenGallery(); return; }
   if (app.querySelector('.stats-view')) { await showStats(); return; }
-  if (app.querySelector('.fork-grid')) { await showForks(); return; }
 }
 
 function collectStatsHtml() {
@@ -1433,15 +1433,8 @@ function collectStatsHtml() {
       <i>${status}</i>
     </div>`;
   }).join('');
-  const forkChips = COLLECT.forks.map((it) => {
-    const chosen = collectStateOf('fork', it.id) === 'chosen';
-    return `<div class="fork-chip ${chosen ? 'chosen' : ''}" onclick="enterForks()">
-      <b>${esc(it.year)}</b>${esc(it.title)}
-      <i>${chosen ? '已走过' : '未选择'}</i>
-    </div>`;
-  }).join('');
   return `
-    <div class="collect-line">失窃 ${c.stolenGot}/${c.stolenTotal} · 躁动 ${c.rsFound}/${c.restlessTotal} · 分岔 ${c.forkChosen}/${c.forkTotal}</div>
+    <div class="collect-line">失窃 ${c.stolenGot}/${c.stolenTotal} · 躁动 ${c.rsFound}/${c.restlessTotal} · 假如之书 10 本</div>
     <section class="stat-sec">
       <h3>失窃页 · ${c.stolenGot}/${c.stolenTotal}<button class="stat-mini" onclick="enterStolen()">打开展柜</button></h3>
       <div class="stolen-grid">${stolenChips || '<div class="rail-hint">展柜暂时空着。</div>'}</div>
@@ -1451,8 +1444,8 @@ function collectStatsHtml() {
       <div class="restless-grid">${restlessChips || '<div class="rail-hint">这一册里没有躁动书页。</div>'}</div>
     </section>
     <section class="stat-sec">
-      <h3>历史分岔 · ${c.forkChosen}/${c.forkTotal}<button class="stat-mini" onclick="enterForks()">进入分岔</button></h3>
-      <div class="stolen-grid">${forkChips || '<div class="rail-hint">地图上还没有岔路。</div>'}</div>
+      <h3>暗门 · 十本假如之书<button class="stat-mini" onclick="enterWhatIf()">推开暗门</button></h3>
+      <div class="rail-hint">L4 右墙有一扇不在平面图上的门。门后十本书不在馆藏目录里；打开一本，选符号 / 神经 / 具身任意一条科技树，就能生成一篇长篇科幻推测。</div>
     </section>`;
 }
 
@@ -1487,47 +1480,6 @@ async function showStolenGallery() {
   </div>`;
 }
 window.showStolenGallery = showStolenGallery;
-
-async function showForks() {
-  document.body.classList.add('grid');
-  state.findMarks = []; state.global = []; state.chapterMain = '';
-  app.innerHTML = '<div class="empty">正在展开岔路地图……</div>';
-  await loadCollectData();
-  const c = collectCounts();
-  const meta = COLLECT.meta.forks || {};
-  const cards = COLLECT.forks.map((it) => {
-    const chosen = collectStateOf('fork', it.id) === 'chosen';
-    return `
-      <article class="fork-card ${chosen ? 'chosen' : ''}" data-fork="${esc(it.id)}">
-        <div class="fk-year">${esc(it.year)}</div>
-        <h3>${esc(it.title)}</h3>
-        <p class="fk-premise">${esc(it.premise)}</p>
-        <div class="fk-actions">
-          <button class="ghost" onclick="mmForkMain('${esc(it.id)}')">走主线</button>
-          ${chosen
-            ? '<span class="fk-done">已选择</span>'
-            : `<button onclick="mmChooseFork('${esc(it.id)}')">走假如</button>`}
-        </div>
-        ${chosen ? `<div class="fork-branch"><div class="fb-kicker">假如 · 推测</div>${esc(it.branch)}</div>` : ''}
-      </article>`;
-  }).join('');
-  app.innerHTML = `
-  <div class="rail-view fork-view">
-    <div class="rail-head"><span>历史分岔 · 推测</span>
-      <span class="head-links"><a onclick="enterStats()">借阅档案 →</a> · <a onclick="enterStolen()">失窃页 →</a></span>
-    </div>
-    <div class="rail-sub">${esc(meta.subtitle || '')}</div>
-    <div class="fork-grid">${cards}</div>
-    <div class="collect-line">已走完 ${c.forkChosen}/${c.forkTotal} 个岔路</div>
-    ${c.forkChosen >= c.forkTotal && c.forkTotal ? `
-      <div class="frag-unlock">
-        <div class="fu-kicker">另一条时间线</div>
-        <h4>${esc(meta.endTitle || '另一条时间线')}</h4>
-        <p>${esc(meta.endText || '')}</p>
-      </div>` : ''}
-  </div>`;
-}
-window.showForks = showForks;
 
 // ---------- 前沿书架 · arXiv 定时入库 ----------
 let FRONTIER_CACHE = null;
@@ -1604,24 +1556,6 @@ window.showFrontier = showFrontier;
 
 function enterFrontier() { fadeSwap(() => showFrontier()); }
 window.enterFrontier = enterFrontier;
-
-function mmForkMain(id) {
-  const it = collectItem('fork', id);
-  if (!it) return;
-  showChapter(it.chapter);
-}
-window.mmForkMain = mmForkMain;
-
-async function mmChooseFork(id) {
-  const it = collectItem('fork', id);
-  if (!it) return;
-  if (collectStateOf('fork', it.id) === 'chosen') return;
-  const ok = await mmCollectPost('fork', id, 'choose', it.chapter);
-  if (!ok) return;
-  mmToast('这条岔路已经走过。');
-  await showForks();
-}
-window.mmChooseFork = mmChooseFork;
 
 // ---------- 残页拼合板 ----------
 let fragMosaicCtx = null;
@@ -1857,7 +1791,7 @@ async function showAbout(highlightTutorial = false) {
         <span class="about-fact"><b>12</b>张残页</span>
         <span class="about-fact"><b>9</b>件失窃页</span>
         <span class="about-fact"><b>12</b>页躁动书页</span>
-        <span class="about-fact"><b>6</b>条历史分岔</span>
+        <span class="about-fact"><b>10</b>本假如之书</span>
         <span class="about-fact"><b>6</b>个可玩演示</span>
         <span class="about-fact"><b>30</b>条星图连线</span>
         <span class="about-fact"><b>每日</b>前沿入库</span>
@@ -1874,7 +1808,7 @@ async function showAbout(highlightTutorial = false) {
         <article class="tut-step"><span class="tut-num">06 / 查找</span><h4>卡片目录的四级排序</h4><p>检索先锁<b>大标题</b>，再锁 <b>tag</b>，再看正文提及次数，最后才是相关内容。<b>前沿书架</b>每天从 arXiv 新纸入库，可按领域筛选并跳回馆内旧书。</p></article>
         <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：5 条主线、55 站，同名书就是换乘站；<b>星图</b>看 48 本书的 30 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
         <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完。</p></article>
-        <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>历史分岔</b>、<b>隐藏书</b>与层板红线。借阅档案里的「今日可做」每天给线索。</p></article>
+        <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 右墙还有一扇不在平面图上的<b>暗门</b>，门后十本「假如之书」可按三条科技树生成长篇科幻推测。</p></article>
         <article class="tut-step"><span class="tut-num">10 / 手机</span><h4>手机也能逛</h4><p>入馆默认落在书架视图；进 3D 后用左下<b>虚拟摇杆</b>移动，拖动画面转视角，点书抽出、再点翻开。2D 页面会暂停 3D 渲染，省电也省流量。</p></article>
       </div>
       <div class="tut-actions">
@@ -1896,7 +1830,7 @@ async function showAbout(highlightTutorial = false) {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>91 项</b>，覆盖入馆、取书、检索、电梯、两套视图、隐藏馆藏与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>95 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门假如之书与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>
@@ -1990,7 +1924,7 @@ async function showStats() {
     // 今日可做：把隐藏玩法摊成一张能照着做的清单（每类最多两条，避免被失窃页刷屏）
     const todoStolen = [];
     const todoRestless = [];
-    const todoFork = [];
+    const todoFork = [{ label: '暗门 · 十本假如之书', hint: 'L4 右墙，不在平面图上', act: 'enterWhatIf()', btn: '去推门' }];
     COLLECT.stolen.forEach((it) => {
       if (collectStateOf('stolen', it.id) !== 'recovered') {
         todoStolen.push({ label: `失窃页 ${it.no} · ${it.title}`, hint: `${it.floor} 展柜`, act: 'enterStolen()', btn: '去展柜' });
@@ -1999,11 +1933,6 @@ async function showStats() {
     COLLECT.restless.forEach((it) => {
       if (collectStateOf('restless', it.id) === 'found') {
         todoRestless.push({ label: `躁动书页 ${it.no} · ${it.title}`, hint: '已收容，尚未归位', act: `mmOpenRestless('${it.id}')`, btn: '去归位' });
-      }
-    });
-    COLLECT.forks.forEach((it) => {
-      if (collectStateOf('fork', it.id) !== 'chosen') {
-        todoFork.push({ label: `分岔 ${it.year} · ${it.title}`, hint: '还没走这条假如线', act: 'enterForks()', btn: '去选择' });
       }
     });
     const todoTotal = todoStolen.length + todoRestless.length + todoFork.length;
@@ -2109,7 +2038,6 @@ function enter3D() { fadeSwap(() => backToRoom()); }
 // 书轨用更短的转场：快速进入这张线路图
 function enterRail() { fadeSwap(() => showRail(), { hard: true, hide3d: true, out: 260 }); }
 function enterTimeline() { fadeSwap(() => showTimeline()); }
-function enterForks() { fadeSwap(() => showForks()); }
 function enterStolen() { fadeSwap(() => showStolenGallery()); }
 
 // ---------- 楼层平面图 ----------

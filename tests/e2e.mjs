@@ -332,19 +332,39 @@ badgeCount === 10 ? ok('借阅徽章 10 枚', String(badgeCount)) : bad('借阅�
 const myBooksHead = await page.locator('.stat-sec h3', { hasText: '我翻过的书' }).count();
 myBooksHead ? ok('「我翻过的书」聚合') : bad('「我翻过的书」聚合');
 
-// 5b2. 异常馆藏视图：失窃页 / 分岔 / 残页拼合板
+// 5b2. 异常馆藏视图：失窃页 / 暗门十本假如之书 / 残页拼合板
 await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
 await page.getByRole('button', { name: '失窃页', exact: true }).click();
 await page.waitForSelector('.stolen-card', { timeout: 10000 });
 const stolenCards = await page.locator('.stolen-card').count();
 stolenCards === 9 ? ok('失窃页展柜 9 件', String(stolenCards)) : bad('失窃页展柜数量', String(stolenCards));
 await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
-await page.getByRole('button', { name: '分岔', exact: true }).click();
-await page.waitForSelector('.fork-card', { timeout: 10000 });
-const forkCards = await page.locator('.fork-card').count();
-forkCards === 6 ? ok('历史分岔 6 个岔路', String(forkCards)) : bad('历史分岔数量', String(forkCards));
-const forkChoose = await page.locator('.fork-card button', { hasText: '走假如' }).count();
-forkChoose === 6 ? ok('分岔「走假如」按钮', String(forkChoose)) : bad('分岔按钮', String(forkChoose));
+await page.getByRole('button', { name: '暗门', exact: true }).click();
+await page.waitForSelector('.wi-spine', { timeout: 10000 });
+const wiBooks = await page.locator('.wi-spine').count();
+wiBooks === 10 ? ok('暗门后十本假如之书', String(wiBooks)) : bad('暗门后十本假如之书', String(wiBooks));
+await page.locator('.wi-spine').first().click();
+await page.waitForSelector('.wi-book', { timeout: 8000 });
+const wiTrees = await page.locator('.wi-tree').count();
+wiTrees === 3 ? ok('三条科技树可选', String(wiTrees)) : bad('三条科技树可选', String(wiTrees));
+await page.locator('.wi-runbar .wi-run').click();
+await page.waitForSelector('#wiStory .wi-story', { timeout: 8000 });
+const wiParas = await page.locator('#wiStory .wi-story p').count();
+const wiStory1 = await page.locator('#wiStory').innerText();
+(wiParas >= 6 && wiStory1.length > 800)
+  ? ok('走假如生成长篇故事', `${wiParas} 段 / ${wiStory1.length} 字`)
+  : bad('走假如生成长篇故事', `${wiParas} 段 / ${wiStory1.length} 字`);
+await page.locator('.wi-tree', { hasText: '神经树' }).click();
+await page.locator('.wi-runbar .wi-run').click();
+await page.waitForTimeout(300);
+const wiStory2 = await page.locator('#wiStory').innerText();
+wiStory2 !== wiStory1 ? ok('换科技树生成不同故事') : bad('换科技树生成不同故事');
+await page.locator('#wiStory .ws-actions button', { hasText: '回暗门书架' }).click();
+await page.waitForSelector('.wi-spine', { timeout: 8000 });
+const wiBack = await page.locator('.wi-spine').count();
+wiBack === 10 ? ok('从故事回暗门书架') : bad('从故事回暗门书架', String(wiBack));
+const doorMesh = await page.evaluate(() => !!(window.mm3d && window.mm3d.secretDoor && window.mm3d.propGroups && window.mm3d.propGroups.L4));
+doorMesh ? ok('L4 暗门实体已挂载') : bad('L4 暗门实体已挂载');
 await page.evaluate(() => window.showFragmentMosaic());
 await page.waitForSelector('.frag-slot', { timeout: 10000 });
 const fragSlots = await page.locator('.frag-slot').count();

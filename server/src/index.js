@@ -77,6 +77,12 @@ app.get('/audio.js', async (request, reply) => {
   return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
 });
 
+app.get('/whatif.js', async (request, reply) => {
+  const p = path.join(ROOT, 'web', 'whatif.js');
+  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'whatif.js 缺失' } });
+  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
+});
+
 app.get('/vendor/*', async (request, reply) => {
   const rel = String(request.params['*'] || '');
   if (!rel || rel.includes('..')) return reply.code(400).send({ error: { code: 'BAD_REQUEST', message: '非法路径' } });
@@ -220,6 +226,9 @@ app.get('/api/hidden', async (request, reply) => jsonContent(reply, 'hidden.json
 app.get('/api/stolen', async (request, reply) => jsonContent(reply, 'stolen.json'));
 
 app.get('/api/restless', async (request, reply) => jsonContent(reply, 'restless.json'));
+
+// 暗门后的十本「假如之书」：纯静态数据，只读
+app.get('/api/whatif', async (request, reply) => jsonContent(reply, 'whatif.json'));
 
 app.get('/api/forks', async (request, reply) => jsonContent(reply, 'forks.json'));
 
