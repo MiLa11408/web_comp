@@ -172,9 +172,6 @@ def notes(slide, full_note, cue):
             [[R("提词 · NOTES   ", size=10, color=GOLD3, font=SANS),
               R(full_note, size=10.5, color=FAINT, font=SANS)]], line_spacing=1.15)
     hline(slide, LX, Inches(6.78), Inches(13.333 - 0.9), Inches(6.78), LINE2, 0.75)
-    # 右下角 9pt 提词
-    textbox(slide, Inches(7.3), Inches(7.06), Inches(5.1), Inches(0.34),
-            [[R(cue, size=9, color=FAINT, font=SANS)]], align=PP_ALIGN.RIGHT)
     # 演讲者备注
     slide.notes_slide.notes_text_frame.text = full_note
 
@@ -197,7 +194,7 @@ def card(slide, x, y, w, h, kick, big=None, body=None, note=None, data_no=None):
 
 def rows(slide, x, y, w, items, label_w=Inches(1.65), size=13.5, row_h=0.52):
     """两列键值行（左标签 dim，右内容可含加粗）"""
-    cur = y
+    cur = y.inches if hasattr(y, 'inches') else float(y)
     for label, value_runs in items:
         textbox(slide, x, Inches(cur), label_w, Inches(row_h),
                 [[R(label, size=size, color=DIM, font=SANS)]])
@@ -209,7 +206,7 @@ def rows(slide, x, y, w, items, label_w=Inches(1.65), size=13.5, row_h=0.52):
 
 def steps(slide, x, y, w, items, num_size=34, size=14.5):
     """编号步骤：两位序号 + 主文 + 每项可带子说明"""
-    cur = y
+    cur = y.inches if hasattr(y, 'inches') else float(y)
     for i, (light, sub) in enumerate(items):
         textbox(slide, x, Inches(cur), Inches(0.85), Inches(0.7),
                 [[R("%02d" % (i + 1), size=num_size, color=GOLD3, font=SERIF, bold=True)]])
@@ -595,15 +592,16 @@ def build_tour(prs, n):
     header(slide, "路线", "30-SECOND TOUR", "15 / 16")
     title_block(slide, "演示路线（30 秒版）", "The 30-second walkthrough")
     def flow(y, nodes, hl_pos=()):
+        y = y.inches if hasattr(y, 'inches') else float(y)
         x = LX
         for i, (txt, hl) in enumerate(nodes):
             w = Inches(1.9)
             if i in hl_pos:
-                rect(slide, x, y, w, Inches(0.62), fill=RGBColor(0x2A, 0x21, 0x14),
+                rect(slide, x, Inches(y), w, Inches(0.62), fill=RGBColor(0x2A, 0x21, 0x14),
                      line_color=GOLD2, line_w=0.75)
                 c = GOLD2
             else:
-                rect(slide, x, y, w, Inches(0.62), fill=PANEL, line_color=GOLD, line_w=0.75)
+                rect(slide, x, Inches(y), w, Inches(0.62), fill=PANEL, line_color=GOLD, line_w=0.75)
                 c = INK
             textbox(slide, x, Inches(y + 0.1), w, Inches(0.42),
                     [[R(txt, size=11.5, color=c, font=SANS)]], align=PP_ALIGN.CENTER)
