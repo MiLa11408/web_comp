@@ -60,6 +60,15 @@
   .wi-oracle .go { color: #e2c17c; font-size: 11px; white-space: nowrap; letter-spacing: 1px; }
   .wi-oracle-form { margin-top: 18px; border: 1px solid #3a2f22; background: #1b1510; padding: 16px; }
   .wi-oracle-form label { display: block; color: #8a7a5c; font-size: 11px; letter-spacing: 2px; margin-bottom: 8px; }
+  .wi-oracle-suggest { margin-bottom: 12px; }
+  .wi-oracle-suggest-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+  .wi-oracle-suggest-head span { color: #8a7a5c; font-size: 11px; letter-spacing: 1px; }
+  .wi-oracle-refresh { background: transparent; border: 1px solid #5a4526; color: #cbb892; padding: 3px 9px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .wi-oracle-refresh:hover { border-color: var(--gold); color: var(--gold); }
+  .wi-oracle-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .wi-oracle-chip { background: #241c14; border: 1px solid #5a4526; color: #cbb892; padding: 6px 10px; font-size: 11.5px; cursor: pointer; font-family: inherit; line-height: 1.5; text-align: left; }
+  .wi-oracle-chip:hover { border-color: #c8a24a; color: #f0d68a; background: #2c241a; }
+  .wi-oracle-chip.on { border-color: #c8a24a; color: #f0d68a; background: #3a2b16; }
   #oracleQ { width: 100%; box-sizing: border-box; resize: vertical; min-height: 82px; background: #241c14; border: 1px solid #5a4526; color: #eadbb8; padding: 10px 12px; font-size: 14px; line-height: 1.8; outline: none; font-family: "Songti SC", "SimSun", serif; }
   #oracleQ:focus { border-color: #c8a24a; }
   .wi-oracle-runbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
@@ -308,6 +317,81 @@
 
   // ---------- 第十一本「未写之书」：只写「如果没有 X」的小故事 ----------
   const ORACLE_RE = /如果没有[^。！？!?\n]{1,80}(会怎么样|会怎样|会如何|会发生什么)/;
+  const ORACLE_POOL = [
+    '如果没有电，会怎么样？',
+    '如果没有互联网，会怎么样？',
+    '如果没有语言，会怎么样？',
+    '如果没有文字，会怎么样？',
+    '如果没有印刷术，会怎么样？',
+    '如果没有专利，会怎么样？',
+    '如果没有开源，会怎么样？',
+    '如果没有晶体管，会怎么样？',
+    '如果没有 GPU，会怎么样？',
+    '如果没有数据，会怎么样？',
+    '如果没有摄像头，会怎么样？',
+    '如果没有卫星，会怎么样？',
+    '如果没有 GPS，会怎么样？',
+    '如果没有地图，会怎么样？',
+    '如果没有货币，会怎么样？',
+    '如果没有公司，会怎么样？',
+    '如果没有大学，会怎么样？',
+    '如果没有考试，会怎么样？',
+    '如果没有医院，会怎么样？',
+    '如果没有抗生素，会怎么样？',
+    '如果没有睡眠，会怎么样？',
+    '如果没有记忆，会怎么样？',
+    '如果没有死亡，会怎么样？',
+    '如果没有城市，会怎么样？',
+    '如果没有农业，会怎么样？',
+    '如果没有海洋，会怎么样？',
+    '如果没有月亮，会怎么样？',
+    '如果没有算法，会怎么样？',
+    '如果没有密码学，会怎么样？',
+    '如果没有版权，会怎么样？',
+    '如果没有社交媒体，会怎么样？',
+    '如果没有搜索，会怎么样？',
+    '如果没有推荐算法，会怎么样？',
+    '如果没有自动驾驶，会怎么样？',
+    '如果没有机器人，会怎么样？',
+    '如果没有翻译，会怎么样？',
+    '如果没有老师，会怎么样？',
+    '如果没有图书馆，会怎么样？',
+    '如果没有纸，会怎么样？',
+    '如果没有钟表，会怎么样？'
+  ];
+  let oracleLastPick = [];
+
+  function mmOracleRefresh() {
+    const box = document.getElementById('oracleChips');
+    if (!box) return;
+    const pool = ORACLE_POOL.slice();
+    const picks = [];
+    while (picks.length < 4 && pool.length) {
+      const i = Math.floor(Math.random() * pool.length);
+      picks.push(pool.splice(i, 1)[0]);
+    }
+    if (picks.slice().sort().join('|') === oracleLastPick.slice().sort().join('|') && ORACLE_POOL.length > picks.length) {
+      const extra = ORACLE_POOL.find((q) => !picks.includes(q));
+      if (extra) picks[picks.length - 1] = extra;
+    }
+    oracleLastPick = picks;
+    box.innerHTML = picks.map((q) => `<button type="button" class="wi-oracle-chip" data-q="${esc(q)}">${esc(q)}</button>`).join('');
+    box.querySelectorAll('.wi-oracle-chip').forEach((el) => {
+      el.onclick = () => mmOraclePick(el.dataset.q);
+    });
+  }
+  window.mmOracleRefresh = mmOracleRefresh;
+
+  function mmOraclePick(q) {
+    const input = document.getElementById('oracleQ');
+    if (!input) return;
+    input.value = q;
+    input.focus();
+    document.querySelectorAll('.wi-oracle-chip').forEach((el) => el.classList.toggle('on', el.dataset.q === q));
+    const box = document.getElementById('oracleStory');
+    if (box && box.querySelector('.wi-oracle-error')) box.innerHTML = '';
+  }
+  window.mmOraclePick = mmOraclePick;
 
   function oracleHtml() {
     return `
@@ -321,6 +405,13 @@
       </div>
       <div class="wi-oracle-form">
         <label for="oracleQ">你的假设</label>
+        <div class="wi-oracle-suggest">
+          <div class="wi-oracle-suggest-head">
+            <span>不知道问什么？挑一个</span>
+            <button type="button" class="wi-oracle-refresh" onclick="mmOracleRefresh()">↻ 换一批</button>
+          </div>
+          <div class="wi-oracle-chips" id="oracleChips"></div>
+        </div>
         <textarea id="oracleQ" maxlength="160" rows="3" placeholder="例如：如果没有电，会怎么样？"></textarea>
         <div class="wi-oracle-runbar">
           <button class="wi-run" id="oracleRun" onclick="mmOracleRun()">让它写 →</button>
@@ -335,6 +426,7 @@
     const el = app();
     if (!el) return;
     el.innerHTML = oracleHtml();
+    mmOracleRefresh();
     if (window.mmTip) window.mmTip('oracle', '未写之书', '只接受「如果没有 X 会怎么样」；只写与问题相关的短故事，不回答别的。');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
