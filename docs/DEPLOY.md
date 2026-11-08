@@ -1,6 +1,6 @@
 # 部署说明 · 机忆书库（/ai/ 子路径，端口 3300）
 
-本文对应服务器环境：**Ubuntu 22.04 / 24.04（或同类 Linux）+ nginx + systemd**。目标是把整站挂在 `<站点>/ai/`（HTTP 与 HTTPS 均可用），后端只监听 `127.0.0.1:3300`，由 nginx 反代。线上直接用 `http://150.158.1.111/ai/` 访问；`https://150.158.1.111/ai/` 同样可用，但证书为自签，浏览器会提示不安全。
+本文对应服务器环境：**Ubuntu 22.04 / 24.04（或同类 Linux）+ nginx + systemd**。目标是把整站挂在 `<站点>/ai/`（HTTP 与 HTTPS 均可用），后端只监听 `127.0.0.1:3300`，由 nginx 反代。线上直接用 `http://150.158.1.111:82/ai/` 访问；`https://150.158.1.111/ai/` 同样可用，但证书为自签，浏览器会提示不安全。
 
 > 前端所有请求已改为相对路径（`api/...`、`vendor/...`），因此 `/ai/` 子路径不需要改后端任何路由。`proxy_pass` 末尾的 `/` 是关键。
 
@@ -78,17 +78,17 @@ curl -fsS http://127.0.0.1:3300/api/health
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-访问 `http://<域名或IP>/ai/`（无需面对自签证书警告）；`https://<域名或IP>/ai/` 也可用，但证书为自签。nginx 已配置 `/ai` → `/ai/` 的 301，避免相对路径解析错位。
+访问 `http://<域名或IP>:82/ai/`（无需面对自签证书警告）；`https://<域名或IP>/ai/` 也可用，但证书为自签。nginx 已配置 `/ai` → `/ai/` 的 301，避免相对路径解析错位。
 
-### 4.1 当前线上拓扑（80 端口由 Docker 前端容器占用）
+### 4.1 当前线上拓扑（82 为大赛对外入口；80 端口由 Docker 前端容器占用）
 
-线上 `80` 不是宿主机 nginx，而是 Docker 容器 `dachuang-frontend`（另一个 Vue 项目，监听容器内 80）。宿主机 nginx 只监听 `443` 和 `8080`，因此 `http://…/ai/` 必须同时在两处反代：
+线上 `80` 不是宿主机 nginx，而是 Docker 容器 `dachuang-frontend`（另一个 Vue 项目，监听容器内 80）。宿主机 nginx 监听 `443`、`8080` 和 `82`，其中 **`82` 是直连宿主机 nginx 的 HTTP 入口**（不经过容器，链路最短），因此 `http://…:82/ai/` 只在宿主机一处反代即可；`http://…/ai/`（80）则需同时经过容器与宿主机两处反代：
 
 ```text
 浏览器 → 容器 nginx(80) → 宿主机 nginx(8080) → 127.0.0.1:3300
 ```
 
-宿主机 `/etc/nginx/sites-available/study-checkin` 的 `server` 块（443 + 8080）已 `include /etc/nginx/snippets/machine-memory.conf`，其中 `/ai/` 反代到 `3300`。容器内的 `127.0.0.1` 指容器自身，且 `3300` 只监听宿主机 `127.0.0.1`，所以容器里要用 Docker 网关访问宿主机 8080（网段/网关用 `docker network inspect dachuang_default` 确认，默认 `172.18.0.1`）。在容器 `/etc/nginx/conf.d/default.conf` 的 `location /` 之前加：
+宿主机 `/etc/nginx/sites-available/study-checkin` 的 `server` 块（443 + 8080 + 82）已 `include /etc/nginx/snippets/machine-memory.conf`，其中 `/ai/` 反代到 `3300`；`82` 端口的访问链路为：浏览器 → 宿主机 nginx(82) → 127.0.0.1:3300。容器内的 `127.0.0.1` 指容器自身，且 `3300` 只监听宿主机 `127.0.0.1`，所以容器里要用 Docker 网关访问宿主机 8080（网段/网关用 `docker network inspect dachuang_default` 确认，默认 `172.18.0.1`）。在容器 `/etc/nginx/conf.d/default.conf` 的 `location /` 之前加：
 
 ```nginx
 location = /ai {

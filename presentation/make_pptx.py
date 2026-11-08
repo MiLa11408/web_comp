@@ -44,7 +44,7 @@ RW = Inches(0.9)   # 右页边距
 CW = Inches(13.333 - 1.8)  # 内容宽 11.533"
 
 TEAM_LINE = "动态组 · 队伍名 · 队长名 · 学号"
-URL_ONLINE = "http://150.158.1.111/ai/"
+URL_ONLINE = "http://150.158.1.111:82/ai/"
 
 # ---------------- 基础工具 ----------------
 def R(text, size=None, color=None, font=None, bold=None, italic=None):
