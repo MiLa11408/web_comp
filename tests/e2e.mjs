@@ -339,7 +339,18 @@ await page.waitForSelector('.stolen-card', { timeout: 10000 });
 const stolenCards = await page.locator('.stolen-card').count();
 stolenCards === 9 ? ok('失窃页展柜 9 件', String(stolenCards)) : bad('失窃页展柜数量', String(stolenCards));
 await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });
-await page.getByRole('button', { name: '暗门', exact: true }).click();
+// 暗门不再是页面入口：先从 L4 帷幕揭晓，再点门进入
+const doorState = await page.evaluate(() => {
+  if (!window.mm3d || !window.mm3d.secretVeil) return null;
+  const before = window.mm3d.isSecretDoorRevealed();
+  const revealed = window.mm3d.revealSecretDoor(true);
+  return { veil: true, before, revealed, after: window.mm3d.isSecretDoorRevealed() };
+});
+(doorState && doorState.veil && !doorState.before && doorState.after)
+  ? ok('L4 帷幕揭晓暗门', '点帷幕后显形')
+  : bad('L4 帷幕揭晓暗门', JSON.stringify(doorState));
+const doorOpen = await page.evaluate(() => !!(window.mm3d && window.mm3d.openSecretDoor()));
+doorOpen ? ok('揭晓后暗门可进入') : bad('揭晓后暗门可进入');
 await page.waitForSelector('.wi-spine', { timeout: 10000 });
 const wiBooks = await page.locator('.wi-spine').count();
 wiBooks === 10 ? ok('暗门后十本假如之书', String(wiBooks)) : bad('暗门后十本假如之书', String(wiBooks));
@@ -363,8 +374,8 @@ await page.locator('#wiStory .ws-actions button', { hasText: '回暗门书架' }
 await page.waitForSelector('.wi-spine', { timeout: 8000 });
 const wiBack = await page.locator('.wi-spine').count();
 wiBack === 10 ? ok('从故事回暗门书架') : bad('从故事回暗门书架', String(wiBack));
-const doorMesh = await page.evaluate(() => !!(window.mm3d && window.mm3d.secretDoor && window.mm3d.propGroups && window.mm3d.propGroups.L4));
-doorMesh ? ok('L4 暗门实体已挂载') : bad('L4 暗门实体已挂载');
+const doorMesh = await page.evaluate(() => !!(window.mm3d && window.mm3d.secretDoor && window.mm3d.secretVeil && window.mm3d.propGroups && window.mm3d.propGroups.L4));
+doorMesh ? ok('L4 暗门与帷幕实体已挂载') : bad('L4 暗门与帷幕实体已挂载');
 await page.evaluate(() => window.showFragmentMosaic());
 await page.waitForSelector('.frag-slot', { timeout: 10000 });
 const fragSlots = await page.locator('.frag-slot').count();
@@ -466,8 +477,8 @@ await tut.waitForSelector('#tutorial', { timeout: 12000 });
 const tutSteps = await tut.locator('.tut-step').count();
 const tutActions = await tut.locator('.tut-actions button').count();
 const tutAbout = await tut.locator('.about-view').count();
-(tutSteps === 10 && tutAbout === 1) ? ok('首次入馆自动打开新读者教程', `${tutSteps} 步`) : bad('首次教程', `steps=${tutSteps} about=${tutAbout}`);
-tutActions >= 4 ? ok('教程快捷入口', String(tutActions)) : bad('教程快捷入口', String(tutActions));
+(tutSteps === 11 && tutAbout === 1) ? ok('首次入馆自动打开新读者教程', `${tutSteps} 步`) : bad('首次教程', `steps=${tutSteps} about=${tutAbout}`);
+tutActions >= 5 ? ok('教程快捷入口', String(tutActions)) : bad('教程快捷入口', String(tutActions));
 await tut.reload({ waitUntil: 'domcontentloaded' });
 await tut.waitForSelector('#gate', { timeout: 15000 });
 await tut.getByRole('button', { name: '以访客身份入馆' }).click();

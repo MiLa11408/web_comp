@@ -747,7 +747,6 @@
     <button class="back" onclick="mmStartTour()">导览</button>
   </div>
   <div class="nav-group"><span class="ng-label">档案与玩法</span>
-    <button class="back" onclick="enterWhatIf()">暗门</button>
     <button class="back" onclick="enterStolen()">失窃页</button>
     <button class="back" onclick="enterStats()">借阅档案</button>
   </div>
@@ -1444,8 +1443,8 @@ function collectStatsHtml() {
       <div class="restless-grid">${restlessChips || '<div class="rail-hint">这一册里没有躁动书页。</div>'}</div>
     </section>
     <section class="stat-sec">
-      <h3>暗门 · 十本假如之书<button class="stat-mini" onclick="enterWhatIf()">推开暗门</button></h3>
-      <div class="rail-hint">L4 右墙有一扇不在平面图上的门。门后十本书不在馆藏目录里；打开一本，选符号 / 神经 / 具身任意一条科技树，就能生成一篇长篇科幻推测。</div>
+      <h3>暗门 · 十本假如之书<button class="stat-mini" onclick="goL4()">去 L4 找线索</button></h3>
+      <div class="rail-hint">L4 的蜡封桌上多了一张盖着红 X 的备忘；右墙的帷幕今天没有拉直。先读备忘，再点帷幕把它拉开。门后十本书不在馆藏目录里，选符号 / 神经 / 具身任意一条科技树即可生成长篇科幻推测。</div>
     </section>`;
 }
 
@@ -1798,7 +1797,7 @@ async function showAbout(highlightTutorial = false) {
       </div>
     </div>
     <section class="tut" id="tutorial">
-      <div class="tut-head"><span>NEW READER · FIRST VISIT</span><b>新读者教程</b><em>第一次来，按这 10 步走一遍就会了</em></div>
+      <div class="tut-head"><span>NEW READER · FIRST VISIT</span><b>新读者教程</b><em>第一次来，按这 11 步走一遍就会了</em></div>
       <div class="tut-grid">
         <article class="tut-step"><span class="tut-num">01 / 进门</span><h4>访客还是借书证</h4><p>门厅有三个选择：<b>访客</b>可以读全部 384 章，但不能盖章、批注、记进度；<b>新办借书证</b>只要 3 字符以上的证号和 8 位口令，之后回来自动识别；<b>入馆</b>是已有证的人用的。</p></article>
         <article class="tut-step"><span class="tut-num">02 / 走动</span><h4>3D 阅览室怎么走</h4><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 前后左右，按住鼠标左键拖动转视角。从书架之间的空隙可以绕到后排；右下角「黄铜电梯」随时选层。</p></article>
@@ -1808,8 +1807,9 @@ async function showAbout(highlightTutorial = false) {
         <article class="tut-step"><span class="tut-num">06 / 查找</span><h4>卡片目录的四级排序</h4><p>检索先锁<b>大标题</b>，再锁 <b>tag</b>，再看正文提及次数，最后才是相关内容。<b>前沿书架</b>每天从 arXiv 新纸入库，可按领域筛选并跳回馆内旧书。</p></article>
         <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：5 条主线、55 站，同名书就是换乘站；<b>星图</b>看 48 本书的 30 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
         <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完。</p></article>
-        <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 右墙还有一扇不在平面图上的<b>暗门</b>，门后十本「假如之书」可按三条科技树生成长篇科幻推测。</p></article>
-        <article class="tut-step"><span class="tut-num">10 / 手机</span><h4>手机也能逛</h4><p>入馆默认落在书架视图；进 3D 后用左下<b>虚拟摇杆</b>移动，拖动画面转视角，点书抽出、再点翻开。2D 页面会暂停 3D 渲染，省电也省流量。</p></article>
+        <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 的蜡封桌上多了一张盖着红 X 的备忘，记得读它——那不是装饰。</p></article>
+        <article class="tut-step"><span class="tut-num">10 / 暗门</span><h4>一扇不在平面图上的门</h4><p>先看 L4 蜡封桌的备忘，再点右墙那幅没有拉直的<b>帷幕</b>把它滑开。后面是一扇没有编号的门；点门进去，十本「假如之书」会等你。选符号 / 神经 / 具身任意一条科技树，点「走假如」就能生成一篇长故事。</p></article>
+        <article class="tut-step"><span class="tut-num">11 / 手机</span><h4>手机也能逛</h4><p>入馆默认落在书架视图；进 3D 后用左下<b>虚拟摇杆</b>移动，拖动画面转视角，点书抽出、再点翻开。2D 页面会暂停 3D 渲染，省电也省流量。</p></article>
       </div>
       <div class="tut-actions">
         <button class="tut-first" onclick="enter3D()">进 3D 阅览室 →</button>
@@ -1817,6 +1817,7 @@ async function showAbout(highlightTutorial = false) {
         <button class="ghost" onclick="mmShowStar()">打开星图</button>
         <button class="ghost" onclick="enterTimeline()">时间轴</button>
         <button class="ghost" onclick="enterStats()">借阅档案 · 今日可做</button>
+        <button class="ghost" onclick="goL4()">去 L4 找暗门线索</button>
       </div>
     </section>
     <div class="about-grid">
@@ -1830,7 +1831,7 @@ async function showAbout(highlightTutorial = false) {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>95 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门假如之书与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>97 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>
@@ -1924,7 +1925,7 @@ async function showStats() {
     // 今日可做：把隐藏玩法摊成一张能照着做的清单（每类最多两条，避免被失窃页刷屏）
     const todoStolen = [];
     const todoRestless = [];
-    const todoFork = [{ label: '暗门 · 十本假如之书', hint: 'L4 右墙，不在平面图上', act: 'enterWhatIf()', btn: '去推门' }];
+    const todoFork = [{ label: '暗门线索 · 十本假如之书', hint: 'L4 蜡封桌备忘 / 右墙帷幕', act: 'goL4()', btn: '去 L4' }];
     COLLECT.stolen.forEach((it) => {
       if (collectStateOf('stolen', it.id) !== 'recovered') {
         todoStolen.push({ label: `失窃页 ${it.no} · ${it.title}`, hint: `${it.floor} 展柜`, act: 'enterStolen()', btn: '去展柜' });
@@ -2035,6 +2036,19 @@ function fadeSwap(fn, ms) {
 function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
 function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() { fadeSwap(() => backToRoom()); }
+// 去 L4 找暗门线索：先回到 3D，再等楼层切换就绪后选 L4（不直接开到门后）
+function goL4() {
+  enter3D();
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    if (!document.body.classList.contains('grid') && !window.mmViewBusy && window.mm3d && typeof window.mm3d.setFloor === 'function') {
+      window.mm3d.setFloor('L4');
+      clearInterval(timer);
+    } else if (tries > 60) clearInterval(timer);
+  }, 100);
+}
+window.goL4 = goL4;
 // 书轨用更短的转场：快速进入这张线路图
 function enterRail() { fadeSwap(() => showRail(), { hard: true, hide3d: true, out: 260 }); }
 function enterTimeline() { fadeSwap(() => showTimeline()); }

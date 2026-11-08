@@ -2120,6 +2120,38 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     doc.rotation.z = (i - 1) * 0.12;
     put(wt, sphereG(0.06, 8), propMats.redSeal, -0.5 + i * 0.5, 0.845, -0.1 + (i % 2) * 0.2);
   }
+  // 多出来的一张备忘：暗门的线索，点一下会读出内容
+  const clueCanvas = document.createElement('canvas');
+  clueCanvas.width = 320;
+  clueCanvas.height = 220;
+  const cctx = clueCanvas.getContext('2d');
+  cctx.fillStyle = '#d8c49a';
+  cctx.fillRect(0, 0, 320, 220);
+  cctx.strokeStyle = '#8a6a3a';
+  cctx.lineWidth = 3;
+  cctx.strokeRect(8, 8, 304, 204);
+  cctx.fillStyle = '#3a2f1c';
+  cctx.font = 'bold 22px "KaiTi", "STKaiti", serif';
+  cctx.fillText('第十柜 · 未编目', 24, 50);
+  cctx.fillText('右墙帷幕后面', 24, 86);
+  cctx.fillText('十道脊 = 钥匙', 24, 122);
+  cctx.fillStyle = '#7a1a1a';
+  cctx.font = 'bold 64px "Times New Roman", serif';
+  cctx.fillText('X', 250, 190);
+  const clueTex = new THREE.CanvasTexture(clueCanvas);
+  clueTex.colorSpace = THREE.SRGBColorSpace;
+  const clueMat = new THREE.MeshStandardMaterial({
+    map: clueTex, roughness: 0.86, metalness: 0.04, side: THREE.DoubleSide,
+    emissive: 0x2a1c0a, emissiveIntensity: 0.18,
+  });
+  const clueGroup = new THREE.Group();
+  clueGroup.position.set(0.72, 0.82, 0.22);
+  wt.add(clueGroup);
+  const cluePlane = put(clueGroup, planeG(0.42, 0.29), clueMat, 0, 0, 0);
+  cluePlane.rotation.x = -Math.PI / 2;
+  cluePlane.rotation.z = -0.16;
+  const clueSeal = put(clueGroup, sphereG(0.035, 8), propMats.redSeal, 0.18, 0.012, 0.1);
+  clueSeal.scale.y = 0.4;
   // 锁链
   function addChain(parent, x, y, z, links) {
     const g = new THREE.Group();
@@ -2248,6 +2280,59 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // 门环把手
   put(secretDoor, torusG(0.1, 0.028, 8, 24), doorBrassMat, 0.66, 1.12, 0.27);
   put(secretDoor, sphereG(0.045, 10), doorBrassMat, 0.66, 1.26, 0.26);
+
+  // 帷幕：暗门平时被它遮住，点一下会滑向一侧
+  const secretVeil = new THREE.Group();
+  secretVeil.position.set(ROOM.sideX - 0.47, 0, 0.8);
+  secretVeil.rotation.y = -Math.PI / 2;
+  secretVeil.userData.noHoverScale = true; // 帷幕太大，悬停只改手型不缩放
+  p4.add(secretVeil);
+  const veilMat = new THREE.MeshStandardMaterial({ color: 0x241a30, roughness: 1, metalness: 0.02, side: THREE.DoubleSide });
+  const veilFoldMat = new THREE.MeshStandardMaterial({ color: 0x1a1224, roughness: 1, metalness: 0.02 });
+  put(secretVeil, planeG(2.05, 3.45), veilMat, 0, 1.78, 0);
+  for (const fx of [-0.82, -0.41, 0, 0.41, 0.82]) {
+    put(secretVeil, boxG(0.08, 3.42, 0.055), veilFoldMat, fx, 1.78, 0.035);
+  }
+  const veilRod = put(secretVeil, cylG(0.028, 0.028, 2.18, 8), doorBrassMat, 0, 3.52, 0.05);
+  veilRod.rotation.z = Math.PI / 2;
+  // 帷幕上的小铜牌 X
+  const veilTagCanvas = document.createElement('canvas');
+  veilTagCanvas.width = 128;
+  veilTagCanvas.height = 128;
+  const vtc = veilTagCanvas.getContext('2d');
+  vtc.clearRect(0, 0, 128, 128);
+  vtc.strokeStyle = '#c8a24a';
+  vtc.lineWidth = 10;
+  vtc.strokeRect(8, 8, 112, 112);
+  vtc.fillStyle = '#e6d9bd';
+  vtc.font = 'bold 64px "Times New Roman", serif';
+  vtc.textAlign = 'center';
+  vtc.fillText('X', 64, 88);
+  const veilTagTex = new THREE.CanvasTexture(veilTagCanvas);
+  veilTagTex.colorSpace = THREE.SRGBColorSpace;
+  const veilTagMat = new THREE.MeshStandardMaterial({
+    map: veilTagTex, transparent: true, roughness: 0.4, metalness: 0.5, side: THREE.DoubleSide,
+    emissive: 0x3a2a08, emissiveIntensity: 0.2,
+  });
+  put(secretVeil, planeG(0.18, 0.18), veilTagMat, 0, 2.4, 0.07);
+  // 帷幕底部漏出的紫光
+  put(secretVeil, planeG(1.92, 0.05), doorSeamMat, 0, 0.09, 0.06);
+
+  // 暗门的揭晓状态：帷幕滑开动画（revealSecretDoor(true) 供测试直接显形）
+  let secretDoorRevealed = false;
+  let veilAnim = 0;
+  function revealSecretDoor(instant = false) {
+    if (secretDoorRevealed) return false;
+    if (instant) {
+      secretDoorRevealed = true;
+      veilAnim = 0;
+      secretVeil.visible = false;
+      return true;
+    }
+    if (veilAnim) return false;
+    veilAnim = 0.0001;
+    return true;
+  }
 
   propGroups.L1 = p1;
   propGroups.L2 = p2;
@@ -2640,9 +2725,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
     if (!silent) {
       toast(floorWelcome(fid));
-      // L4 首次到达时补一句暗门提示，避免玩家错过右墙上的门
+      // L4 到达时只给环境线索：帷幕、紫光、翻书声，不直接说“这里有门”
       if (fid === 'L4') {
-        setTimeout(() => { if (currentFloor === 'L4') toast('右墙有一扇没有编号的门，门后传来十本书翻动的声音。', 4200); }, 2600);
+        setTimeout(() => {
+          if (currentFloor === 'L4' && !secretDoorRevealed) toast('右墙的帷幕今天没有拉直，后面好像有翻书声。', 4200);
+        }, 2600);
       }
     }
   }
@@ -2741,7 +2828,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (hovered && hovered.obj === obj) { el.style.cursor = 'pointer'; return; }
     clearHover();
     hovered = { obj, scale: obj.scale.clone() };
-    obj.scale.multiplyScalar(1.04);
+    if (!obj.userData.noHoverScale) obj.scale.multiplyScalar(1.04);
     el.style.cursor = 'pointer';
   }
 
@@ -2758,7 +2845,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const hitDrawer = raycaster.intersectObjects(cabinetDrawers, false);
     const hitHidden = hiddenBook.visible ? raycaster.intersectObject(hiddenBook, false) : [];
     const hitStolen = raycaster.intersectObjects(stolenCases.filter((c) => c.group.visible).map((c) => c.group), true);
-    const hitDoor = currentFloor === 'L4' ? raycaster.intersectObject(secretDoor, true) : [];
+    const hitDoor = currentFloor === 'L4' && secretDoorRevealed ? raycaster.intersectObject(secretDoor, true) : [];
+    const hitVeil = currentFloor === 'L4' && !secretDoorRevealed ? raycaster.intersectObject(secretVeil, true) : [];
+    const hitClue = currentFloor === 'L4' ? raycaster.intersectObject(clueGroup, true) : [];
     // 高亮目标与 pick 的拾取优先级保持一致，避免悬停提示与点击结果不一致
     let target = null;
     if (hitElev.length) target = elevator;
@@ -2769,7 +2858,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       let obj = hitStolen[0].object;
       while (obj && obj.userData.stolenId == null) obj = obj.parent;
       target = obj || null;
-    } else if (hitDoor.length && (!hits.length || hitDoor[0].distance < hits[0].distance)) target = secretDoor;
+    } else if (hitClue.length) target = clueGroup;
+    else if (hitVeil.length && (!hits.length || hitVeil[0].distance < hits[0].distance)) target = secretVeil;
+    else if (hitDoor.length && (!hits.length || hitDoor[0].distance < hits[0].distance)) target = secretDoor;
     else if (hitLamp.length) target = lampGroup;
     else if (hitZoom.length) target = zoomGroup;
     else if (hitDrawer.length) target = hitDrawer[0].object;
@@ -2833,15 +2924,32 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         }
       }
     }
-    // L4 右墙暗门：门比书近时才触发，避免隔着书架误点
+    // L4 的暗门线索：先读蜡封备忘，再掀帷幕，最后才点门
     if (currentFloor === 'L4') {
-      const doorHits = raycaster.intersectObject(secretDoor, true);
-      const shelfHits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);
-      if (doorHits.length && (!shelfHits.length || doorHits[0].distance < shelfHits[0].distance)) {
+      const clueHits = raycaster.intersectObject(clueGroup, true);
+      if (clueHits.length) {
         if (window.mmAudioPlay) window.mmAudioPlay('page');
-        if (window.mmOpenWhatIfRoom) window.mmOpenWhatIfRoom();
-        else toast('门后没有回应。');
+        toast('备忘：第十柜未编目。右墙的帷幕后有一点紫光；十道书脊是钥匙。别让馆长知道。', 5600);
         return;
+      }
+      const shelfHits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);
+      if (!secretDoorRevealed) {
+        const veilHits = raycaster.intersectObject(secretVeil, true);
+        if (veilHits.length && (!shelfHits.length || veilHits[0].distance < shelfHits[0].distance)) {
+          if (window.mmAudioPlay) window.mmAudioPlay('page');
+          revealSecretDoor();
+          toast('帷幕滑向一侧。后面有一点紫光，和十道刻痕。', 4200);
+          return;
+        }
+      }
+      if (secretDoorRevealed) {
+        const doorHits = raycaster.intersectObject(secretDoor, true);
+        if (doorHits.length && (!shelfHits.length || doorHits[0].distance < shelfHits[0].distance)) {
+          if (window.mmAudioPlay) window.mmAudioPlay('page');
+          if (window.mmOpenWhatIfRoom) window.mmOpenWhatIfRoom();
+          else toast('门后没有回应。');
+          return;
+        }
       }
     }
     const lampHits = raycaster.intersectObject(lampGroup, true);
@@ -3364,6 +3472,18 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       const doorPulse = 0.55 + Math.sin(elapsed * 2.1) * 0.3;
       doorGlowMat.emissiveIntensity = doorPulse;
       doorSeamMat.opacity = 0.2 + (doorPulse - 0.25) * 0.35;
+      // 帷幕上那枚 X 铜牌轻轻呼吸：是线索，但不像按钮那样喊人
+      if (!secretDoorRevealed) veilTagMat.emissiveIntensity = 0.16 + Math.sin(elapsed * 1.6) * 0.1;
+    }
+    // 帷幕滑开：向侧面移动约 2.3m，结束后隐藏
+    if (veilAnim) {
+      veilAnim = Math.min(1, veilAnim + dt / 1.05);
+      secretVeil.position.z = 0.8 - easeInOut(veilAnim) * 2.3;
+      if (veilAnim >= 1) {
+        veilAnim = 0;
+        secretDoorRevealed = true;
+        secretVeil.visible = false;
+      }
     }
     // 未追回展柜的暗红呼吸光环（共用材质，仅可见的环在脉动）
     stolenRedMat.emissiveIntensity = 0.4 + 0.28 * Math.sin(elapsed * 1.7);
@@ -3459,6 +3579,14 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   return {
     reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups, shelfUnits: SHELF_UNITS,
     secretDoor,
+    secretVeil,
+    revealSecretDoor,
+    isSecretDoorRevealed: () => secretDoorRevealed,
+    openSecretDoor: () => {
+      if (!secretDoorRevealed || !window.mmOpenWhatIfRoom) return false;
+      window.mmOpenWhatIfRoom();
+      return true;
+    },
     setHiddenVisible: (v) => { hiddenBook.visible = !!v; },
     getFloor: () => currentFloor,
     toastFloor: () => toast(floorWelcome(currentFloor)),
