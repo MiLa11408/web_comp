@@ -41,10 +41,11 @@ cd <本地仓库>/Explore/ai-library
 chmod +x deploy/deploy.sh
 rsync -az --delete \
   --exclude node_modules --exclude .git --exclude .data --exclude '*.log' \
-  -e "ssh -i /e/下载download/1.pem" ./ root@<服务器IP>:/opt/machine-memory/
+  -e "ssh -i /e/下载download/1.pem" ./ ubuntu@<服务器IP>:/opt/machine-memory/
 ```
 
-> 若 `rsync` 不可用：`scp -i <私钥> -r ./ root@<IP>:/opt/machine-memory/`（先手动排除 node_modules）。
+> 若 `rsync` 不可用：`scp -i <私钥> -r ./ ubuntu@<IP>:/opt/machine-memory/`（先手动排除 node_modules）。
+> 本项目服务器（150.158.1.111）的 root SSH 未开放，实测用 `ubuntu@` 登录后可 `sudo`。
 
 ## 2. 安装依赖
 
@@ -163,7 +164,7 @@ cd /opt/web_comp && git pull
 sudo systemctl restart machine-memory
 
 # 或本地一键（需 SERVER_HOST）
-SERVER_HOST=root@<IP> SSH_KEY=/e/下载download/1.pem ./deploy/deploy.sh
+SERVER_HOST=ubuntu@<IP> SSH_KEY=/e/下载download/1.pem ./deploy/deploy.sh
 ```
 
 `deploy.sh` 使用 `rsync --delete`，会保留远端 `.data/`（SQLite 用户数据）。
