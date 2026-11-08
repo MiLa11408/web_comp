@@ -2275,7 +2275,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // ---------- UI：提示 / 提示条 / 遮罩 / 电梯面板 ----------
   const hint = document.createElement('div');
   hint.className = 'mm-hint';
-  hint.textContent = 'WASD 移动 · 鼠标拖拽转视角 · 点击书取书 · 从书架之间的空隙可绕到后排';
+  hint.textContent = 'WASD 移动 · 拖拽转视角 · 点书抽出 · E 翻开 · Q 叠到 L1 长桌 · 右键放回';
   root.appendChild(hint);
 
   // 触屏：左下虚拟摇杆负责移动，画面拖动转视角（canvas 的 pointer 事件已通用）
@@ -2293,7 +2293,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   if (coarsePointer) {
     joyEl.style.display = 'block';
     joyLabel.style.display = 'block';
-    hint.textContent = '左下摇杆移动 · 拖动画面转视角 · 点书取书';
+    hint.textContent = '左下摇杆移动 · 拖动画面转视角 · 点书抽出 · 长按/点按查看';
   }
   function joyMove(e) {
     const rect = joyEl.getBoundingClientRect();
@@ -2561,7 +2561,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     clearHover(); // 切层后旧高亮目标可能已隐藏，先还原缩放
     applyAtmos(fid);
     for (const it of bookItems) {
-      it.mesh.visible = fid === 'all' || it.book.floor === fid;
+      // 手里的书、桌上叠着的书不跟楼层隐藏，否则拿在手上会突然消失
+      it.mesh.visible = it.stacked || it === heldBook || fid === 'all' || it.book.floor === fid;
     }
     for (const c of stolenCases) {
       c.group.visible = fid === 'all' || c.item.floor === fid;
@@ -2589,6 +2590,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   el.addEventListener('pointerdown', (e) => {
     if (tour) return;
+    if (e.button === 2) return; // 右键留给「放回」
     dragging = true;
     lastX = downX = e.clientX;
     lastY = downY = e.clientY;
@@ -2620,6 +2622,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
     if (moved < 6) pick(e.clientX, e.clientY);
   });
+  el.addEventListener('contextmenu', (e) => {
+    if (!heldBook) return;
+    e.preventDefault();
+    putBackHeld();
+  });
   el.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (tour) return;
@@ -2633,7 +2640,12 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (k === 'w' || k === 'a' || k === 's' || k === 'd') {
       keys[k] = true;
       e.preventDefault();
+      return;
     }
+    if (!heldBook) return;
+    if (k === 'e' || k === 'enter') { openHeldBook(); e.preventDefault(); }
+    else if (k === 'q') { placeOnTable(heldBook); e.preventDefault(); }
+    else if (k === 'escape') { putBackHeld(); e.preventDefault(); }
   });
   window.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
@@ -2694,7 +2706,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     else if (hitDrawer.length) target = hitDrawer[0].object;
     else if (hits.length) {
       const item = hits[0].object.userData.item;
-      target = item && !item.animating ? hits[0].object : null;
+      target = item && !item.animating && item !== heldBook ? hits[0].object : null;
     }
     applyHover(target);
   }
@@ -2702,6 +2714,18 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   function pick(x, y) {
     if (tour || traveling) return;
     setPointer(x, y);
+    // 手里有书：点自己=翻开，点别的书=先把手里这本叠到长桌，点空白=放回架上
+    if (heldBook) {
+      const heldHits = raycaster.intersectObjects(bookItems.map((it) => it.mesh), false);
+      const target = heldHits.length ? heldHits[0].object.userData.item : null;
+      if (target === heldBook) { openHeldBook(); return; }
+      if (target && target !== heldBook && target.chapterId && !target.animating) {
+        placeOnTable(heldBook);
+        takeBook(target);
+        return;
+      }
+      putBackHeld(true);
+    }
     const elevHits = raycaster.intersectObject(elevator, true);
     if (elevHits.length) {
       if (window.mmAudioPlay) window.mmAudioPlay('elevator');
@@ -2768,47 +2792,147 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     takeBook(item);
   }
 
-  // ---------- 取书翻开（签名时刻） ----------
+  // ---------- 取书：先抽到手里，再翻开 / 叠到长桌 ----------
   let taking = false;
   let traveling = false;
-  function takeBook(item) {
-    if (taking || tour) return;
-    clearHover(); // 取书动画自行控制 scale，先移除悬停缩放
-    taking = true;
-    if (window.mmAudioPlay) window.mmAudioPlay('page');
-    item.animating = true;
-    if (item.body) item.body.setEnabled(false);
+  let heldBook = null;
+  const stackItems = [];
+  const handLook = new THREE.Object3D();
+  const handTarget = new THREE.Vector3();
+  const handQ = new THREE.Quaternion();
+  const handDir = new THREE.Vector3();
+  const handRight = new THREE.Vector3();
 
+  function handPoint(out) {
+    camera.getWorldDirection(handDir);
+    handRight.crossVectors(handDir, camera.up).normalize();
+    out.copy(camera.position).addScaledVector(handDir, 0.95).addScaledVector(handRight, 0.42);
+    out.y -= 0.22;
+    return out;
+  }
+  function handQuaternion(out) {
+    handLook.position.copy(handPoint(handTarget));
+    handLook.lookAt(camera.position);
+    return out.copy(handLook.quaternion);
+  }
+
+  function restoreToShelf(item, animate = true) {
+    if (item.stacked) {
+      item.stacked = false;
+      if (item.mesh.parent !== scene) scene.attach(item.mesh);
+    }
+    const si = stackItems.indexOf(item);
+    if (si >= 0) stackItems.splice(si, 1);
+    const done = () => {
+      item.mesh.position.copy(item.basePos);
+      item.mesh.quaternion.copy(item.baseQuat);
+      item.mesh.scale.setScalar(1);
+      if (item.body) {
+        item.body.setTranslation({ x: item.basePos.x, y: item.basePos.y, z: item.basePos.z }, true);
+        item.body.setRotation({ x: item.baseQuat.x, y: item.baseQuat.y, z: item.baseQuat.z, w: item.baseQuat.w }, true);
+        item.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        item.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        item.body.setEnabled(true);
+      }
+      item.animating = false;
+    };
+    if (!animate) { done(); return; }
     const start = item.mesh.position.clone();
     const startQ = item.mesh.quaternion.clone();
-    const dir = camera.getWorldDirection(new THREE.Vector3());
-    const target = camera.position.clone().add(dir.multiplyScalar(0.95));
-    target.y -= 0.1;
+    item.animating = true;
+    const t0 = performance.now();
+    const dur = 480;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const e = easeInOut(p);
+      item.mesh.position.lerpVectors(start, item.basePos, e);
+      item.mesh.position.y += Math.sin(p * Math.PI) * 0.18;
+      item.mesh.quaternion.copy(startQ).slerp(item.baseQuat, e);
+      item.mesh.scale.setScalar(1 + 0.1 * Math.sin(p * Math.PI));
+      if (p < 1) requestAnimationFrame(step);
+      else done();
+    };
+    requestAnimationFrame(step);
+  }
+
+  // 桌上 3 摞，按书脊厚度自然加高
+  function layoutStack() {
+    const heights = {};
+    stackItems.forEach((it, i) => {
+      const col = i % 3;
+      const th = it.w || 0.2;
+      const h = heights[col] || 0;
+      it.mesh.position.set(-0.75 + col * 0.75, 0.82 + h + th / 2, 0.02);
+      it.mesh.quaternion.setFromEuler(new THREE.Euler(0, (i - 1) * 0.07, Math.PI / 2, 'YXZ'));
+      it.mesh.scale.setScalar(1);
+      heights[col] = h + th + 0.008;
+    });
+  }
+
+  function placeOnTable(item) {
+    if (!item) return;
+    if (currentFloor !== 'L1') {
+      heldBook = null;
+      restoreToShelf(item);
+      toast('长桌在 L1 旧纸层，这本书先放回架上。');
+      return;
+    }
+    heldBook = null;
+    item.animating = false;
+    item.stacked = true;
+    if (item.body) item.body.setEnabled(false);
+    if (item.mesh.parent !== t1) t1.attach(item.mesh);
+    stackItems.push(item);
+    if (stackItems.length > 12) restoreToShelf(stackItems.shift());
+    layoutStack();
+    if (window.mmAudioPlay) window.mmAudioPlay('step');
+    toast(`《${item.book.title}》放在长桌上，已叠 ${stackItems.length} 本。`);
+  }
+
+  function putBackHeld(silent = false) {
+    if (!heldBook) return;
+    const item = heldBook;
+    heldBook = null;
+    restoreToShelf(item);
+    if (!silent) toast('书已放回架上。');
+  }
+
+  function openHeldBook() {
+    if (!heldBook) return;
+    const item = heldBook;
+    heldBook = null;
+    clearHover();
+    taking = true;
+    item.animating = true;
+    if (item.body) item.body.setEnabled(false);
+    const start = item.mesh.position.clone();
+    const startQ = item.mesh.quaternion.clone();
+    camera.getWorldDirection(handDir);
+    const target = camera.position.clone().addScaledVector(handDir, 0.52);
     const dummy = new THREE.Object3D();
-    dummy.position.copy(start);
+    dummy.position.copy(target);
     dummy.lookAt(camera.position);
     const targetQ = dummy.quaternion.clone();
-
     const t0 = performance.now();
-    const dur = 950;
+    const dur = 460;
     const step = (now) => {
       const p = Math.min(1, (now - t0) / dur);
       const e = easeInOut(p);
       item.mesh.position.lerpVectors(start, target, e);
-      item.mesh.position.z += Math.sin(p * Math.PI) * 0.16;
       item.mesh.quaternion.copy(startQ).slerp(targetQ, e);
-      item.mesh.scale.setScalar(1 + 0.35 * e);
+      item.mesh.scale.setScalar(0.5 + 0.35 * e);
       if (p < 1) requestAnimationFrame(step);
       else {
         fade(true);
         setTimeout(() => {
           onOpenBook(item.chapterId);
           setTimeout(() => fade(false), 380);
-        }, 240);
+        }, 200);
         setTimeout(() => {
           item.mesh.position.copy(item.basePos);
           item.mesh.quaternion.copy(item.baseQuat);
           item.mesh.scale.setScalar(1);
+          item.mesh.visible = true;
           if (item.body) {
             item.body.setTranslation({ x: item.basePos.x, y: item.basePos.y, z: item.basePos.z }, true);
             item.body.setRotation({ x: item.baseQuat.x, y: item.baseQuat.y, z: item.baseQuat.z, w: item.baseQuat.w }, true);
@@ -2819,6 +2943,46 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
           item.animating = false;
           taking = false;
         }, 780);
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  function takeBook(item) {
+    if (taking || tour || !item) return;
+    clearHover();
+    if (heldBook) putBackHeld(true);
+    taking = true;
+    if (window.mmAudioPlay) window.mmAudioPlay('page');
+    item.animating = true;
+    if (item.stacked) {
+      item.stacked = false;
+      if (item.mesh.parent !== scene) scene.attach(item.mesh);
+      const si = stackItems.indexOf(item);
+      if (si >= 0) stackItems.splice(si, 1);
+      layoutStack();
+    }
+    if (item.body) item.body.setEnabled(false);
+    const start = item.mesh.position.clone();
+    const startQ = item.mesh.quaternion.clone();
+    const target = handPoint(new THREE.Vector3());
+    const targetQ = handQuaternion(new THREE.Quaternion());
+    const t0 = performance.now();
+    const dur = 720;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const e = easeInOut(p);
+      item.mesh.position.lerpVectors(start, target, e);
+      item.mesh.position.y += Math.sin(p * Math.PI) * 0.14;
+      item.mesh.quaternion.copy(startQ).slerp(targetQ, e);
+      item.mesh.scale.setScalar(1 - 0.5 * e);
+      if (p < 1) requestAnimationFrame(step);
+      else {
+        item.animating = false;
+        taking = false;
+        heldBook = item;
+        item.mesh.visible = true;
+        toast(`《${item.book.title}》已抽到手里：左键/E 翻开 · 右键 放回 · Q 放到长桌。`);
       }
     };
     requestAnimationFrame(step);
@@ -2905,6 +3069,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (!Array.isArray(stops) || !stops.length) return;
     if (traveling || taking) return;
     clearHover(); // 导览期间不接受悬停，先还原旧高亮
+    if (heldBook) putBackHeld(true);
     if (tour) endTour();
     for (const k in keys) keys[k] = false;
     const home = { pos: player.pos.clone(), tYaw: player.tYaw, tPitch: player.tPitch };
@@ -2964,7 +3129,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     joyReset();
     if (lensOn) toggleLens(false);
     taking = false;
+    heldBook = null;
+    stackItems.length = 0;
     for (const item of bookItems) {
+      item.stacked = false;
+      if (item.mesh.parent !== scene) scene.attach(item.mesh);
       item.animating = false;
       item.mesh.position.copy(item.basePos);
       item.mesh.quaternion.copy(item.baseQuat);
@@ -3083,7 +3252,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (world) {
       world.step();
       for (const item of bookItems) {
-        if (!item.body || item.animating) continue;
+        // 手里的书、桌上的书由动画/桌面位置接管，不让物理体把它们拉回书架
+        if (!item.body || item.animating || item === heldBook || item.stacked) continue;
         const p = item.body.translation();
         if (p.y < 0.2) {
           item.mesh.position.copy(item.basePos);
@@ -3117,6 +3287,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
     for (let d = 0; d < orbitDots.length; d++) {
       orbitDots[d].material.emissiveIntensity = 0.6 + 0.4 * Math.sin(elapsed * 1.6 + d * 1.2);
+    }
+    // 手里的书跟着人走：握住位置随视角，带一点呼吸浮动
+    if (heldBook && !taking) {
+      heldBook.mesh.position.lerp(handPoint(handTarget), 0.28);
+      heldBook.mesh.quaternion.slerp(handQuaternion(handQ), 0.28);
+      heldBook.mesh.scale.setScalar(0.5 + Math.sin(elapsed * 2.4) * 0.006);
+      heldBook.mesh.visible = true;
     }
     renderer.render(scene, camera);
     drawLens();
@@ -3208,6 +3385,17 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     getStolenPlan,
     toggleLens,
     isLensOn: () => lensOn,
+    // 抽书 / 叠书（也供 E2E 与后续脚本调用）
+    grabBook: (id) => {
+      const item = bookItems.find((it) => (it.book.id || it.book.call) === id);
+      if (!item) return false;
+      takeBook(item);
+      return true;
+    },
+    heldInfo: () => (heldBook ? { id: heldBook.book.id, title: heldBook.book.title } : null),
+    openHeld: () => { if (!heldBook) return false; openHeldBook(); return true; },
+    stackHeld: () => { if (heldBook) { placeOnTable(heldBook); return true; } return false; },
+    getStack: () => stackItems.map((it) => it.book.id),
   };
 }
 

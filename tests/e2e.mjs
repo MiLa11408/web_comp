@@ -100,6 +100,38 @@ lensState === 'block' ? ok('3D 放大镜举起/放下') : bad('3D 放大镜举�
 await page.evaluate(() => { window.mm3d.setFloor('all', true); window.mm3d.reset(); });
 await page.waitForTimeout(700);
 
+// 物理书架：抽出到手里 → 叠到 L1 长桌 → 再抽一本翻开
+await page.evaluate(async () => {
+  window.mm3d.setFloor('L1', true);
+  window.mm3d.grabBook('b1');
+  await new Promise((r) => setTimeout(r, 1100));
+});
+const heldInfo = await page.evaluate(() => window.mm3d.heldInfo());
+heldInfo && heldInfo.id === 'b1' ? ok('书抽到手里', heldInfo.title) : bad('书抽到手里', JSON.stringify(heldInfo));
+const stackState = await page.evaluate(() => {
+  window.mm3d.stackHeld();
+  return window.mm3d.getStack();
+});
+stackState.length === 1 ? ok('书叠到长桌', stackState.join(',')) : bad('书叠到长桌', JSON.stringify(stackState));
+const openState = await page.evaluate(async () => {
+  window.mm3d.grabBook('b2');
+  await new Promise((r) => setTimeout(r, 1000));
+  return window.mm3d.heldInfo();
+});
+if (openState && openState.id === 'b2') {
+  await page.keyboard.press('e');
+  await page.waitForSelector('#reader', { timeout: 10000 });
+  ok('手里的书按 E 翻开');
+  await page.locator('.reader-float-close').first().click();
+  await page.waitForTimeout(1600);
+} else bad('第二本书抽到手里', JSON.stringify(openState));
+await page.evaluate(() => window.mm3d.reset());
+await page.waitForTimeout(800);
+const stackAfterReset = await page.evaluate(() => window.mm3d.getStack());
+stackAfterReset.length === 0 ? ok('复位清空长桌') : bad('复位清空长桌', JSON.stringify(stackAfterReset));
+await page.evaluate(() => window.mm3d.setFloor('all', true));
+await page.waitForTimeout(600);
+
 // 星图（3D）
 await page.getByRole('button', { name: '星图' }).click();
 await page.waitForSelector('#mm-star-overlay', { timeout: 12000 });
