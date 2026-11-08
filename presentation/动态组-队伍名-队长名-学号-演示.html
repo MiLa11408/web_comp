@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="x-content-type" content="presentation" />
+<meta name="x-presentation-version" content="1.0" />
+<meta name="x-presentation-indicator" content="deck-stage .slide" />
+<title>机忆书库 · THE MACHINE MEMORY · 答辩演示</title>
+<style>
+  :root{
+    --bg:#14100d; --bg-deep:#0d0a07; --panel:#1d1712; --panel2:#241c14;
+    --ink:#e6d9bd; --dim:#9a8a6f; --faint:#7d6e55;
+    --gold:#c8a24a; --gold2:#e2c17c; --gold3:#8a6320;
+    --line:#3a2f22; --line2:#5a4526;
+    --rust:#9c1f1f; --rust2:#c43a3a;
+    --paper:#e8dcc0;
+    --serif:"Songti SC","STSong","SimSun","Noto Serif SC",serif;
+    --sans:"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    --mono:"Consolas","SF Mono","SFMono-Regular",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1400px 700px at 50% -12%, #241c14 0%, transparent 60%),
+      radial-gradient(1000px 700px at 100% 110%, #1a1209 0%, transparent 55%),
+      var(--bg-deep);
+    color:var(--ink);
+    font-family:var(--sans);
+    height:100vh; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .stage-wrap{position:relative;}
+  .stage{position:relative; width:1920px; height:1080px; transform-origin:top left; overflow:hidden;
+    background:
+      radial-gradient(1100px 560px at 50% -8%, #241c14 0%, transparent 62%),
+      radial-gradient(820px 640px at 105% 108%, #1c1308 0%, transparent 58%),
+      linear-gradient(180deg, #17120d 0%, var(--bg) 55%, #120d09 100%);
+  }
+  /* —— 幻灯片 —— */
+  .slide{
+    position:absolute; inset:0; opacity:0; visibility:hidden;
+    padding:56px 92px 140px;
+    transition:opacity .45s ease, visibility .45s ease, transform .45s ease;
+    transform:translateY(14px);
+  }
+  .slide.active{opacity:1; visibility:visible; transform:translateY(0);}
+  .slide.prev-out{transform:translateY(-14px);}
+
+  /* 细金线框架 + 四角压花 */
+  .slide::before{
+    content:""; position:absolute; inset:34px 40px 96px;
+    border:1px solid rgba(200,162,74,.22); pointer-events:none;
+  }
+  .slide::after{
+    content:""; position:absolute; inset:40px 46px 102px;
+    border:1px solid rgba(200,162,74,.08); pointer-events:none;
+  }
+  .cn{position:absolute; width:30px; height:30px; border:1.5px solid var(--gold); pointer-events:none; opacity:.75;}
+  .cn.tl{top:30px; left:36px; border-right:none; border-bottom:none;}
+  .cn.tr{top:30px; right:36px; border-left:none; border-bottom:none;}
+  .cn.bl{bottom:90px; left:36px; border-right:none; border-top:none;}
+  .cn.br{bottom:90px; right:36px; border-left:none; border-top:none;}
+
+  /* 超大页码（章节数字） */
+  .ghost-num{
+    position:absolute; right:56px; top:34px; z-index:0;
+    font-family:var(--serif); font-weight:700; font-size:230px; line-height:1;
+    color:rgba(200,162,74,.07); letter-spacing:-6px; pointer-events:none; user-select:none;
+  }
+
+  /* 页眉 */
+  .hd{position:relative; z-index:2; display:flex; align-items:baseline; justify-content:space-between;
+    padding-bottom:20px; border-bottom:1px solid var(--line2); margin-bottom:34px;}
+  .kicker{font-family:var(--sans); font-size:17px; letter-spacing:6px; color:var(--gold);}
+  .kicker .en{color:var(--dim); font-size:13px; letter-spacing:4px; margin-left:14px;}
+  .pg{font-family:var(--mono); font-size:14px; color:var(--faint); letter-spacing:2px;}
+  .pg b{color:var(--gold2); font-weight:600;}
+
+  /* 标题 */
+  h1,h2,h3{margin:0;}
+  .title-block{margin-bottom:40px;}
+  .title-block h2{font-family:var(--serif); font-size:56px; font-weight:700; color:var(--ink); letter-spacing:2px; line-height:1.15;}
+  .title-block .sub{font-family:var(--sans); font-size:19px; color:var(--dim); letter-spacing:3px; margin-top:14px;}
+
+  .body{position:relative; z-index:2;}
+
+  /* 通用块 */
+  .lead{font-family:var(--serif); font-size:31px; line-height:1.8; color:var(--ink); font-weight:600;}
+  .lead .mark{color:var(--gold2);}
+  .lead::before{content:"「"; color:var(--gold);}
+  .lead::after{content:"」"; color:var(--gold);}
+  .dim-note{color:var(--faint); font-size:17px; margin-top:22px; letter-spacing:1px;}
+
+  .rule{display:flex; align-items:center; gap:16px; margin:22px 0; color:var(--gold3); font-size:14px; letter-spacing:3px;}
+  .rule::before,.rule::after{content:""; height:1px; background:linear-gradient(90deg,transparent,var(--line2)); }
+  .rule::before{width:46px;}
+  .rule::after{flex:1;}
+
+  /* 关键词三联 */
+  .trio{display:flex; gap:26px; margin-top:44px;}
+  .trio .item{flex:1; border-top:1px solid var(--gold); padding-top:18px;}
+  .trio .item .k{font-family:var(--serif); font-size:34px; color:var(--gold2);}
+  .trio .item .v{font-size:17px; color:var(--dim); line-height:1.7; margin-top:8px;}
+
+  /* 大数字统计 */
+  .stat-hero{display:flex; align-items:stretch; gap:40px; margin-bottom:40px;}
+  .stat-big{font-family:var(--serif); font-weight:700; color:var(--gold2);
+    font-size:150px; line-height:.95; letter-spacing:-2px; display:flex; align-items:baseline; gap:26px;}
+  .stat-big .x{font-size:70px; color:var(--gold3);}
+  .stat-big .dim{font-size:28px; color:var(--dim); font-weight:400; letter-spacing:2px;}
+  .stat-side{flex:1; display:flex; flex-direction:column; justify-content:center; gap:14px;}
+
+  /* 表格 */
+  table{width:100%; border-collapse:collapse; font-size:18px;}
+  th{font-family:var(--sans); color:var(--gold); text-align:left; padding:13px 16px; border-bottom:1px solid var(--gold); letter-spacing:2px; font-weight:600; font-size:15px;}
+  td{padding:13px 16px; border-bottom:1px solid var(--line); color:var(--ink); vertical-align:top; line-height:1.6;}
+  td:first-child{color:var(--dim); white-space:nowrap;}
+  td .num{color:var(--gold2); font-weight:700; font-family:var(--serif); font-size:22px;}
+  tr:last-child td{border-bottom:none;}
+
+  /* 卡片网格 */
+  .grid{display:grid; gap:18px;}
+  .g2{grid-template-columns:1fr 1fr;}
+  .g3{grid-template-columns:1fr 1fr 1fr;}
+  .g4{grid-template-columns:1fr 1fr 1fr 1fr;}
+  .card{background:linear-gradient(160deg, var(--panel2), var(--panel)); border:1px solid var(--line);
+    padding:22px 24px; position:relative; overflow:hidden;}
+  .card::after{content:attr(data-no); position:absolute; right:10px; bottom:-14px; font-family:var(--serif);
+    font-size:78px; color:rgba(200,162,74,.08); font-weight:700;}
+  .card .c-kick{font-size:13px; letter-spacing:3px; color:var(--gold3); margin-bottom:10px;}
+  .card h4{font-family:var(--serif); font-size:26px; color:var(--gold2); margin:0 0 10px; font-weight:600;}
+  .card p{font-size:16px; color:var(--dim); line-height:1.8; margin:0;}
+  .card p b{color:var(--ink);}
+  .card .big{font-family:var(--serif); font-size:44px; color:var(--gold2); line-height:1;}
+  .card .note{font-size:14px; color:var(--faint); margin-top:10px; line-height:1.7;}
+
+  /* 编号步骤 */
+  .steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:16px; counter-reset:s;}
+  .steps li{position:relative; padding:0 0 0 84px; font-size:20px; line-height:1.7; color:var(--ink); counter-increment:s;}
+  .steps li::before{content:counter(s,decimal-leading-zero); position:absolute; left:0; top:0;
+    font-family:var(--serif); font-size:44px; font-weight:700; color:var(--gold3); line-height:1;}
+  .steps li b{color:var(--gold2); font-weight:600;}
+  .steps li span{color:var(--dim); font-size:16px; display:block; margin-top:4px;}
+
+  /* 键值列表（技术/安全） */
+  .kv{display:grid; grid-template-columns:2fr 3fr; gap:0; border-top:1px solid var(--line2); margin-top:8px;}
+  .kv .k{font-family:var(--mono); font-size:17px; color:var(--gold3); letter-spacing:1px; padding:14px 20px 14px 0; border-bottom:1px solid var(--line);}
+  .kv .v{font-size:19px; color:var(--ink); padding:14px 0; border-bottom:1px solid var(--line); line-height:1.7;}
+  .kv .v b{color:var(--gold2);}
+
+  /* 多行要点 */
+  ul.points{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px;}
+  ul.points li{position:relative; padding-left:30px; font-size:20px; line-height:1.75; color:var(--ink);}
+  ul.points li::before{content:""; position:absolute; left:0; top:12px; width:9px; height:9px; background:var(--gold);
+    transform:rotate(45deg);}
+  ul.points li b{color:var(--gold2); font-weight:600;}
+  ul.points li .d{color:var(--dim); font-size:16px;}
+
+  /* 命令代码 */
+  pre.code{background:#0f0b08; border:1px solid var(--line2); border-left:3px solid var(--gold);
+    padding:20px 24px; font-family:var(--mono); font-size:19px; line-height:1.9; color:#cdbf9a; margin:18px 0;}
+  pre.code .c{color:var(--faint);}
+  pre.code .cm{color:var(--gold3);}
+
+  .url{font-family:var(--mono); color:var(--gold2); font-size:20px; letter-spacing:1px;}
+
+  /* 流程路线 */
+  .flowline{display:flex; align-items:center; flex-wrap:wrap; gap:14px; margin:20px 0;}
+  .flowline .node{border:1px solid var(--gold); color:var(--ink); padding:12px 22px; font-size:19px; letter-spacing:1px;
+    background:var(--panel); position:relative;}
+  .flowline .node.hl{background:#2a2114; color:var(--gold2); border-color:var(--gold2);}
+  .flowline .arrow{color:var(--gold3); font-family:var(--serif); font-size:24px;}
+
+  /* 演讲备注区 */
+  .notes{position:absolute; left:92px; right:92px; bottom:44px; z-index:3;
+    border-top:1px solid var(--line2); padding-top:14px; display:flex; gap:18px; align-items:flex-start;}
+  .notes .tag{font-family:var(--sans); font-size:13px; letter-spacing:3px; color:var(--gold3); white-space:nowrap; padding-top:2px;}
+  .notes .txt{font-size:15px; color:var(--faint); line-height:1.65;}
+  .notes .txt b{color:var(--dim); font-weight:600;}
+
+  /* 印章圆章 */
+  .seal{position:absolute; pointer-events:none;}
+  .seal svg{display:block;}
+
+  /* —— 封面 —— */
+  .cover .ghost-num{display:none;}
+  .cover .hd{border-bottom:none;}
+  .cover-center{position:relative; z-index:2; margin-top:120px;}
+  .cover-kick{font-size:19px; letter-spacing:8px; color:var(--gold3);}
+  .cover-title{font-family:var(--serif); font-size:128px; font-weight:700; color:var(--ink); letter-spacing:8px; line-height:1.06; margin:26px 0 6px;}
+  .cover-en{font-family:var(--sans); font-size:27px; letter-spacing:14px; color:var(--gold); margin-bottom:30px; text-transform:uppercase;}
+  .cover-sub{font-family:var(--serif); font-size:33px; color:var(--dim); letter-spacing:3px;}
+  .cover-team{margin-top:90px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;}
+  .cover-team .t{border:1px solid var(--line2); background:var(--panel); color:var(--ink);
+    padding:12px 24px; font-size:21px; letter-spacing:2px;}
+  .cover-team .t.hl{color:var(--gold2); border-color:var(--gold3);}
+  .cover-url{margin-top:34px; font-family:var(--mono); color:var(--dim); font-size:20px; letter-spacing:1px;}
+
+  /* —— 结束页 —— */
+  .end .close-line{font-family:var(--serif); font-size:58px; color:var(--gold2); letter-spacing:3px; margin:90px 0 24px;}
+
+  /* 总览 */
+  #overview{position:fixed; inset:0; z-index:50; background:rgba(10,8,5,.94); display:none;
+    overflow:auto; padding:60px 80px;}
+  body.overview #overview{display:block;}
+  #overview .ov-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:34px;}
+  #overview .ov-title{font-family:var(--serif); font-size:34px; color:var(--gold2); letter-spacing:4px;}
+  #overview button{cursor:pointer; background:transparent; border:1px solid var(--gold); color:var(--gold);
+    font-family:var(--sans); font-size:15px; letter-spacing:2px; padding:9px 20px;}
+  #overview button:hover{background:#2a2114;}
+  .ov-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  .ov-card{background:var(--panel); border:1px solid var(--line); padding:20px 22px; cursor:pointer; position:relative;
+    transition:border-color .2s, transform .2s; overflow:hidden;}
+  .ov-card:hover{border-color:var(--gold); transform:translateY(-3px);}
+  .ov-card .no{font-family:var(--serif); font-size:40px; color:var(--gold3); font-weight:700; line-height:1;}
+  .ov-card .tt{font-family:var(--serif); font-size:21px; color:var(--ink); margin-top:10px;}
+  .ov-card .en{font-size:12px; color:var(--faint); letter-spacing:1px; margin-top:6px;}
+
+  /* 底部操作提示条 */
+  .hint{position:fixed; right:22px; bottom:12px; z-index:40; font-size:12px; color:#5a4f3c; letter-spacing:1px; user-select:none;}
+</style>
+</head>
+<body>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+
+    <!-- 01 封面 -->
+    <section class="slide cover active" data-deck-label="封面">
+      <div class="cover-center">
+        <div class="cover-kick">网页设计大赛 · 参赛作品</div>
+        <h1 class="cover-title">机忆书库</h1>
+        <div class="cover-en">The Machine Memory</div>
+        <div class="cover-sub">一座可以走进去的 AI 知识档案馆</div>
+        <div class="cover-team">
+          <span class="t hl">动态组</span><span class="t">队伍名</span><span class="t">队长名</span><span class="t">学号</span>
+        </div>
+        <div class="cover-url">线上地址　http://150.158.1.111/ai/</div>
+      </div>
+      <div class="seal" data-seal="top-right"></div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">开场一句即可，不用读整页。先报队名、亮出「可以走进去的 AI 档案馆」这个定位。</span></div>
+    </section>
+
+    <!-- 02 一句话定位 -->
+    <section class="slide" data-deck-label="定位">
+      <header class="hd"><span class="kicker">定位<span class="en">POSITIONING</span></span><span class="pg">02 / 16</span></header>
+      <div class="ghost-num">02</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>一句话定位</h2>
+          <div class="sub">One Sentence · Positioning</div>
+        </div>
+        <p class="lead">这不是一个 AI 百科，而是一座<span class="mark">可以走进去</span>的 AI 档案馆：用<span class="mark">空间、线路与残缺页</span>，把 90 年的人工智能史组织成可探索的路径。</p>
+        <div class="trio">
+          <div class="item"><div class="k">空间</div><div class="v">书 = 知识，电梯 = 分级，把晦涩的 AI 史变成一栋楼。</div></div>
+          <div class="item"><div class="k">线路</div><div class="v">书轨 = 主题路线，星图 = 概念关系，按顺序读、按关系读。</div></div>
+          <div class="item"><div class="k">残缺</div><div class="v">残页、失窃页、暗门——让「缺失」本身成为玩法。</div></div>
+        </div>
+        <div class="dim-note">所有史实有来源，所有推测有标注。</div>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">直接引出三个关键词：<b>空间、线路、残缺</b>——这是后文全部展开的骨架。</span></div>
+    </section>
+
+    <!-- 03 内容深度 48×384 -->
+    <section class="slide" data-deck-label="内容深度 48×384">
+      <header class="hd"><span class="kicker">内容<span class="en">CONTENT</span></span><span class="pg">03 / 16</span></header>
+      <div class="ghost-num">03</div>
+      <div class="body">
+        <div class="title-block"><h2>内容深度 · 48 本书 × 384 章</h2></div>
+        <div class="stat-hero">
+          <div class="stat-big"><span>48</span><span class="x">×</span><span>8</span><span class="dim">= 384 章 · 约 80 万字</span></div>
+        </div>
+        <table>
+          <tr><th>指标</th><th>规模</th></tr>
+          <tr><td>书目</td><td><span class="num">48</span> 本 × 8 章 = 384 章，约 80 万字</td></tr>
+          <tr><td>时间跨度</td><td>1936 图灵机 → 2026 前沿（每日更新 arXiv）</td></tr>
+          <tr><td>每章骨架</td><td>9 段固定骨架：时间人物 → 机制 → 影响 → 争议 → 关系 → 来源</td></tr>
+          <tr><td>来源</td><td>每章 ≥3 条实开核验来源，checked: true</td></tr>
+          <tr><td>大白话</td><td>每章 ≥2 处机制白话讲解 + 馆员页边注</td></tr>
+        </table>
+        <div class="rule">覆盖 · COVERAGE</div>
+        <p class="dim-note" style="margin-top:6px; font-size:18px;">符号主义 · 神经网络 · GPT 世系 · DeepSeek 与中国 AI · 具身智能 · AI 安全 · 算力芯片 · 法律伦理 · 气候教育　|　GPT / Claude / DeepSeek 三大模型家族功绩全部落位</p>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">评委最关心「内容是不是抄来的」——直接答：每章 <b>3 条以上实开核验来源</b> + 全文自校验，check: true。</span></div>
+    </section>
+
+    <!-- 04 知识结构 -->
+    <section class="slide" data-deck-label="知识结构">
+      <header class="hd"><span class="kicker">结构<span class="en">STRUCTURE</span></span><span class="pg">04 / 16</span></header>
+      <div class="ghost-num">04</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>知识不是一堵墙，是有结构的</h2>
+          <div class="sub">Structure, not a wall</div>
+        </div>
+        <div class="grid g4">
+          <div class="card" data-no="L"><div class="c-kick">楼层 · LEVEL</div><h4>知识分级</h4>
+            <p>L1 公开 → L2 内部 → L3 机密 → L4 绝密</p>
+            <div class="note">越往上越残破、越接近争议。</div></div>
+          <div class="card" data-no="R"><div class="c-kick">书轨 · ROUTE</div><h4>主题线路</h4>
+            <p>5 条主线 + 7 条支线 + <b>55 站</b></p>
+            <div class="note">同一本书跨线出现 = 「换乘站」。</div></div>
+          <div class="card" data-no="G"><div class="c-kick">星图 · GRAPH</div><h4>概念关系</h4>
+            <p>48 个节点 · <b>30 条</b>关系弧线</p>
+            <div class="note">节点分布在四层球壳。</div></div>
+          <div class="card" data-no="T"><div class="c-kick">时间 · TIME</div><h4>年代与尺度</h4>
+            <p>384 张年代卡 · 12 项参数标尺 · 20 件失败案例</p>
+            <div class="note">时间轴 / 模型尺寸墙 / 失败博物馆。</div></div>
+        </div>
+        <div class="rule">一句话 · IN SHORT</div>
+        <p class="dim-note" style="margin-top:6px; font-size:20px;">楼层回答「<b style="color:var(--gold2)">信不信</b>」，书轨回答「<b style="color:var(--gold2)">按什么顺序读</b>」，星图回答「<b style="color:var(--gold2)">谁和谁有关系</b>」。</p>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">一句话总结——楼层回答「信不信」，书轨回答「按什么顺序读」，星图回答「谁和谁有关系」。</span></div>
+    </section>
+
+    <!-- 05 查找/检索 -->
+    <section class="slide" data-deck-label="查找检索">
+      <header class="hd"><span class="kicker">查找<span class="en">SEARCH</span></span><span class="pg">05 / 16</span></header>
+      <div class="ghost-num">05</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>查找：为「查得到」设计的检索</h2>
+          <div class="sub">Four-level ranking</div>
+        </div>
+        <p class="lead" style="font-size:27px;">四级排序，一条查询同时锁定四个层面。</p>
+        <ol class="steps" style="margin-top:30px;">
+          <li><b>大标题</b>（权重最高）</li>
+          <li><b>标签 tag</b></li>
+          <li><b>正文提及次数</b></li>
+          <li><b>相关内容</b></li>
+        </ol>
+        <div class="rule">体验 · UX</div>
+        <ul class="points">
+          <li>输入补全：书名 / 章节 / 人物 / 标签，<b>边输边出</b></li>
+          <li>命中词在正文中<b>高亮</b>，检索侧栏可跳转</li>
+          <li>书架总览一键列出全部 48 本书、索书号、年份与进度</li>
+        </ul>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">现场可演示搜「神经网络」——命中优先落在神经书系，而不是散在全文里。</span></div>
+    </section>
+
+    <!-- 06 趣味·馆藏玩法 -->
+    <section class="slide" data-deck-label="馆藏玩法">
+      <header class="hd"><span class="kicker">趣味<span class="en">PLAY</span></span><span class="pg">06 / 16</span></header>
+      <div class="ghost-num">06</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>把档案做成可玩的馆藏</h2>
+          <div class="sub">Playable collection</div>
+        </div>
+        <table>
+          <tr><th>玩法</th><th>数量 / 机制</th></tr>
+          <tr><td>残页</td><td><span class="num">12</span> 张 if 线残页，藏在章节与 3D 展厅，掉落/拾取，可拼合成一条故事线</td></tr>
+          <tr><td>失窃页</td><td><span class="num">9</span> 件，锁在 3D 展柜里，读到章末才能追回</td></tr>
+          <tr><td>躁动书页</td><td><span class="num">12</span> 件，先「收容」再「归位」到正确章节</td></tr>
+          <tr><td>隐藏书</td><td>读够 12 章才显形的《未编目 · 第七码》</td></tr>
+          <tr><td>徽章</td><td><span class="num">10</span> 枚借阅徽章 + 「我翻过的书」聚合</td></tr>
+          <tr><td>盖章 / 读完</td><td>红章落纸动画、二次确认、可撤销</td></tr>
+        </table>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">强调「<b>缺失成为玩法</b>」——残页和失窃页让读者注意到史料是怎么丢的。</span></div>
+    </section>
+
+    <!-- 07 L4 暗门 -->
+    <section class="slide" data-deck-label="L4 暗门">
+      <header class="hd"><span class="kicker">趣味 · 暗门<span class="en">THE HIDDEN DOOR</span></span><span class="pg">07 / 16</span></header>
+      <div class="ghost-num">07</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>L4 的暗门</h2>
+          <div class="sub">录制视频的亮点镜头</div>
+        </div>
+        <ol class="steps">
+          <li>L4 蜡封桌上多一张盖着<b>红 X 的备忘</b><span>「第十柜未编目 / 右墙帷幕后 / 十道脊 = 钥匙」</span></li>
+          <li>右墙帷幕没有拉直，点它滑开 → 露出<b>不在平面图上的铁门</b></li>
+          <li>门后是<b>十本「假如之书」</b>（1956 达特茅斯 → 2024 开源）<span>选一条科技树：符号树 / 神经树 / 具身树　·　点「走假如」→ 生成 12 段约 1400 字的科幻推测，换树内容不同</span></li>
+          <li>书架尽头还有<b>第十一本「未写之书」</b><span>只接受「如果没有 X 会怎么样」，调 DeepSeek V3.2 生成只与问题相关的小故事，不合格式直接拒绝</span></li>
+        </ol>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">三步打开暗门的过程本身就是一个悬念镜头，适合放视频中段。</span></div>
+    </section>
+
+    <!-- 08 可玩演示与导览 -->
+    <section class="slide" data-deck-label="演示与导览">
+      <header class="hd"><span class="kicker">趣味 · 演示<span class="en">DEMO & GUIDE</span></span><span class="pg">08 / 16</span></header>
+      <div class="ghost-num">08</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>可玩演示与馆长导览</h2>
+          <div class="sub">Interactive demos & auto tour</div>
+        </div>
+        <div class="grid g2">
+          <div class="card"><div class="c-kick">06 个可玩演示</div>
+            <div class="big">6 个</div>
+            <p>图灵测试 · 中文屋 · 注意力示意 · 规则系统 · 扩散去噪 · 缩放定律</p>
+            <div class="note">参数可拖拽，现场即可演示。</div></div>
+          <div class="card"><div class="c-kick">馆长导览 · 自动版</div>
+            <div class="big">8 站</div>
+            <p>8 站自动巡游约 3 分钟</p>
+            <div class="note">进度条 + 暂停继续，无需操作。</div></div>
+        </div>
+        <ul class="points" style="margin-top:28px;">
+          <li>接待卡、四层馆员个性欢迎语、WebAudio 环境音</li>
+          <li>分区域新手提示卡：第一次到哪，才在哪出现，<b>不打断探索</b></li>
+        </ul>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">答辩时可现场点开一个演示；视频录制直接跑导览即可。</span></div>
+    </section>
+
+    <!-- 09 技术方案 -->
+    <section class="slide" data-deck-label="技术方案">
+      <header class="hd"><span class="kicker">技术<span class="en">STACK</span></span><span class="pg">09 / 16</span></header>
+      <div class="ghost-num">09</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>无构建 · 可审计 · 轻依赖</h2>
+          <div class="sub">No build step · Auditable · Lightweight</div>
+        </div>
+        <div class="kv">
+          <div class="k">前端</div><div class="v">原生 HTML/JS + three.js（本地 vendor）+ Rapier 物理 + WebAudio</div>
+          <div class="k">后端</div><div class="v">Fastify 5 + Node 内置 <b>node:sqlite</b>（零数据库服务）</div>
+          <div class="k">内容</div><div class="v">Markdown + YAML frontmatter + JSON（<b>内容与代码分离</b>）</div>
+          <div class="k">部署</div><div class="v">systemd + nginx 子路径 /ai/，npm ci --omit=dev 即上线</div>
+          <div class="k">运维</div><div class="v">arXiv 每日 04:17 自动入库 · 每日 03:40 自动备份（保留 14 天）</div>
+        </div>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">评委问「技术选型为什么」——答：无构建步骤 = 任何 Node ≥ 22.5 的机器三条命令跑起来。</span></div>
+    </section>
+
+    <!-- 10 3D 阅览室 -->
+    <section class="slide" data-deck-label="3D 阅览室">
+      <header class="hd"><span class="kicker">技术亮点 ①<span class="en">3D READING ROOM</span></span><span class="pg">10 / 16</span></header>
+      <div class="ghost-num">10</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>3D 阅览室</h2>
+          <div class="sub">First-person immersive reading</div>
+        </div>
+        <ul class="points">
+          <li>第一人称 <b>WASD + 拖拽视角</b>；点击书脊抽到手里 → E 翻开 → Q 叠到长桌（<b>Rapier 真物理</b>）</li>
+          <li>精细建模：拱形高窗、藻井与梁底藏光、护墙板、滑梯、吊灯水晶坠</li>
+          <li>黄铜电梯<b>入舱转场</b>（门开 → 走入 → 黑场切层 → 到站），楼层切换同步 3D / 2D 视图</li>
+          <li>低配自动降 DPR、关阴影、减粒子；2D 页面暂停 3D 渲染省电；手机虚拟摇杆</li>
+        </ul>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">技术难点举例——3D/2D 楼层状态双向同步、物理书与手持状态分离、软件渲染下 E2E 稳定。</span></div>
+    </section>
+
+    <!-- 11 工程质量 -->
+    <section class="slide" data-deck-label="工程质量">
+      <header class="hd"><span class="kicker">技术亮点 ②<span class="en">QUALITY</span></span><span class="pg">11 / 16</span></header>
+      <div class="ghost-num">11</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>工程质量</h2>
+          <div class="sub">Engineered for auditors</div>
+        </div>
+        <div class="grid g2" style="margin-bottom:24px;">
+          <div class="card"><div class="c-kick">内容校验 · npm run verify</div>
+            <div class="big">0 FAIL · 0 WARN</div>
+            <p>384 章全自动校验：字数、来源、双向关系、索书号唯一性</p></div>
+          <div class="card"><div class="c-kick">端到端 · npm run test:e2e</div>
+            <div class="big">116 项全绿</div>
+            <p>Playwright + 系统 Chrome：入馆、取书、检索、电梯、书轨、星图、暗门、未写之书、盖章撤销、移动端</p></div>
+        </div>
+        <ul class="points">
+          <li>四身份走查打磨：目标用户 / 评委 / 路过开发者 / 路人</li>
+          <li>提交记录与档案 skill 全程留痕</li>
+        </ul>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">这一页专给路过的专业开发者评委准备。</span></div>
+    </section>
+
+    <!-- 12 安全性 -->
+    <section class="slide" data-deck-label="安全性">
+      <header class="hd"><span class="kicker">安全<span class="en">SECURITY</span></span><span class="pg">12 / 16</span></header>
+      <div class="ghost-num">12</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>安全性</h2>
+          <div class="sub">Defense in depth</div>
+        </div>
+        <div class="kv">
+          <div class="k">认证</div><div class="v">密码 <b>scrypt 慢哈希</b> + 随机盐；会话 token 签名鉴权</div>
+          <div class="k">注入</div><div class="v">全部 SQL 走参数化查询；注册/登录/IP 级<b>限流</b></div>
+          <div class="k">未写之书 API</div><div class="v">输入格式白名单校验 + 8 次/10 分钟限流 + 最大 token 限制</div>
+          <div class="k">密钥</div><div class="v">放服务器 .env（权限 600），<b>不进仓库、不进压缩包</b>，只提供 .env.example</div>
+          <div class="k">权限</div><div class="v">访客<b>只读</b>全部内容；盖章/批注/进度才需借书证</div>
+          <div class="k">部署</div><div class="v">自签 https + http 双入口，CSP 收紧与最小权限</div>
+        </div>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">如果有安全评委，重点讲密钥工程化与限流。</span></div>
+    </section>
+
+    <!-- 13 数据与统计 -->
+    <section class="slide" data-deck-label="数据与统计">
+      <header class="hd"><span class="kicker">数据<span class="en">DATA & LOG</span></span><span class="pg">13 / 16</span></header>
+      <div class="ghost-num">13</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>数据与统计（后端记录）</h2>
+          <div class="sub">The site remembers every read</div>
+        </div>
+        <ul class="points">
+          <li>每个人翻阅了<b>什么书多少次</b></li>
+          <li>什么书被多少人翻阅（<b>全馆 TOP 榜</b>）</li>
+          <li>残页收集程度、印章、批注、进度、徽章</li>
+          <li>「借阅档案 · 今日可做」把隐藏玩法摊成<b>可照着做的清单</b></li>
+        </ul>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">一句话——网站不只是展示，它记录每一次阅读。</span></div>
+    </section>
+
+    <!-- 14 运行方式 -->
+    <section class="slide" data-deck-label="运行方式">
+      <header class="hd"><span class="kicker">运行<span class="en">RUN IT</span></span><span class="pg">14 / 16</span></header>
+      <div class="ghost-num">14</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>运行方式（评委可直接照做）</h2>
+        </div>
+        <pre class="code">npm install      <span class="cm"># 只需 fastify/yaml/three/rapier（playwright-core 仅测试用）</span>
+npm start        <span class="cm"># http://127.0.0.1:3300</span></pre>
+        <p style="font-size:20px; color:var(--dim);">线上演示　<span class="url">http://150.158.1.111/ai/</span></p>
+        <div class="rule">自检（可选）· OPTIONAL CHECKS</div>
+        <pre class="code">npm run verify     <span class="cm"># 内容校验</span>
+npm run test:e2e   <span class="cm"># 端到端测试（需本机 Chrome/Edge）</span></pre>
+        <p class="dim-note" style="margin-top:4px;">详细步骤与排错见 README.md 与 docs/DEPLOY.md</p>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">压缩包里的运行说明以这页为准。</span></div>
+    </section>
+
+    <!-- 15 演示路线 -->
+    <section class="slide" data-deck-label="演示路线">
+      <header class="hd"><span class="kicker">路线<span class="en">30-SECOND TOUR</span></span><span class="pg">15 / 16</span></header>
+      <div class="ghost-num">15</div>
+      <div class="body">
+        <div class="title-block">
+          <h2>演示路线（30 秒版）</h2>
+          <div class="sub">The 30-second walkthrough</div>
+        </div>
+        <div class="flowline">
+          <span class="node">门厅入馆</span><span class="arrow">→</span>
+          <span class="node">3D 书架抽书翻开</span><span class="arrow">→</span>
+          <span class="node hl">馆长导览 8 站</span>
+        </div>
+        <div class="flowline">
+          <span class="arrow" style="font-size:22px;color:var(--gold3);">↳</span>
+          <span class="node hl">L4 暗门三连</span><span class="arrow">→</span>
+          <span class="node">假如之书 · 走一条科技树</span><span class="arrow">→</span>
+          <span class="node">未写之书 · 问一个假设</span>
+        </div>
+        <div class="rule">暗门三连 · MEMO → CURTAIN → DOOR</div>
+        <ul class="points">
+          <li>备忘（盖红 X）→ 帷幕滑开 → 铁门现身</li>
+          <li>假如之书选树走线 · 未写之书只接受假设性问题</li>
+        </ul>
+      </div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">视频前 3 分钟跑导览，后 1 分钟给暗门与检索特写。</span></div>
+    </section>
+
+    <!-- 16 结束页 -->
+    <section class="slide end" data-deck-label="结束">
+      <header class="hd"><span class="kicker">机忆书库<span class="en">THE MACHINE MEMORY</span></span><span class="pg">16 / 16</span></header>
+      <div class="ghost-num">16</div>
+      <div class="body">
+        <div class="close-line">不替你下结论，只把线索摆在你面前。</div>
+        <ul class="points" style="margin-top:20px;">
+          <li>线上　<span class="url">http://150.158.1.111/ai/</span></li>
+          <li>48 本书 · 384 章 · 116 项 E2E 全绿</li>
+          <li>「假如」都标注为推测，史实都有来源</li>
+        </ul>
+        <div class="cover-team" style="margin-top:64px;">
+          <span class="t hl">动态组</span><span class="t">队伍名</span><span class="t">队长名</span><span class="t">学号</span>
+        </div>
+        <div class="close-line" style="font-size:34px; margin-top:56px; color:var(--ink);">感谢观看，欢迎提问。</div>
+      </div>
+      <div class="seal" data-seal="top-right"></div>
+      <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">Q&A 提示：和普通百科的区别 / 内容准确性 / 性能低配 / 为什么做残页。</span></div>
+    </section>
+
+  </div>
+</div>
+
+<!-- 总览（索引卡） -->
+<div id="overview">
+  <div class="ov-head">
+    <div class="ov-title">目录 · INDEX OF SLIDES</div>
+    <button id="ov-close">关闭总览 · Esc</button>
+  </div>
+  <div class="ov-grid" id="ov-grid"></div>
+</div>
+
+<div class="hint">← → / 空格 翻页　·　Home / End 首尾　·　Esc 总览　·　F11 全屏</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage');
+  var wrap = document.querySelector('.stage-wrap');
+  var ov = document.getElementById('overview');
+  var ovGrid = document.getElementById('ov-grid');
+  var idx = 0;
+
+  // 注入四角压花
+  slides.forEach(function(s){
+    ['tl','tr','bl','br'].forEach(function(p){
+      var e = document.createElement('i'); e.className = 'cn ' + p; s.appendChild(e);
+    });
+  });
+
+  // 宫格页码（ghost-num 无则补）
+  slides.forEach(function(s, i){
+    if(!s.querySelector('.ghost-num')){
+      var g = document.createElement('div'); g.className='ghost-num';
+      g.textContent = String(i+1).padStart(2,'0'); s.appendChild(g);
+    }
+  });
+
+  // 印章圆章（SVG）
+  function makeSeal(){
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(svgNS,'svg');
+    svg.setAttribute('width','168'); svg.setAttribute('height','168'); svg.setAttribute('viewBox','0 0 168 168');
+    var c1 = document.createElementNS(svgNS,'circle'); c1.setAttribute('cx','84'); c1.setAttribute('cy','84');
+    c1.setAttribute('r','80'); c1.setAttribute('fill','none'); c1.setAttribute('stroke','#9c1f1f'); c1.setAttribute('stroke-width','5'); svg.appendChild(c1);
+    var c2 = document.createElementNS(svgNS,'circle'); c2.setAttribute('cx','84'); c2.setAttribute('cy','84');
+    c2.setAttribute('r','70'); c2.setAttribute('fill','none'); c2.setAttribute('stroke','#9c1f1f'); c2.setAttribute('stroke-width','1.6'); svg.appendChild(c2);
+    function txt(x,y,str,fs){
+      var t = document.createElementNS(svgNS,'text'); t.setAttribute('x',x); t.setAttribute('y',y);
+      t.setAttribute('fill','#9c1f1f'); t.setAttribute('font-size',fs); t.setAttribute('text-anchor','middle');
+      t.setAttribute('font-family','"Songti SC","SimSun",serif'); t.textContent = str; svg.appendChild(t);
+    }
+    txt(84,66,'机忆书库',20);
+    txt(84,96,'· 馆藏 ·',14);
+    txt(84,118,'THE MACHINE',11);
+    txt(84,132,'MEMORY',11);
+    svg.style.opacity = '.9';
+    svg.style.transform = 'rotate(-8deg)';
+    return svg;
+  }
+  document.querySelectorAll('.seal').forEach(function(el){
+    var pos = el.getAttribute('data-seal');
+    if(pos==='top-right'){ el.style.top='44px'; el.style.right='56px'; }
+    else { el.style.bottom='110px'; el.style.right='56px'; }
+    el.appendChild(makeSeal());
+  });
+
+  function show(i){
+    idx = (i + slides.length) % slides.length;
+    slides.forEach(function(s, j){
+      s.classList.toggle('active', j===idx);
+      s.classList.toggle('prev-out', false);
+    });
+    document.title = '机忆书库 · ' + (idx+1) + ' / ' + slides.length + ' · ' + (slides[idx].getAttribute('data-deck-label')||'');
+  }
+  function next(){ show(idx+1); }
+  function prev(){ show(idx-1); }
+
+  // 总览索引卡
+  var labels = slides.map(function(s){ return s.getAttribute('data-deck-label')||''; });
+  var titles = [
+    '封面 · THE MACHINE MEMORY','一句话定位','内容深度 48×384','知识结构','查找与检索',
+    '馆藏玩法','L4 的暗门','可玩演示与导览','技术方案','3D 阅览室','工程质量','安全性',
+    '数据与统计','运行方式','演示路线','结束页'
+  ];
+  titles.forEach(function(t,i){
+    var d = document.createElement('div'); d.className='ov-card';
+    var n = document.createElement('div'); n.className='no'; n.textContent = String(i+1).padStart(2,'0');
+    var tt = document.createElement('div'); tt.className='tt'; tt.textContent = t;
+    var en = document.createElement('div'); en.className='en'; en.textContent = labels[i];
+    d.appendChild(n); d.appendChild(tt); d.appendChild(en);
+    d.addEventListener('click', function(){ closeOverview(); show(i); });
+    ovGrid.appendChild(d);
+  });
+
+  function openOverview(){ document.body.classList.add('overview'); }
+  function closeOverview(){ document.body.classList.remove('overview'); }
+
+  document.addEventListener('keydown', function(e){
+    if(document.body.classList.contains('overview')){
+      if(e.key==='Escape'){ closeOverview(); }
+      return;
+    }
+    if(e.key==='ArrowRight' || e.key===' ' || e.key==='Spacebar' || e.key==='PageDown' || e.key==='Enter'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ e.preventDefault(); show(0); }
+    else if(e.key==='End'){ e.preventDefault(); show(slides.length-1); }
+    else if(e.key==='Escape'){ openOverview(); }
+  });
+  document.getElementById('ov-close').addEventListener('click', closeOverview);
+
+  // 点击空白区域翻下一页（可选），点击总览按钮在 Esc
+  function fit(){
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    wrap.style.width = (1920*s) + 'px';
+    wrap.style.height = (1080*s) + 'px';
+    stage.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+
+  show(0);
+  fit();
+})();
+</script>
+</body>
+</html>
