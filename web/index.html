@@ -193,6 +193,10 @@
   .tut-actions button.ghost { border-color: #5a4526; color: #cbb892; background: transparent; }
   .tut-actions button:hover { background: #3a2d1c; }
   .tut-actions .tut-first { background: #3a2b16; }
+  .tut-manual { margin-top: 16px; border-top: 1px dashed #4a3a24; padding-top: 10px; }
+  .tut-manual summary { cursor: pointer; color: #8a7a5c; font-size: 12px; letter-spacing: 1px; padding: 4px 0; outline: none; }
+  .tut-manual summary:hover { color: var(--gold); }
+  .tut-manual .tut-grid { margin-top: 14px; }
   /* 借阅档案 · 今日可做 */
   .todo-list { display: grid; gap: 8px; }
   .todo-row { display: flex; align-items: center; gap: 10px; background: #1d1712; border: 1px solid var(--line); padding: 9px 12px; flex-wrap: wrap; }
@@ -430,6 +434,18 @@
   .reader-tools span { color: #8a7a5c; font-size: 11px; margin-left: auto; }
   #mmToast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(10px); z-index: 100; background: #2c241a; color: var(--gold); border: 1px solid var(--gold); padding: 9px 18px; font-size: 13px; letter-spacing: 1px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
   #mmToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* 分区域新手提示卡：第一次进入某区域时出现一次 */
+  #mmTipCard { position: fixed; right: 22px; bottom: 74px; z-index: 86; width: min(360px, calc(100vw - 44px)); background: linear-gradient(160deg, #2b1d12, #1a130d); border: 1px solid #c8a24a; box-shadow: 0 20px 60px rgba(0,0,0,.65); padding: 15px 16px 13px; transform: translateY(18px); opacity: 0; pointer-events: none; transition: opacity .28s, transform .28s; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  #mmTipCard.show { opacity: 1; transform: translateY(0); pointer-events: none; }
+  #mmTipCard.show .tip-actions button, #mmTipCard.show .tip-close { pointer-events: auto; }
+  #mmTipCard .tip-kicker { color: #8a7a5c; font-size: 10.5px; letter-spacing: 2px; margin-bottom: 6px; }
+  #mmTipCard .tip-title { color: #f0d68a; font-size: 15px; font-weight: 500; letter-spacing: 1px; margin-bottom: 5px; }
+  #mmTipCard .tip-body { color: #cbb892; font-size: 12.5px; line-height: 1.85; }
+  #mmTipCard .tip-actions { display: flex; justify-content: flex-end; margin-top: 11px; }
+  #mmTipCard .tip-actions button { background: #3a291a; border: 1px solid #c8a24a; color: #f0d68a; padding: 5px 12px; font-size: 11.5px; cursor: pointer; font-family: inherit; }
+  #mmTipCard .tip-close { position: absolute; right: 8px; top: 6px; background: none; border: none; color: #8a7a5c; font-size: 15px; cursor: pointer; padding: 2px 6px; }
+  #mmTipCard .tip-close:hover { color: #c8a24a; }
+  @media (max-width: 700px) { #mmTipCard { left: 12px; right: 12px; bottom: 132px; width: auto; } }
   .stats-view { max-width: 1050px; }
   .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
   .stat-card { background: #1d1712; border: 1px solid var(--line); padding: 12px 14px; }
@@ -695,18 +711,16 @@
     gate.classList.add('leaving');
     setTimeout(() => {
       gate.remove();
-      // 第一次入馆直接送到「关于本馆」的新读者教程；之后不再打扰
-      if (!localStorage.getItem('mm_tutorial_seen')) {
-        localStorage.setItem('mm_tutorial_seen', '1');
-        setTimeout(() => enterTutorialPage(), 120);
-        return;
-      }
+      // 新手提示改为分区域卡片：第一次进哪里，才在哪里出现，不再把整套教程塞到首页
+      if (!localStorage.getItem('mm_tutorial_seen')) localStorage.setItem('mm_tutorial_seen', '1');
       // 移动端默认落在 2D 书架视图：3D 需要手动进入，避免首屏就撞上重渲染
       if (window.innerWidth < 760) {
         try {
           enterShelf('all');
           mmToast('移动端已切到书架视图；想看 3D，点顶部「3D 阅览室」。');
         } catch (e) { /* 移动端降级失败不影响入馆 */ }
+      } else if (window.mmTip) {
+        window.mmTip('3d', '3D 阅览室', 'WASD 移动、拖拽转视角；点书抽到手里，E 翻开；右下角「黄铜电梯」选层。');
       }
     }, 1150);
   }
@@ -916,6 +930,65 @@ function mmToast(text) {
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('on'), 2200);
 }
+
+// ---------- 分区域新手提示卡 ----------
+let tipQueue = [];
+let tipShowing = false;
+let tipCardEl = null;
+
+function mmEnsureTipCard() {
+  if (tipCardEl) return tipCardEl;
+  tipCardEl = document.createElement('div');
+  tipCardEl.id = 'mmTipCard';
+  tipCardEl.setAttribute('role', 'status');
+  document.body.appendChild(tipCardEl);
+  return tipCardEl;
+}
+
+function mmNextTip() {
+  if (tipShowing || !tipQueue.length) return;
+  const tip = tipQueue.shift();
+  const card = mmEnsureTipCard();
+  tipShowing = true;
+  try { localStorage.setItem('mm_tip_' + tip.id, '1'); } catch (e) { /* 忽略 */ }
+  card.dataset.tipId = tip.id;
+  card.innerHTML = `<div class="tip-kicker">FIRST VISIT · 新手提示</div>
+    <div class="tip-title">${esc(tip.title)}</div>
+    <div class="tip-body">${esc(tip.body)}</div>
+    <div class="tip-actions"><button type="button" data-tip-ok>知道了</button></div>
+    <button type="button" class="tip-close" data-tip-close aria-label="关闭提示">×</button>`;
+  const dismiss = () => {
+    card.classList.remove('show');
+    setTimeout(() => {
+      tipShowing = false;
+      mmNextTip();
+    }, 300);
+  };
+  card.querySelector('[data-tip-ok]').onclick = dismiss;
+  card.querySelector('[data-tip-close]').onclick = dismiss;
+  requestAnimationFrame(() => card.classList.add('show'));
+}
+
+function mmTip(id, title, body) {
+  if (!id || localStorage.getItem('mm_tip_' + id) === '1') return false;
+  if (tipQueue.some((t) => t.id === id) || (tipShowing && tipCardEl && tipCardEl.dataset.tipId === id)) return false;
+  tipQueue.push({ id, title, body });
+  mmNextTip();
+  return true;
+}
+window.mmTip = mmTip;
+
+function mmResetTips() {
+  try {
+    Object.keys(localStorage).filter((k) => k.startsWith('mm_tip_')).forEach((k) => localStorage.removeItem(k));
+    localStorage.removeItem('mm_tutorial_seen');
+  } catch (e) { /* 忽略 */ }
+  tipQueue = [];
+  tipShowing = false;
+  if (tipCardEl) tipCardEl.classList.remove('show');
+  mmToast('新手提示已重置：下次进入各区域时会再出现。');
+}
+window.mmResetTips = mmResetTips;
 
 function mmToggleSound() {
   const on = window.mmAudioToggle ? window.mmAudioToggle() : false;
@@ -1618,6 +1691,7 @@ function collectStatsHtml() {
 
 async function showStolenGallery() {
   document.body.classList.add('grid');
+  mmTip('stolen', '失窃页展柜', '先把对应章节读到章末，缺页才会显形；追回后展柜会换金封条。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在打开失窃页展柜……</div>';
   await loadCollectData();
@@ -1682,6 +1756,7 @@ window.mmFrontierSearch = mmFrontierSearch;
 
 async function showFrontier(keep) {
   document.body.classList.add('grid');
+  mmTip('frontier', '前沿书架', '每天从 arXiv 入库；按领域筛选，点标题看摘要与原文链接。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   if (!keep) app.innerHTML = '<div class="empty">正在登记新到馆的纸页……</div>';
   const d = await ensureFrontier();
@@ -1915,6 +1990,7 @@ window.mmCheckHiddenBook = mmCheckHiddenBook;
 
 async function mmShowStar() {
   try {
+    mmTip('star', '星图', '48 本书按四层球壳排布；点星开书，按 L 打开文字版关系列表。');
     await ensureCatalog();
     const mod = await import('./star.js');
     mod.showStarMap();
@@ -1966,8 +2042,10 @@ async function showAbout(highlightTutorial = false) {
       </div>
     </div>
     <section class="tut" id="tutorial">
-      <div class="tut-head"><span>NEW READER · FIRST VISIT</span><b>新读者教程</b><em>第一次来，按这 11 步走一遍就会了</em></div>
-      <div class="tut-grid">
+      <div class="tut-head"><span>NEW READER · LIGHT GUIDES</span><b>新手提示</b><em>每个区域第一次进入时，右下角会出现一张小卡片，点「知道了」即可。</em></div>
+      <details class="tut-manual">
+        <summary>完整手册（11 步，可选）</summary>
+        <div class="tut-grid">
         <article class="tut-step"><span class="tut-num">01 / 进门</span><h4>访客还是借书证</h4><p>门厅有三个选择：<b>访客</b>可以读全部 384 章，但不能盖章、批注、记进度；<b>新办借书证</b>只要 3 字符以上的证号和 8 位口令，之后回来自动识别；<b>入馆</b>是已有证的人用的。</p></article>
         <article class="tut-step"><span class="tut-num">02 / 走动</span><h4>3D 阅览室怎么走</h4><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 前后左右，按住鼠标左键拖动转视角。从书架之间的空隙可以绕到后排；右下角「黄铜电梯」随时选层。</p></article>
         <article class="tut-step"><span class="tut-num">03 / 取书</span><h4>把书抽到手里</h4><p>点书脊，书会飞到右手。<b>左键再点书 / <kbd>E</kbd></b> 翻开；<b>右键 / <kbd>Esc</kbd></b> 放回架上；<b><kbd>Q</kbd></b> 放到 L1 长桌，按书脊厚度叠成三摞，最多 12 本。</p></article>
@@ -1979,14 +2057,14 @@ async function showAbout(highlightTutorial = false) {
         <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 的蜡封桌上多了一张盖着红 X 的备忘，记得读它——那不是装饰。</p></article>
         <article class="tut-step"><span class="tut-num">10 / 暗门</span><h4>一扇不在平面图上的门</h4><p>先看 L4 蜡封桌的备忘，再点右墙那幅没有拉直的<b>帷幕</b>把它滑开。后面是一扇没有编号的门；点门进去，十本「假如之书」会等你。选符号 / 神经 / 具身任意一条科技树，点「走假如」就能生成一篇长故事。书架尽头还有一本<b>未写之书</b>：写下「如果没有 X」的假设，它只生成与这个问题相关的小故事。</p></article>
         <article class="tut-step"><span class="tut-num">11 / 手机</span><h4>手机也能逛</h4><p>入馆默认落在书架视图；进 3D 后用左下<b>虚拟摇杆</b>移动，拖动画面转视角，点书抽出、再点翻开。2D 页面会暂停 3D 渲染，省电也省流量。</p></article>
-      </div>
+        </div>
+      </details>
       <div class="tut-actions">
         <button class="tut-first" onclick="enter3D()">进 3D 阅览室 →</button>
         <button onclick="enterRail()">打开书轨</button>
         <button class="ghost" onclick="mmShowStar()">打开星图</button>
-        <button class="ghost" onclick="enterTimeline()">时间轴</button>
         <button class="ghost" onclick="enterStats()">借阅档案 · 今日可做</button>
-        <button class="ghost" onclick="goL4()">去 L4 找暗门线索</button>
+        <button class="ghost" onclick="mmResetTips()">重置新手提示</button>
       </div>
     </section>
     <div class="about-grid">
@@ -2000,7 +2078,7 @@ async function showAbout(highlightTutorial = false) {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>110 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索、未写之书、盖章撤销与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>113 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索、未写之书、盖章撤销、分区域提示与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>
@@ -2016,6 +2094,7 @@ function enterStats() { fadeSwap(() => showStats()); }
 
 async function showStats() {
   document.body.classList.add('grid');
+  mmTip('stats', '借阅档案', '看谁在读什么、今日可做与徽章；失窃页、躁动书页和暗门线索都在这里。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在翻借阅台账……</div>';
   try {
@@ -2301,6 +2380,7 @@ async function showPlan(floor = 'all') {
   planFloor = floor || 'all';
   document.body.classList.remove('reading');
   document.body.classList.add('grid');
+  mmTip('plan', '楼层平面图', '每层书架的位置都在这张图上；点书架进书架视图，底部可进本层 3D。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在展开楼层平面图……</div>';
   const [catalog, floors] = await Promise.all([ensureCatalog(), ensureFloors()]);
@@ -2724,6 +2804,7 @@ function tlFilter(btn) {
 
 async function showTimeline() {
   document.body.classList.add('grid');
+  mmTip('timeline', '时间轴', '按年代筛 384 章；页面底部还有失败博物馆与模型尺寸墙。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在按年份整理卡片……</div>';
   const [catalog, fail, models] = await Promise.all([
@@ -2859,6 +2940,7 @@ window.mmRailDepart = function () {
 
 async function showRail() {
   document.body.classList.add('grid');
+  mmTip('rail', '书轨', '5 条主线、55 站；同名书是换乘站。点站点开书，按「发车」看列车动画。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在铺设书轨……</div>';
   const [rail, catalog] = await Promise.all([ensureRail(), ensureCatalog()]);
@@ -3087,6 +3169,7 @@ async function showRail() {
 async function showShelves(floor) {
   shelfFloor = floor || (window.mm3d && window.mm3d.getFloor ? window.mm3d.getFloor() : shelfFloor) || 'all';
   document.body.classList.add('grid');
+  mmTip('shelf', '书架视图', '按层找书，点一格看书脊；顶部电梯与 3D 楼层同步。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在取出书架……</div>';
   const [catalog, floors] = await Promise.all([ensureCatalog(), ensureFloors()]);
@@ -3145,6 +3228,7 @@ async function showShelves(floor) {
 
 async function showOverview() {
   document.body.classList.add('grid');
+  mmTip('overview', '书架总览', '一次列出全部书目、索书号、年份与章节进度；点书名直接开读。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在整理馆藏总览……</div>';
   const [catalog, floors] = await Promise.all([ensureCatalog(), ensureFloors()]);
@@ -3183,6 +3267,7 @@ function backToRoom() {
     window.mm3d.reset();
     if (window.mm3d.toastFloor) window.mm3d.toastFloor();
   }
+  mmTip('3d', '3D 阅览室', 'WASD 移动、拖拽转视角；点书抽到手里，E 翻开；右下角「黄铜电梯」选层。');
 }
 
 // 3D 启动时把书目映射灌进共享缓存（接待卡/馆员署名要用）
@@ -3401,6 +3486,7 @@ function chapterBrief(id) {
 
 async function showChapter(id) {
   document.body.classList.add('reading');
+  mmTip('reading', '阅读页', '左侧检索、右侧页边注；盖章 / 读完可再次点击撤销；右上角随时合书。');
   const r = await (await fetch('api/chapters/' + id)).json();
   await loadCollectData();
   // 章末导航需要目录里的标题；目录很轻（一次约 53KB，之后走缓存）

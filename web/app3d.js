@@ -3184,6 +3184,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         heldBook = item;
         item.mesh.visible = true;
         toast(`《${item.book.title}》已抽到手里：左键/E 翻开 · 右键 放回 · Q 放到长桌。`);
+        if (window.mmTip) window.mmTip('hand', '书在手里', '左键再点书 / E 翻开；右键 / Esc 放回；Q 放到 L1 长桌。');
       }
     };
     requestAnimationFrame(step);

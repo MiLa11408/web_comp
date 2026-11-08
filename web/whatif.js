@@ -208,6 +208,7 @@
     const el = app();
     if (!el) return;
     el.innerHTML = roomHtml(state.data);
+    if (window.mmTip) window.mmTip('whatif', '暗门书架', '十本假如之书：选一条科技树，点「走假如」生成长故事；书架尽头是未写之书。');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -334,6 +335,7 @@
     const el = app();
     if (!el) return;
     el.innerHTML = oracleHtml();
+    if (window.mmTip) window.mmTip('oracle', '未写之书', '只接受「如果没有 X 会怎么样」；只写与问题相关的短故事，不回答别的。');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
       const q = document.getElementById('oracleQ');

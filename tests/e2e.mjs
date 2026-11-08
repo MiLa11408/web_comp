@@ -52,6 +52,12 @@ await page.waitForTimeout(550);
 const navExpanded = await page.locator('#navShell:not(.nav-collapsed)').count();
 navExpanded === 1 ? ok('顶部导航可展开') : bad('顶部导航可展开', String(navExpanded));
 
+// 清掉首张区域提示卡，避免后续卡片叠在点击区域
+if (await page.locator('#mmTipCard.show').count()) {
+  await page.locator('#mmTipCard [data-tip-ok]').click();
+  await page.waitForTimeout(300);
+}
+
 // 导览（3D 已就绪，直接开场；避免先切 2D 再回 3D 的软件渲染重编译）
 await page.waitForFunction(() => window.mm3d && typeof window.mm3d.startTour === 'function', null, { timeout: 25000 });
 await page.getByRole('button', { name: '导览' }).click();
@@ -553,26 +559,37 @@ if (mobErrors.length) bad('移动端 JS 报错', mobErrors.slice(0, 2).join(' | 
 else ok('移动端无 JS 报错');
 await mob.close();
 
-// 8b. 首次入馆自动打开「关于本馆 · 新读者教程」，二次访问不再跳
+// 8b. 新手提示改为分区域卡片；完整手册在「关于本馆」内折叠
 const tutCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 const tut = await tutCtx.newPage();
 await tut.goto(BASE, { waitUntil: 'domcontentloaded' });
 await tut.waitForSelector('#gate', { timeout: 15000 });
 await tut.getByRole('button', { name: '以访客身份入馆' }).click();
+await tut.waitForSelector('#mmTipCard.show', { timeout: 12000 });
+const firstTip = await tut.locator('#mmTipCard .tip-title').innerText();
+firstTip.includes('3D') ? ok('首次入馆出现 3D 新手提示卡', firstTip) : bad('首次新手提示', firstTip);
+const autoAbout = await tut.locator('#tutorial').count();
+autoAbout === 0 ? ok('首次入馆不再自动打开大教程') : bad('首次自动教程', String(autoAbout));
+await tut.locator('#mmTipCard [data-tip-ok]').click();
+await tut.waitForTimeout(350);
+await tut.getByRole('button', { name: '关于本馆' }).click();
 await tut.waitForSelector('#tutorial', { timeout: 12000 });
 const tutSteps = await tut.locator('.tut-step').count();
 const tutActions = await tut.locator('.tut-actions button').count();
 const tutAbout = await tut.locator('.about-view').count();
-(tutSteps === 11 && tutAbout === 1) ? ok('首次入馆自动打开新读者教程', `${tutSteps} 步`) : bad('首次教程', `steps=${tutSteps} about=${tutAbout}`);
+const manualOpen = await tut.locator('details.tut-manual[open]').count();
+(tutSteps === 11 && tutAbout === 1) ? ok('关于本馆保留完整手册 11 步', `${tutSteps} 步`) : bad('首次教程', `steps=${tutSteps} about=${tutAbout}`);
 tutActions >= 5 ? ok('教程快捷入口', String(tutActions)) : bad('教程快捷入口', String(tutActions));
+manualOpen === 0 ? ok('完整手册默认折叠') : bad('完整手册折叠', String(manualOpen));
 await tut.reload({ waitUntil: 'domcontentloaded' });
 await tut.waitForSelector('#gate', { timeout: 15000 });
 await tut.getByRole('button', { name: '以访客身份入馆' }).click();
 await tut.waitForFunction(() => !document.getElementById('gate'), null, { timeout: 8000 });
 await tut.waitForTimeout(1800);
+const secondTip = await tut.locator('#mmTipCard.show').count();
 const secondTut = await tut.locator('#tutorial').count();
 const secondApp = await tut.locator('#app').isVisible();
-(secondTut === 0 && secondApp) ? ok('二次入馆不再跳教程') : bad('二次入馆不再跳教程', `tutorial=${secondTut} app=${secondApp}`);
+(secondTip === 0 && secondTut === 0 && secondApp) ? ok('二次入馆不再弹提示/教程') : bad('二次入馆', `tip=${secondTip} tutorial=${secondTut} app=${secondApp}`);
 await tutCtx.close();
 
 // 9. 控制台错误
