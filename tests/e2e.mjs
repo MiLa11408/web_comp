@@ -351,7 +351,7 @@ await page.locator('.wi-runbar .wi-run').click();
 await page.waitForSelector('#wiStory .wi-story', { timeout: 8000 });
 const wiParas = await page.locator('#wiStory .wi-story p').count();
 const wiStory1 = await page.locator('#wiStory').innerText();
-(wiParas >= 6 && wiStory1.length > 800)
+(wiParas >= 10 && wiStory1.length > 1200)
   ? ok('走假如生成长篇故事', `${wiParas} 段 / ${wiStory1.length} 字`)
   : bad('走假如生成长篇故事', `${wiParas} 段 / ${wiStory1.length} 字`);
 await page.locator('.wi-tree', { hasText: '神经树' }).click();
