@@ -13,8 +13,8 @@ from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
 from pptx.oxml.ns import qn
 
 # ---------------- 常量 ----------------
-OUT_PATH = r"e:\MiLa_Puzzle\Explore\ai-library\presentation\动态组-队伍名-队长名-学号-演示.pptx"
-VIDEO_PATH = r"e:\MiLa_Puzzle\Explore\deliverables\机忆书库-演示视频.mp4"
+OUT_PATH = r"e:\MiLa_Puzzle\Explore\ai-library\presentation\动态组-塔之诅咒队-盛梓杨-2421010219-演示.pptx"
+VIDEO_PATH = r"e:\MiLa_Puzzle\Explore\deliverables\动态组-塔之诅咒队-盛梓杨-2421010219-演示视频.mp4"
 
 BG      = RGBColor(0x14, 0x10, 0x0D)   # 深墨棕
 BG_DEEP = RGBColor(0x0D, 0x0A, 0x07)   # 深黑
@@ -43,7 +43,7 @@ LX = Inches(0.9)   # 左页边距
 RW = Inches(0.9)   # 右页边距
 CW = Inches(13.333 - 1.8)  # 内容宽 11.533"
 
-TEAM_LINE = "动态组 · 队伍名 · 队长名 · 学号"
+TEAM_LINE = "动态组 · 塔之诅咒队 · 盛梓杨 · 2421010219"
 URL_ONLINE = "http://150.158.1.111:82/ai/"
 
 # ---------------- 基础工具 ----------------
