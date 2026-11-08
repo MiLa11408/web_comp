@@ -33,11 +33,11 @@ else bad('入馆门厅显示', gateTitle);
 const gateBtns = await page.locator('.gate-btn').count();
 gateBtns === 3 ? ok('门厅三个按钮', String(gateBtns)) : bad('门厅三个按钮', String(gateBtns));
 
+await page.evaluate(() => localStorage.setItem('mm_tutorial_seen', '1'));
 await page.getByRole('button', { name: '以访客身份入馆' }).click();
 await page.waitForFunction(() => !document.getElementById('gate'), null, { timeout: 5000 });
 await page.waitForTimeout(1200);
-if (await page.locator('#gSkip').count()) await page.locator('#gSkip').click();
-ok('访客入馆后门厅移除与入馆指引');
+ok('访客入馆后门厅移除（二次访问不跳教程）');
 await page.waitForTimeout(800);
 const mainVisible = await page.locator('#app').isVisible();
 mainVisible ? ok('主界面可见') : bad('主界面可见');
@@ -435,6 +435,28 @@ mobRail >= 40 ? ok('移动端书轨渲染', String(mobRail)) : bad('移动端书
 if (mobErrors.length) bad('移动端 JS 报错', mobErrors.slice(0, 2).join(' | '));
 else ok('移动端无 JS 报错');
 await mob.close();
+
+// 8b. 首次入馆自动打开「关于本馆 · 新读者教程」，二次访问不再跳
+const tutCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+const tut = await tutCtx.newPage();
+await tut.goto(BASE, { waitUntil: 'domcontentloaded' });
+await tut.waitForSelector('#gate', { timeout: 15000 });
+await tut.getByRole('button', { name: '以访客身份入馆' }).click();
+await tut.waitForSelector('#tutorial', { timeout: 12000 });
+const tutSteps = await tut.locator('.tut-step').count();
+const tutActions = await tut.locator('.tut-actions button').count();
+const tutAbout = await tut.locator('.about-view').count();
+(tutSteps === 10 && tutAbout === 1) ? ok('首次入馆自动打开新读者教程', `${tutSteps} 步`) : bad('首次教程', `steps=${tutSteps} about=${tutAbout}`);
+tutActions >= 4 ? ok('教程快捷入口', String(tutActions)) : bad('教程快捷入口', String(tutActions));
+await tut.reload({ waitUntil: 'domcontentloaded' });
+await tut.waitForSelector('#gate', { timeout: 15000 });
+await tut.getByRole('button', { name: '以访客身份入馆' }).click();
+await tut.waitForFunction(() => !document.getElementById('gate'), null, { timeout: 8000 });
+await tut.waitForTimeout(1800);
+const secondTut = await tut.locator('#tutorial').count();
+const secondApp = await tut.locator('#app').isVisible();
+(secondTut === 0 && secondApp) ? ok('二次入馆不再跳教程') : bad('二次入馆不再跳教程', `tutorial=${secondTut} app=${secondApp}`);
+await tutCtx.close();
 
 // 9. 控制台错误
 const realErrors = errors.filter((e) => !/WebGL|GPU|swiftshader|THREE.WebGLRenderer|Failed to load resource/i.test(e));
