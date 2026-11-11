@@ -351,6 +351,12 @@ if (frCards >= 1) {
   /[\u4e00-\u9fff]/.test(firstTitle) ? ok('前沿新闻中文标题', firstTitle.slice(0, 24)) : bad('前沿新闻中文标题', firstTitle);
   const firstTags = await page.locator('.fr-card .fr-tag').first().count();
   firstTags >= 1 ? ok('前沿新闻标签') : bad('前沿新闻标签', '无');
+  const plainCount = await page.locator('.fr-card .fr-plain').count();
+  plainCount >= 1 ? ok('前沿新闻说人话段落', String(plainCount)) : bad('前沿新闻说人话段落', String(plainCount));
+  const termCount = await page.locator('.fr-card .fr-term').count();
+  termCount >= 1 ? ok('前沿新闻术语小抄', String(termCount)) : bad('前沿新闻术语小抄', String(termCount));
+  const guideCount = await page.locator('.fr-guide').count();
+  guideCount === 1 ? ok('前沿观察阅读指南') : bad('前沿观察阅读指南', String(guideCount));
   const firstLink = await page.locator('.fr-card h3 a').first().getAttribute('href');
   firstLink && firstLink.startsWith('https://arxiv.org/abs/') ? ok('前沿条目指向 arXiv 原文') : bad('前沿条目链接', String(firstLink));
   await page.locator('.fr-chips button').nth(1).click();
@@ -657,6 +663,18 @@ ok('catalog 竞态可用', `并发目录接口 ${catalogMs}ms`);
 burst.every((r) => r.ok()) ? ok('20 并发检索全部 200', `${burstMs}ms 总耗时`) : bad('20 并发检索', '存在非 200');
 ok('单次检索响应', `≤ ${maxSearch}ms`);
 
+// 7b. 首页按钮：从 2D 书架视图回到全馆大厅
+await page.locator('.reader-float-close').first().click().catch(() => {});
+await page.waitForTimeout(1800);
+await page.getByRole('button', { name: '书架视图' }).click();
+await page.waitForSelector('.unit', { timeout: 10000 });
+await page.getByRole('button', { name: '首页' }).click();
+await page.waitForFunction(() => !document.body.classList.contains('grid') && !document.body.classList.contains('reading')
+  && !window.mmViewBusy && window.mm3d && window.mm3d.getFloor() === 'all', null, { timeout: 45000 });
+await page.waitForTimeout(800);
+const homeFloor = await page.evaluate(() => window.mm3d.getFloor());
+homeFloor === 'all' ? ok('首页回到全馆大厅') : bad('首页回大厅', homeFloor);
+
 // 8. 移动端 390×844
 const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const mobErrors = [];
@@ -681,6 +699,8 @@ else ok('移动端无 JS 报错');
 await mob.close();
 
 // 8b. 新手提示改为分区域卡片；完整手册在「关于本馆」内折叠
+// 先关掉主页面，释放 SwiftShader/3D 内存，避免再开新上下文时门厅加载失败
+await page.close();
 const tutCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 const tut = await tutCtx.newPage();
 await tut.goto(BASE, { waitUntil: 'domcontentloaded' });

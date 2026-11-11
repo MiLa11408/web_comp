@@ -451,13 +451,21 @@
   .fr-card h3 { margin: 0; font-size: 15.5px; line-height: 1.55; color: #eadbb8; font-weight: 500; font-family: var(--font-serif); }
   .fr-card h3 a { color: inherit; text-decoration: none; }
   .fr-card h3 a:hover { color: var(--gold); }
+  .fr-level { border: 1px solid #5a4526; color: #a8946c; padding: 1px 6px; font-size: 10.5px; letter-spacing: .5px; }
   .fr-tags { display: flex; gap: 5px; flex-wrap: wrap; }
   .fr-tag { border: 1px solid #4a3a24; color: #a8946c; padding: 1px 7px; font-size: 10.5px; letter-spacing: .5px; }
   .fr-authors { color: #8a7a5c; font-size: 11.5px; line-height: 1.6; font-style: italic; }
   .fr-summary { color: #cbb892; font-size: 13px; line-height: 1.85; font-family: var(--font-serif); }
   .fr-summary.en { color: #9a8a6f; font-size: 11.5px; font-family: var(--font-mono); line-height: 1.7; }
+  .fr-plain { background: rgba(200,162,74,.06); border-left: 2px solid #8a6320; padding: 8px 10px; color: #d8c8a8; font-size: 12.5px; line-height: 1.9; font-family: var(--font-serif); }
+  .fr-plain b { color: #c8a24a; font-weight: 500; letter-spacing: 1px; }
+  .fr-terms { display: flex; flex-direction: column; gap: 4px; }
+  .fr-term { color: #9a8a6f; font-size: 11.5px; line-height: 1.65; }
+  .fr-term b { color: #cbb892; font-weight: 500; }
   .fr-why { border-left: 2px solid #6b5a3a; padding-left: 9px; color: #b09a72; font-size: 11.5px; line-height: 1.75; }
   .fr-why b { color: #c8a24a; font-weight: 500; }
+  .fr-guide { color: #8a7a5c; font-size: 11.5px; line-height: 1.8; border-left: 2px solid #4a3a24; padding-left: 10px; margin: 6px 0 10px; }
+  .fr-guide b { color: #c8a24a; font-weight: 500; }
   .fr-card details summary { color: #8a7a5c; font-size: 11.5px; cursor: pointer; outline: none; }
   .fr-card details summary:hover { color: var(--gold); }
   .fr-actions { display: flex; gap: 8px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
@@ -826,6 +834,7 @@
 <div class="nav-shell" id="navShell">
   <nav class="nav-groups" aria-label="馆内导航">
     <div class="nav-group"><span class="ng-label">阅览</span>
+      <button class="back" onclick="mmHome()">首页</button>
       <button class="back" onclick="enter3D()">3D 阅览室</button>
       <button class="back" onclick="enterShelf()">书架视图</button>
       <button class="back" onclick="enterOverview()">书架总览</button>
@@ -1831,16 +1840,20 @@ async function showFrontier(keep) {
     const n = x.news || {};
     const title = n.title_zh || x.title;
     const tags = (n.tags && n.tags.length ? n.tags : [x.field]).filter(Boolean).slice(0, 3);
+    const terms = Array.isArray(n.terms) ? n.terms : [];
     return `
     <article class="fr-card">
       <div class="fr-top">
         <span class="fr-field">${esc(x.field || '交叉')}</span>
+        ${n.level ? `<span class="fr-level">${esc(n.level)}</span>` : ''}
         <span>${esc(x.published || '')}</span>
         <span>${esc((x.cats || []).join(' · '))}</span>
       </div>
       <h3><a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a></h3>
       <div class="fr-tags">${tags.map((t) => `<span class="fr-tag">${esc(t)}</span>`).join('')}</div>
       <div class="fr-summary">${esc(n.lede || String(x.summary || '').slice(0, 150) + '…')}</div>
+      ${n.plain ? `<div class="fr-plain"><b>说人话</b> · ${esc(n.plain)}</div>` : ''}
+      ${terms.length ? `<div class="fr-terms">${terms.map((t) => `<div class="fr-term"><b>${esc(t.term)}</b>：${esc(t.explain)}</div>`).join('')}</div>` : ''}
       ${n.why ? `<div class="fr-why"><b>为什么值得看</b> · ${esc(n.why)}</div>` : ''}
       <details><summary>原文标题与摘要（英文）</summary><div class="fr-summary en">${esc(x.title)}<br><br>${esc(x.summary)}</div></details>
       <div class="fr-actions">
@@ -1854,13 +1867,14 @@ async function showFrontier(keep) {
     <div class="rail-head"><span>前沿观察 · 科普新闻</span>
       <span class="head-links"><a onclick="enterTimeline()">时间轴 →</a> · <a onclick="enterRail()">书轨 →</a></span>
     </div>
+    <div class="fr-guide"><b>怎么读</b>：先看中文标题和「说人话」，再看术语小抄；想核对数字，展开英文原文。中文导读由馆员编译，原文为准。</div>
     <div class="rail-sub">${esc(d.note || '每天从 arXiv 选新论文，馆员编译成中文科普；只做导读，原文为准。')}</div>
     <div class="fr-toolbar">
       <div class="fr-chips">${fields.map((f) => `<button class="${f === frontierField ? 'on' : ''}" onclick="mmFrontierFilter('${esc(f)}')">${esc(f)}${f === '全部' ? ` · ${items.length}` : ''}</button>`).join('')}</div>
       <span class="fr-updated">${esc(d.source || 'arXiv')} · 编译 ${esc(updated)}</span>
     </div>
     ${list.length ? `<div class="fr-grid">${cards}</div>` : '<div class="fr-empty">这一栏还没有新纸。<br>库房每天凌晨会再去 arXiv 取一次；也可以先回书架读已编目的旧书。</div>'}
-    <div class="size-scale">前沿观察与馆藏分开：馆藏是已核验、已写成的 384 章；这里是新论文的中文科普导读，由馆员编译，可能不完整。数字、结论与原文冲突时，以 arXiv 原文为准；想追根，再去「卡片目录」找它的来路。</div>
+    <div class="size-scale">前沿观察与馆藏分开：馆藏是已核验、已写成的 384 章；这里是新论文的中文科普导读，由馆员编译，可能不完整。「说人话」和「术语小抄」只帮助理解，不替代原文；数字、结论与原文冲突时，以 arXiv 原文为准。想追根，再去「卡片目录」找它的来路。</div>
   </div>`;
 }
 window.showFrontier = showFrontier;
@@ -2352,6 +2366,17 @@ function fadeSwap(fn, ms) {
 function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
 function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() { fadeSwap(() => backToRoom()); }
+// 首页 = 回到全馆大厅（不保留楼层），任何视图都能一鍵回
+function mmHome() {
+  enter3D();
+  mmWhenRoomReady(() => {
+    if (!window.mm3d) return;
+    window.mm3d.setFloor('all', true);
+    window.mm3d.reset();
+    mmToast('回到大厅。', 2600);
+  });
+}
+window.mmHome = mmHome;
 // 去 L4 找暗门线索：先回到 3D，再等楼层切换就绪后选 L4（不直接开到门后）
 function goL4() {
   enter3D();
