@@ -79,6 +79,7 @@ export function initSearch(contentDir) {
   const tagSets = new Map();   // docId -> tag+别名分词集合（命中加成次之）
   const suggestTitles = [];
   const suggestTags = new Set();
+  const suggestAliases = new Set();
   const suggestPeople = new Set();
 
   for (const [id, { meta, body }] of chapters) {
@@ -101,39 +102,102 @@ export function initSearch(contentDir) {
     if (meta.title) suggestTitles.push(meta.title);
     for (const t of meta.tags || []) suggestTags.add(t);
     for (const t of (book && book.tags) || []) suggestTags.add(t);
+    for (const t of (book && book.aliases) || []) suggestAliases.add(t);
     for (const p of meta.people || []) if (p.name) suggestPeople.add(p.name);
   }
 
-  return { books, chapters, index, titleSets, bookTitleSets, tagSets, suggestTitles, suggestTags, suggestPeople };
+  return { books, chapters, index, titleSets, bookTitleSets, tagSets, suggestTitles, suggestTags, suggestAliases, suggestPeople };
+}
+
+function countOccurrences(haystack, needle) {
+  if (!needle) return 0;
+  let count = 0;
+  let pos = 0;
+  while ((pos = haystack.indexOf(needle, pos)) >= 0) {
+    count += 1;
+    pos += needle.length;
+  }
+  return count;
+}
+
+function editDistance(a, b, max = 1) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => i);
+  for (let j = 1; j <= b.length; j++) {
+    let prev = dp[0];
+    dp[0] = j;
+    for (let i = 1; i <= a.length; i++) {
+      const tmp = dp[i];
+      dp[i] = Math.min(dp[i] + 1, dp[i - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[a.length];
+}
+
+// 英文拼写容错：只在完全无命中时启用，避免影响正常排序
+function fuzzyTokens(ctx, tokens) {
+  const out = new Set();
+  for (const t of tokens) {
+    if (!/^[a-z0-9-]{3,}$/.test(t)) continue;
+    for (const term of ctx.index.keys()) {
+      if (term === t) continue;
+      if (Math.abs(term.length - t.length) > 1) continue;
+      if (editDistance(t, term) <= 1) out.add(term);
+    }
+  }
+  return [...out];
 }
 
 export function search(ctx, q, limit = 10) {
   const tokens = tokenize(q || '');
   if (tokens.length === 0) return [];
-  const scores = new Map();
-  const matched = new Map();
-  for (const term of tokens) {
-    const docMap = ctx.index.get(term);
-    if (!docMap) continue;
-    for (const [docId, weight] of docMap) {
-      scores.set(docId, (scores.get(docId) || 0) + weight);
-      if (!matched.has(docId)) matched.set(docId, new Set());
-      matched.get(docId).add(term);
+  let usedTokens = tokens;
+  let fuzzy = false;
+  let scores = new Map();
+  let matched = new Map();
+
+  const accumulate = (terms) => {
+    const s = new Map();
+    const m = new Map();
+    for (const term of terms) {
+      const docMap = ctx.index.get(term);
+      if (!docMap) continue;
+      for (const [docId, weight] of docMap) {
+        s.set(docId, (s.get(docId) || 0) + weight);
+        if (!m.has(docId)) m.set(docId, new Set());
+        m.get(docId).add(term);
+      }
+    }
+    return { s, m };
+  };
+
+  ({ s: scores, m: matched } = accumulate(tokens));
+
+  // 无命中时尝试英文拼写容错；中文仍走精确二元组，避免噪声
+  if (scores.size === 0) {
+    const fuzzyList = fuzzyTokens(ctx, tokens);
+    if (fuzzyList.length) {
+      usedTokens = fuzzyList;
+      fuzzy = true;
+      ({ s: scores, m: matched } = accumulate(fuzzyList));
     }
   }
+  if (scores.size === 0) return [];
+
   // 层级加成（Boss 定的检索优先级）：大标题(书名) +60/词 > 章节标题 +35 > tag/别名 +12 > 正文频次（索引权重递增）
   for (const [docId, score] of scores) {
     const bookTitleSet = ctx.bookTitleSets.get(docId) || new Set();
     const titleSet = ctx.titleSets.get(docId) || new Set();
     const tagSet = ctx.tagSets.get(docId) || new Set();
     let bonus = 0;
-    for (const t of tokens) {
+    for (const t of usedTokens) {
       if (bookTitleSet.has(t)) bonus += 60;
     }
-    for (const t of tokens) {
+    for (const t of usedTokens) {
       if (titleSet.has(t)) bonus += 35;
     }
-    for (const t of tokens) {
+    for (const t of usedTokens) {
       if (tagSet.has(t)) bonus += 12;
     }
     scores.set(docId, score + bonus);
@@ -145,6 +209,20 @@ export function search(ctx, q, limit = 10) {
   return ranked.map(([docId, score]) => {
     const { meta, body } = ctx.chapters.get(docId);
     const book = ctx.books.find((b) => b.id === meta.book);
+    const bookTitleSet = ctx.bookTitleSets.get(docId) || new Set();
+    const titleSet = ctx.titleSets.get(docId) || new Set();
+    const tagSet = ctx.tagSets.get(docId) || new Set();
+    const bodyLower = body.toLowerCase();
+    let bodyHits = 0;
+    const why = [];
+    for (const t of usedTokens) {
+      bodyHits += countOccurrences(bodyLower, t.toLowerCase());
+      if (bookTitleSet.has(t)) why.push(`书名「${t}」`);
+      else if (titleSet.has(t)) why.push(`章节标题「${t}」`);
+      else if (tagSet.has(t)) why.push(`标签「${t}」`);
+    }
+    if (bodyHits) why.push(`正文提及 ${bodyHits} 次`);
+    if (fuzzy) why.unshift('近似拼写');
     return {
       id: docId,
       title: meta.title,
@@ -153,12 +231,27 @@ export function search(ctx, q, limit = 10) {
       book_title: book ? book.title : '',
       tags: meta.tags || [],
       score,
+      bodyHits,
+      why: [...new Set(why)].slice(0, 4),
       snippet: makeSnippet(body, [...(matched.get(docId) || [])]),
     };
   });
 }
 
-// 输入补全：章节标题 / 书名 / 标签 / 人物（拉丁字母走前缀匹配，中文走包含匹配）
+// 零结果兜底：给书与标签方向，而不是空白页
+export function fallbackFor(ctx, q, limit = 6) {
+  const tokens = tokenize(q || '');
+  const hit = (b) => tokens.some((t) =>
+    b.title.includes(t) || (b.tags || []).some((x) => x.includes(t)) || (b.aliases || []).some((x) => x.includes(t)));
+  const picked = ctx.books.filter(hit);
+  const books = (picked.length ? picked : ctx.books).slice(0, limit).map((b) => ({
+    id: b.id, call: b.call, title: b.title, floor: b.floor, tags: (b.tags || []).slice(0, 3),
+  }));
+  const tags = [...new Set(books.flatMap((b) => b.tags))].slice(0, 8);
+  return { books, tags };
+}
+
+// 输入补全：书名 / 章节标题 / 标签 / 别名 / 人物（拉丁字母走前缀匹配，中文走包含匹配）
 export function suggest(ctx, q, limit = 10) {
   const key = (q || '').trim().toLowerCase();
   if (!key) return [];
@@ -168,11 +261,21 @@ export function suggest(ctx, q, limit = 10) {
     return isLatin ? lower.startsWith(key) : lower.includes(key);
   };
   const out = [];
-  for (const t of ctx.suggestTitles) if (match(t)) out.push({ text: t, type: '章节' });
-  for (const b of ctx.books) if (match(b.title)) out.push({ text: b.title, type: '书' });
-  for (const t of ctx.suggestTags) if (match(t)) out.push({ text: t, type: '标签' });
-  for (const t of ctx.suggestPeople) if (match(t)) out.push({ text: t, type: '人物' });
-  return out.slice(0, limit);
+  const seen = new Set();
+  const perType = { 书: 0, 章节: 0, 标签: 0, 别名: 0, 人物: 0 };
+  const push = (text, type) => {
+    const k = type + ':' + text;
+    if (seen.has(k) || perType[type] >= 3 || out.length >= limit) return;
+    seen.add(k);
+    perType[type] += 1;
+    out.push({ text, type });
+  };
+  for (const b of ctx.books) if (match(b.title)) push(b.title, '书');
+  for (const t of ctx.suggestTitles) if (match(t)) push(t, '章节');
+  for (const t of ctx.suggestTags) if (match(t)) push(t, '标签');
+  for (const t of ctx.suggestAliases) if (match(t)) push(t, '别名');
+  for (const t of ctx.suggestPeople) if (match(t)) push(t, '人物');
+  return out;
 }
 
 function escHtml(s) {

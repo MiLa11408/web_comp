@@ -2345,49 +2345,78 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   scene.add(hallPendant);
   buildChandelier(hallPendant, 'L1');
 
-  // ---------- 双层尘埃：近处大颗粒（500）+ 远处细尘（1200） ----------
+  // ---------- 双层尘埃：近处大颗粒 + 远处细尘 ----------
+  // 尘埃：位置只在初始化时写一次，漂浮交给顶点着色器。
+  // 这样每帧不再更新 2150 个 position、也不再整块上传 BufferAttribute。
   function buildDust(count, size, speed, opacity, color) {
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
-    const vel = new Float32Array(count * 3);
+    const seed = new Float32Array(count);
     for (let i = 0; i < count; i++) {
       const j = i * 3;
       pos[j] = (Math.random() - 0.5) * 27.6;
-      pos[j + 1] = 0.06 + Math.random() * 9.1;
+      // 层高 6.6：粒子全部留在可见空间里，不再有 9.1 的“天花板外空转”
+      pos[j + 1] = 0.06 + Math.random() * 6.24;
       pos[j + 2] = -6.6 + Math.random() * 16.6;
-      vel[j] = (Math.random() - 0.5) * speed;
-      vel[j + 1] = (Math.random() - 0.35) * speed;
-      vel[j + 2] = (Math.random() - 0.5) * speed;
+      seed[i] = Math.random();
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({
-      color, size, transparent: true, opacity, depthWrite: false, sizeAttenuation: true,
+    geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(color) },
+        uOpacity: { value: opacity },
+        uSize: { value: size },
+        uPixelRatio: { value: renderer.getPixelRatio() },
+        uSpeed: { value: speed },
+      },
+      vertexShader: `
+        uniform float uTime;
+        uniform float uSize;
+        uniform float uPixelRatio;
+        uniform float uSpeed;
+        attribute float aSeed;
+        varying float vFade;
+        void main() {
+          vec3 p = position;
+          float t = uTime * (0.55 + aSeed * 0.9);
+          p.x += sin(t * 0.6 + aSeed * 6.2831) * 0.55;
+          p.z += cos(t * 0.5 + aSeed * 6.2831) * 0.55;
+          p.y = mod(p.y + uTime * uSpeed * (0.6 + aSeed), 6.30) + 0.05;
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_PointSize = uSize * uPixelRatio * (620.0 / max(0.6, -mv.z));
+          gl_Position = projectionMatrix * mv;
+          vFade = smoothstep(0.2, 1.6, -mv.z) * (1.0 - smoothstep(14.0, 20.0, -mv.z));
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform float uOpacity;
+        varying float vFade;
+        void main() {
+          vec2 d = gl_PointCoord - vec2(0.5);
+          float r = length(d);
+          if (r > 0.5) discard;
+          float a = smoothstep(0.5, 0.0, r) * uOpacity * vFade;
+          gl_FragColor = vec4(uColor, a);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
     });
     const pts = new THREE.Points(geo, mat);
     pts.frustumCulled = false;
     scene.add(pts);
-    return { points: pts, geo, vel, count };
+    return { points: pts, geo, mat, count };
   }
-  // 低配：粉尘数量减半，降低每帧 BufferAttribute 更新与填充开销
-  const dustNear = buildDust(LOW_SPEC ? 250 : 500, 0.045, 0.06, 0.34, 0xffe0b0);
-  const dustFar = buildDust(LOW_SPEC ? 600 : 1200, 0.016, 0.16, 0.18, 0xd9c8a8);
+  const dustNear = buildDust(LOW_SPEC ? 300 : 650, 0.042, 0.06, 0.34, 0xffe0b0);
+  const dustFar = buildDust(LOW_SPEC ? 700 : 1500, 0.015, 0.16, 0.18, 0xd9c8a8);
 
+  // 每帧只推进 uniform，不再碰顶点数组
   function updateDust(layer, dt) {
-    const arr = layer.geo.attributes.position.array;
-    const vel = layer.vel;
-    for (let i = 0; i < layer.count; i++) {
-      const j = i * 3;
-      arr[j] += vel[j] * dt;
-      arr[j + 1] += vel[j + 1] * dt;
-      arr[j + 2] += vel[j + 2] * dt;
-      if (arr[j + 1] > 9.2) arr[j + 1] = 0.06;
-      else if (arr[j + 1] < 0.04) arr[j + 1] = 9.2;
-      if (arr[j] > 13.8) arr[j] = -13.8;
-      else if (arr[j] < -13.8) arr[j] = 13.8;
-      if (arr[j + 2] > 10.0) arr[j + 2] = -6.6;
-      else if (arr[j + 2] < -6.6) arr[j + 2] = 10.0;
-    }
-    layer.geo.attributes.position.needsUpdate = true;
+    layer.mat.uniforms.uTime.value += dt;
   }
 
   // ---------- 物理（Rapier） ----------
@@ -2693,10 +2722,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     shelfEdgeMat.roughness = th.shelfRough;
     for (const l of shelfLights) l.color.setHex(th.spot);
 
-    dustNear.points.material.color.setHex(th.dustNear);
-    dustNear.points.material.opacity = a.dust;
-    dustFar.points.material.color.setHex(th.dustFar);
-    dustFar.points.material.opacity = a.dust * 0.55;
+    dustNear.mat.uniforms.uColor.value.setHex(th.dustNear);
+    dustNear.mat.uniforms.uOpacity.value = a.dust;
+    dustFar.mat.uniforms.uColor.value.setHex(th.dustFar);
+    dustFar.mat.uniforms.uOpacity.value = a.dust * 0.55;
 
     for (let i = 0; i < wallLights.length; i++) {
       const isFloorLamp = i >= 4;
@@ -3525,6 +3554,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    const dpr = renderer.getPixelRatio();
+    dustNear.mat.uniforms.uPixelRatio.value = dpr;
+    dustFar.mat.uniforms.uPixelRatio.value = dpr;
   });
 
   // 标签页重新可见时重置时间戳，避免恢复首帧 dt 跳变

@@ -8,7 +8,7 @@ import {
   createUser, createSession, verifyPassword, getUserByToken, destroySession,
   allowLoginAttempt, allowRegisterAttempt,
 } from './auth.js';
-import { initSearch, search, suggest } from './search.js';
+import { initSearch, search, suggest, fallbackFor } from './search.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', '..');
@@ -61,6 +61,16 @@ const COLLECTION_MAP = {
 
 const app = Fastify({ logger: true });
 
+// 安全响应头（CSP 由 nginx 统一负责；这里补齐本地与直连场景的基础头）
+app.addHook('onSend', async (request, reply, payload) => {
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('X-Frame-Options', 'DENY');
+  reply.header('Referrer-Policy', 'same-origin');
+  reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  reply.header('Cross-Origin-Opener-Policy', 'same-origin');
+  return payload;
+});
+
 // ---------- 样章预览页（阶段 2 换 3D 界面） ----------
 const WEB_INDEX = path.join(ROOT, 'web', 'index.html');
 app.get('/', async (request, reply) => {
@@ -110,9 +120,22 @@ app.get('/vendor/*', async (request, reply) => {
 // ---------- 鉴权装饰 ----------
 app.decorateRequest('user', null);
 
+// 不引入额外依赖：手动解析 Cookie（HttpOnly 会话优先，Bearer 仅保留给 API/测试客户端）
+function cookieValue(request, name) {
+  const raw = request.headers.cookie || '';
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    if (part.slice(0, i).trim() === name) {
+      try { return decodeURIComponent(part.slice(i + 1).trim()); } catch (e) { return null; }
+    }
+  }
+  return null;
+}
+
 async function authHook(request, reply) {
   const header = request.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : (request.cookies && request.cookies.mm_token) || null;
+  const token = header.startsWith('Bearer ') ? header.slice(7) : cookieValue(request, 'mm_token');
   const user = getUserByToken(token);
   if (!user) return reply.code(401).send({ error: { code: 'UNAUTHORIZED', message: '请先登录' } });
   request.user = user;
@@ -123,7 +146,7 @@ const auth = { preHandler: authHook };
 
 function optionalUser(request) {
   const header = request.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : (request.cookies && request.cookies.mm_token) || null;
+  const token = header.startsWith('Bearer ') ? header.slice(7) : cookieValue(request, 'mm_token');
   return getUserByToken(token);
 }
 
@@ -166,7 +189,7 @@ app.post('/api/register', async (request, reply) => {
 
   const user = createUser(username, email || null, password);
   const { token } = createSession(user.id);
-  setCookie(reply, token);
+  setCookie(request, reply, token);
   return reply.code(201).send({ token, user });
 });
 
@@ -183,7 +206,7 @@ app.post('/api/login', async (request, reply) => {
     return fail(reply, 401, 'BAD_CREDENTIALS', '用户名或密码错误');
   }
   const { token } = createSession(row.id);
-  setCookie(reply, token);
+  setCookie(request, reply, token);
   return reply.send({ token, user: { id: row.id, username: row.username, email: row.email } });
 });
 
@@ -449,7 +472,9 @@ app.get('/api/search', async (request, reply) => {
   const q = (request.query.q || '').toString().trim();
   if (!q) return { results: [] };
   const limit = Math.min(50, Math.max(1, Number(request.query.limit) || 10));
-  return { results: search(ctx, q, limit) };
+  const results = search(ctx, q, limit);
+  if (results.length) return { results };
+  return { results, fallback: fallbackFor(ctx, q) };
 });
 
 app.get('/api/suggest', async (request) => {
@@ -515,6 +540,7 @@ app.post('/api/annotations', auth, async (request, reply) => {
   if (!KNOWN_CHAPTERS.has(chapter_id)) return fail(reply, 400, 'BAD_REQUEST', '章节不存在');
   if (typeof quote !== 'string' || !quote.trim()) return fail(reply, 400, 'BAD_REQUEST', '引文不能为空');
   if (typeof note !== 'string' || !note.trim()) return fail(reply, 400, 'BAD_REQUEST', '批注不能为空');
+  if (quote.length > 2000) return fail(reply, 400, 'BAD_REQUEST', '引文太长');
   if (note.length > 4000) return fail(reply, 400, 'BAD_REQUEST', '批注太长');
   const r = db.prepare('INSERT INTO annotations (user_id, chapter_id, quote, note, created_at) VALUES (?, ?, ?, ?, ?)')
     .run(request.user.id, chapter_id, quote.trim(), note.trim(), nowIso());
@@ -545,8 +571,10 @@ app.delete('/api/progress/:chapter_id', auth, async (request, reply) => {
 });
 
 // ---------- Cookie ----------
-function setCookie(reply, token) {
-  reply.header('Set-Cookie', `mm_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=1209600`);
+function setCookie(request, reply, token) {
+  const proto = String(request.headers['x-forwarded-proto'] || request.protocol || '').split(',')[0].trim();
+  const secure = proto === 'https' ? '; Secure' : '';
+  reply.header('Set-Cookie', `mm_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=1209600${secure}`);
 }
 
 // ---------- 启动 ----------

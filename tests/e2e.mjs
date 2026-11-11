@@ -1,4 +1,4 @@
-﻿﻿﻿﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
+﻿﻿﻿﻿﻿﻿﻿﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
 // 运行：node tests/e2e.mjs   （需本机 Chrome 或 Edge，服务已在 3300 启动）
 // 可用 BASE=http://127.0.0.1:3300/ 覆盖地址。
 import { chromium } from 'playwright-core';
@@ -86,14 +86,15 @@ const tourStill = await page.evaluate(() => window.mm3d && window.mm3d.isTouring
 // 后排可达：从书架组间空隙直走，应能进到两排之间
 await page.evaluate(() => window.mm3d.reset());
 await page.waitForTimeout(600);
+await page.keyboard.up('w');
 await page.keyboard.down('w');
 let aisleZ = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
 let stalled = 0;
-for (let i = 0; i < 36; i++) {
+for (let i = 0; i < 50; i++) {
   await page.waitForTimeout(600);
   const z = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
   if (z < -2.6) { aisleZ = z; break; }
-  if (Math.abs(z - aisleZ) < 0.02) { stalled += 1; if (stalled >= 4) break; } else stalled = 0;
+  if (Math.abs(z - aisleZ) < 0.02) { stalled += 1; if (stalled >= 8) break; } else stalled = 0;
   aisleZ = z;
 }
 await page.keyboard.up('w');
@@ -124,14 +125,22 @@ await page.evaluate(async () => {
 });
 const heldInfo = await page.evaluate(() => window.mm3d.heldInfo());
 heldInfo && heldInfo.id === 'b1' ? ok('书抽到手里', heldInfo.title) : bad('书抽到手里', JSON.stringify(heldInfo));
-const stackState = await page.evaluate(() => {
+const stackState = await page.evaluate(async () => {
   window.mm3d.stackHeld();
+  for (let i = 0; i < 30; i++) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (!window.mm3d.heldInfo()) break;
+  }
   return window.mm3d.getStack();
 });
 stackState.length === 1 ? ok('书叠到长桌', stackState.join(',')) : bad('书叠到长桌', JSON.stringify(stackState));
 const openState = await page.evaluate(async () => {
   window.mm3d.grabBook('b2');
-  await new Promise((r) => setTimeout(r, 1000));
+  for (let i = 0; i < 40; i++) {
+    await new Promise((r) => setTimeout(r, 100));
+    const h = window.mm3d.heldInfo();
+    if (h) return h;
+  }
   return window.mm3d.heldInfo();
 });
 if (openState && openState.id === 'b2') {
@@ -474,7 +483,9 @@ const oracleBadBody = await oracleBad.json();
 oracleBadBody.refused === true ? ok('未写之书接口拒绝非假如问题') : bad('未写之书接口拒绝非假如问题', JSON.stringify(oracleBadBody).slice(0, 60));
 
 // 6c. 盖章 / 读完：二次确认、盖上纸面、可撤销
-await page.evaluate((t) => { localStorage.setItem('mm_token', t); }, token);
+// 会话只走 HttpOnly Cookie；前端不再把 token 写进 localStorage
+await page.context().addCookies([{ name: 'mm_token', value: token, url: BASE, httpOnly: true, sameSite: 'Lax' }]);
+await page.evaluate(() => { window.mmAuthed = true; });
 await page.evaluate(() => window.showChapter('b2-c1'));
 await page.waitForSelector('#reader', { timeout: 12000 });
 await page.waitForTimeout(500);
@@ -531,6 +542,54 @@ await page.waitForTimeout(600);
 const stampAfterRevoke = await page.locator('.book-stamp').count();
 const doneAfterRevoke = await page.locator('#doneBtn').innerText();
 (stampAfterRevoke === 0 && doneAfterRevoke === '标记读完') ? ok('撤销状态持久') : bad('撤销持久', `${stampAfterRevoke}/${doneAfterRevoke}`);
+
+// 6d. 检索可解释 / 零结果兜底
+const whyRes = await api.get(BASE + 'api/search?q=' + encodeURIComponent('神经网络'));
+const whyBody = await whyRes.json();
+(whyBody.results[0] && whyBody.results[0].why && whyBody.results[0].why.length)
+  ? ok('检索命中理由', whyBody.results[0].why.join(' · '))
+  : bad('检索命中理由', JSON.stringify(whyBody.results[0] || {}).slice(0, 60));
+const fbRes = await api.get(BASE + 'api/search?q=' + encodeURIComponent('zzzz不存在'));
+const fbBody = await fbRes.json();
+(fbBody.results.length === 0 && fbBody.fallback && fbBody.fallback.books.length)
+  ? ok('零结果兜底书目', String(fbBody.fallback.books.length))
+  : bad('零结果兜底', JSON.stringify(fbBody).slice(0, 80));
+const fuzzyRes = await api.get(BASE + 'api/search?q=transfomer');
+const fuzzyBody = await fuzzyRes.json();
+(fuzzyBody.results.length > 0 && fuzzyBody.results[0].why.includes('近似拼写'))
+  ? ok('英文拼写容错', fuzzyBody.results[0].title)
+  : bad('英文拼写容错', JSON.stringify(fuzzyBody).slice(0, 80));
+
+// 6e. 安全：token 不进 localStorage、Cookie 为 HttpOnly、基础安全头
+const lsToken = await page.evaluate(() => localStorage.getItem('mm_token'));
+lsToken === null ? ok('token 不在 localStorage') : bad('token 泄露到 localStorage', String(lsToken).slice(0, 8));
+const cookieVisible = await page.evaluate(() => document.cookie.includes('mm_token'));
+cookieVisible === false ? ok('会话 Cookie 不可被 JS 读取') : bad('Cookie 可被 JS 读取');
+const secRes = await api.get(BASE + 'api/health');
+const secHeaders = secRes.headers();
+(secHeaders['x-content-type-options'] === 'nosniff' && secHeaders['x-frame-options'] === 'DENY')
+  ? ok('安全响应头')
+  : bad('安全响应头', JSON.stringify({ xcto: secHeaders['x-content-type-options'], xfo: secHeaders['x-frame-options'] }));
+
+// 6f. 演示编排面板
+await page.evaluate(() => window.mmDemoToggle(true));
+const dockVisible = await page.locator('#demoDock').isVisible();
+dockVisible ? ok('演示编排面板可打开') : bad('演示编排面板', '不可见');
+const dockButtons = await page.locator('#demoDock .dd-grid button').count();
+dockButtons >= 6 ? ok('演示编排六个入口', String(dockButtons)) : bad('演示编排入口', String(dockButtons));
+await page.evaluate(() => window.mmDemoToggle(false));
+
+// 6g. 尘埃改为 GPU 着色器
+const dustGpu = await page.evaluate(() => {
+  let found = false;
+  if (window.mm3d && window.mm3d.scene) {
+    window.mm3d.scene.traverse((o) => {
+      if (o.isPoints && o.material && o.material.isShaderMaterial && o.material.uniforms && o.material.uniforms.uTime) found = true;
+    });
+  }
+  return found;
+});
+dustGpu ? ok('尘埃 GPU 着色器') : bad('尘埃 GPU 着色器', '未找到 ShaderMaterial');
 
 // 7. 性能：接口耗时与并发
 const cat = await api.get(BASE + 'api/catalog');

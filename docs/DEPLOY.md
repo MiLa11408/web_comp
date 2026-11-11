@@ -250,5 +250,7 @@ sudo docker exec dachuang-frontend-1 nginx -t && sudo docker exec dachuang-front
 
 - 生产环境用 systemd 里的 `HOST=127.0.0.1`，只让 nginx 访问 3300；同时用防火墙挡住 3300。
 - 站点用 HTTPS；借书证口令在服务端哈希存储，Cookie 为 HttpOnly + SameSite=Lax。
-- 注册/登录已有 IP 级限流（`server/src/auth.js`）。
+- **会话只走 HttpOnly Cookie**：前端不再把 token 写进 localStorage；`/api/me`、盖章、批注、进度都由 Cookie 鉴权。Bearer 仅保留给 API/测试客户端。
+- 注册/登录已有 IP 级限流（`server/src/auth.js`）；批注引文/正文有长度上限；安全响应头由 Fastify 与 nginx 双重补齐。
+- CSP 仍保留 `'unsafe-inline'`（页面内联 `onclick`），这是当前唯一已知的 CSP 收窄项；后续改事件委托后可去掉。
 - 内容里的外部来源链接均为论文/官方页面，站点本身不再二次分发素材。
