@@ -436,7 +436,7 @@
   .si-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6b5a3a, var(--gold)); }
   .size-scale { color: #7d6e55; font-size: 11px; line-height: 1.7; margin-top: 10px; border-left: 2px solid #4a3a24; padding-left: 9px; }
 
-  /* 前沿书架：arXiv 新纸入库 */
+  /* 前沿观察：arXiv 新论文 → 中文科普新闻 */
   .fr-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 16px; }
   .fr-chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .fr-chips button { background: #1f1812; border: 1px solid #4a3a24; color: #b09a72; padding: 5px 11px; font-size: 12px; cursor: pointer; font-family: inherit; }
@@ -448,11 +448,16 @@
   .fr-card:hover { border-left-color: var(--gold); }
   .fr-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: #8a7a5c; }
   .fr-field { border: 1px solid #5a4526; color: #cbb892; padding: 1px 7px; letter-spacing: 1px; }
-  .fr-card h3 { margin: 0; font-size: 14.5px; line-height: 1.55; color: #eadbb8; font-weight: 500; }
+  .fr-card h3 { margin: 0; font-size: 15.5px; line-height: 1.55; color: #eadbb8; font-weight: 500; font-family: var(--font-serif); }
   .fr-card h3 a { color: inherit; text-decoration: none; }
   .fr-card h3 a:hover { color: var(--gold); }
+  .fr-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .fr-tag { border: 1px solid #4a3a24; color: #a8946c; padding: 1px 7px; font-size: 10.5px; letter-spacing: .5px; }
   .fr-authors { color: #8a7a5c; font-size: 11.5px; line-height: 1.6; font-style: italic; }
-  .fr-summary { color: #b09a72; font-size: 12px; line-height: 1.75; font-family: "Consolas", "Microsoft YaHei", monospace; }
+  .fr-summary { color: #cbb892; font-size: 13px; line-height: 1.85; font-family: var(--font-serif); }
+  .fr-summary.en { color: #9a8a6f; font-size: 11.5px; font-family: var(--font-mono); line-height: 1.7; }
+  .fr-why { border-left: 2px solid #6b5a3a; padding-left: 9px; color: #b09a72; font-size: 11.5px; line-height: 1.75; }
+  .fr-why b { color: #c8a24a; font-weight: 500; }
   .fr-card details summary { color: #8a7a5c; font-size: 11.5px; cursor: pointer; outline: none; }
   .fr-card details summary:hover { color: var(--gold); }
   .fr-actions { display: flex; gap: 8px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
@@ -539,6 +544,9 @@
   .plan-tabs .plan-hint { color: #7d6e55; font-size: 11.5px; margin-left: auto; }
   .plan-canvas { overflow-x: auto; border: 1px solid #5a4526; background: #0f0b08; padding: 6px; }
   .plan-svg { display: block; width: 100%; min-width: 560px; height: auto; background: #efe3c6; }
+  .plan-hidden { cursor: pointer; }
+  .plan-hidden rect { transition: fill .2s; }
+  .plan-hidden:hover rect { fill: #dfcda4; }
   .plan-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: #cbb892; margin: 12px 0; }
   .plan-legend span { display: inline-flex; align-items: center; gap: 6px; }
   .plan-legend i { width: 12px; height: 12px; display: inline-block; border: 1px solid #8a6320; }
@@ -827,7 +835,7 @@
       <button class="back" onclick="enterRail()">书轨</button>
       <button class="back" onclick="mmShowStar()">星图</button>
       <button class="back" onclick="enterTimeline()">时间轴</button>
-      <button class="back" onclick="enterFrontier()">前沿书架</button>
+      <button class="back" onclick="enterFrontier()">前沿观察</button>
       <button class="back" onclick="mmStartTour()">导览</button>
     </div>
     <div class="nav-group"><span class="ng-label">档案与玩法</span>
@@ -976,13 +984,13 @@ function shade(hex, f) {
 }
 
 // ---------- 阅读记录 / 轻提示 / 新手引导 ----------
-function mmToast(text) {
+function mmToast(text, ms) {
   let el = document.getElementById('mmToast');
   if (!el) { el = document.createElement('div'); el.id = 'mmToast'; document.body.appendChild(el); }
   el.textContent = text;
   el.classList.add('on');
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('on'), 2200);
+  el._t = setTimeout(() => el.classList.remove('on'), Math.max(1200, Number(ms) || 2200));
 }
 
 // ---------- 分区域新手提示卡 ----------
@@ -1776,7 +1784,7 @@ async function showStolenGallery() {
 }
 window.showStolenGallery = showStolenGallery;
 
-// ---------- 前沿书架 · arXiv 定时入库 ----------
+// ---------- 前沿观察 · arXiv 定时入库 + 中文科普编译 ----------
 let FRONTIER_CACHE = null;
 let FRONTIER_PROMISE = null;
 let frontierField = '全部';
@@ -1810,42 +1818,49 @@ window.mmFrontierSearch = mmFrontierSearch;
 
 async function showFrontier(keep) {
   document.body.classList.add('grid');
-  mmTip('frontier', '前沿书架', '每天从 arXiv 入库；按领域筛选，点标题看摘要与原文链接。');
+  mmTip('frontier', '前沿观察', '每天从 arXiv 选新论文，馆员编译成中文科普；先看导读，再决定要不要读原文。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   if (!keep) app.innerHTML = '<div class="empty">正在登记新到馆的纸页……</div>';
   const d = await ensureFrontier();
   const items = d.items || [];
   const fields = ['全部', ...new Set(items.map((x) => x.field))];
   const list = frontierField === '全部' ? items : items.filter((x) => x.field === frontierField);
-  const updated = d.updated ? new Date(d.updated).toLocaleString('zh-CN', { hour12: false }) : '尚未入库';
-  const cards = list.map((x) => `
+  const stamp = d.newsUpdated || d.updated;
+  const updated = stamp ? new Date(stamp).toLocaleString('zh-CN', { hour12: false }) : '尚未入库';
+  const cards = list.map((x) => {
+    const n = x.news || {};
+    const title = n.title_zh || x.title;
+    const tags = (n.tags && n.tags.length ? n.tags : [x.field]).filter(Boolean).slice(0, 3);
+    return `
     <article class="fr-card">
       <div class="fr-top">
         <span class="fr-field">${esc(x.field || '交叉')}</span>
         <span>${esc(x.published || '')}</span>
         <span>${esc((x.cats || []).join(' · '))}</span>
       </div>
-      <h3><a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a></h3>
-      <div class="fr-authors">${esc((x.authors || []).join('、') || '作者未列出')}</div>
-      <div class="fr-summary">${esc(String(x.summary || '').slice(0, 150))}…</div>
-      ${String(x.summary || '').length > 150 ? `<details><summary>读完整摘要（英文原文）</summary><div class="fr-summary">${esc(x.summary)}</div></details>` : ''}
+      <h3><a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a></h3>
+      <div class="fr-tags">${tags.map((t) => `<span class="fr-tag">${esc(t)}</span>`).join('')}</div>
+      <div class="fr-summary">${esc(n.lede || String(x.summary || '').slice(0, 150) + '…')}</div>
+      ${n.why ? `<div class="fr-why"><b>为什么值得看</b> · ${esc(n.why)}</div>` : ''}
+      <details><summary>原文标题与摘要（英文）</summary><div class="fr-summary en">${esc(x.title)}<br><br>${esc(x.summary)}</div></details>
       <div class="fr-actions">
         <a href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">arXiv 原文 ↗</a>
-        <button data-k="${esc(x.field === '通用智能' ? '智能体' : (x.field || ''))}" onclick="mmFrontierSearch(this.dataset.k)">馆内找同方向的旧书 →</button>
+        <button data-k="${esc((n.tags && n.tags[0]) || x.field || '')}" onclick="mmFrontierSearch(this.dataset.k)">馆内找同方向的旧书 →</button>
       </div>
-    </article>`).join('');
+    </article>`;
+  }).join('');
   app.innerHTML = `
   <div class="rail-view frontier-view">
-    <div class="rail-head"><span>前沿书架 · arXiv 新纸入库</span>
+    <div class="rail-head"><span>前沿观察 · 科普新闻</span>
       <span class="head-links"><a onclick="enterTimeline()">时间轴 →</a> · <a onclick="enterRail()">书轨 →</a></span>
     </div>
-    <div class="rail-sub">${esc(d.note || '这里只登记新到的论文，不改写、不评价。')}</div>
+    <div class="rail-sub">${esc(d.note || '每天从 arXiv 选新论文，馆员编译成中文科普；只做导读，原文为准。')}</div>
     <div class="fr-toolbar">
       <div class="fr-chips">${fields.map((f) => `<button class="${f === frontierField ? 'on' : ''}" onclick="mmFrontierFilter('${esc(f)}')">${esc(f)}${f === '全部' ? ` · ${items.length}` : ''}</button>`).join('')}</div>
-      <span class="fr-updated">${esc(d.source || 'arXiv')} · 入库 ${esc(updated)}</span>
+      <span class="fr-updated">${esc(d.source || 'arXiv')} · 编译 ${esc(updated)}</span>
     </div>
-    ${list.length ? `<div class="fr-grid">${cards}</div>` : '<div class="fr-empty">这一栏还没有新纸。<br>同学，库房每天凌晨会再去 arXiv 取一次；也可以先回书架读已编目的旧书。</div>'}
-    <div class="size-scale">前沿书架与馆藏分开：馆藏是已核验、已写成的 384 章；这里是未经本馆核验的原始预印本，只提供标题、作者、摘要与原文链接。看到值得追的题目，再去「卡片目录」找它的来路。</div>
+    ${list.length ? `<div class="fr-grid">${cards}</div>` : '<div class="fr-empty">这一栏还没有新纸。<br>库房每天凌晨会再去 arXiv 取一次；也可以先回书架读已编目的旧书。</div>'}
+    <div class="size-scale">前沿观察与馆藏分开：馆藏是已核验、已写成的 384 章；这里是新论文的中文科普导读，由馆员编译，可能不完整。数字、结论与原文冲突时，以 arXiv 原文为准；想追根，再去「卡片目录」找它的来路。</div>
   </div>`;
 }
 window.showFrontier = showFrontier;
@@ -2105,7 +2120,7 @@ async function showAbout(highlightTutorial = false) {
         <article class="tut-step"><span class="tut-num">03 / 取书</span><h4>把书抽到手里</h4><p>点书脊，书会飞到右手。<b>左键再点书 / <kbd>E</kbd></b> 翻开；<b>右键 / <kbd>Esc</kbd></b> 放回架上；<b><kbd>Q</kbd></b> 放到 L1 长桌，按书脊厚度叠成三摞，最多 12 本。</p></article>
         <article class="tut-step"><span class="tut-num">04 / 电梯</span><h4>楼层就是分级</h4><p>L1 公开、L2 内部、L3 机密、L4 绝密。越往上书越残、环境越冷，馆员语气也会变。电梯面板和目标楼层互通，3D 与 2D 会同步。</p></article>
         <article class="tut-step"><span class="tut-num">05 / 平面</span><h4>书架视图与总览</h4><p>不想走 3D 就用<b>书架视图</b>按层找书，一格一格看书脊；<b>书架总览</b>一次列出全部书目、索书号、年份、标签与章节进度。</p></article>
-        <article class="tut-step"><span class="tut-num">06 / 查找</span><h4>卡片目录的四级排序</h4><p>检索先锁<b>大标题</b>，再锁 <b>tag</b>，再看正文提及次数，最后才是相关内容。<b>前沿书架</b>每天从 arXiv 新纸入库，可按领域筛选并跳回馆内旧书。</p></article>
+        <article class="tut-step"><span class="tut-num">06 / 查找</span><h4>卡片目录的四级排序</h4><p>检索先锁<b>大标题</b>，再锁 <b>tag</b>，再看正文提及次数，最后才是相关内容。<b>前沿观察</b>每天从 arXiv 选新论文，由馆员编译成中文科普，可按领域筛选并跳回馆内旧书。</p></article>
         <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：5 条主线、55 站，同名书就是换乘站；<b>星图</b>看 48 本书的 30 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
         <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完，盖章和读完都能再次点击撤销。</p></article>
         <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 的蜡封桌上多了一张盖着红 X 的备忘，记得读它——那不是装饰。</p></article>
@@ -2374,6 +2389,30 @@ function enterStolen() { fadeSwap(() => showStolenGallery()); }
 // ---------- 楼层平面图 ----------
 function enterPlan() { fadeSwap(() => showPlan()); }
 
+// 平面图上不起眼的一块深色地砖：不标字、不做菱形，点一下才知道下面有东西
+window.mmPlanHidden = async () => {
+  if (window.mm3d && window.mm3d.isHiddenVisible && window.mm3d.isHiddenVisible()) {
+    mmToast('下面已经空了。入口旁那本没有编号的黑书，就是从这里取出来的。', 4600);
+    return;
+  }
+  try {
+    const st = await (await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()))).json();
+    const chapters = (st && st.me && st.me.chapters) || 0;
+    const frags = (st && st.me && st.me.fragments) || [];
+    const ready = chapters >= 12 || frags.length >= 3;
+    if (!ready) {
+      mmToast('这块地砖比旁边深半度。指节敲上去是空的——还不到打开的时候。', 5200);
+      return;
+    }
+    if (!window.mm3d) return mmToast('地板松了，但 3D 阅览室还没准备好。', 4200);
+    window.mm3d.setHiddenVisible(true);
+    enter3D();
+    setTimeout(() => mmToast('地板松了。入口右手边那本没有编号的黑书，可以拿走了。', 5600), 1300);
+  } catch (e) {
+    mmToast('地砖是空的，但今天听不清。', 3600);
+  }
+};
+
 function planWorldX(wx, sideX) { return ((wx + sideX) / (2 * sideX)) * 1000; }
 function planWorldY(wz) { return ((wz + 7.2) / (10.2 + 7.2)) * 760; }
 
@@ -2568,10 +2607,10 @@ async function showPlan(floor = 'all') {
       <text x="${fx(px(lamp.x) + 17)}" y="${fx(py(lamp.z) + 4)}" font-size="11" fill="#8a6d33">台灯</text>
     </g>`;
   const hiddenSvg = `
-    <g>
-      <path d="M${fx(px(hidden.x))} ${fx(py(hidden.z) - 15)} L${fx(px(hidden.x) + 15)} ${fx(py(hidden.z))} L${fx(px(hidden.x))} ${fx(py(hidden.z) + 15)} L${fx(px(hidden.x) - 15)} ${fx(py(hidden.z))} Z"
-        fill="rgba(59,48,32,.35)" stroke="#3b3020" stroke-width="1.4"/>
-      <text x="${fx(px(hidden.x))}" y="${fx(py(hidden.z) + 32)}" text-anchor="middle" font-size="11" fill="#3b3020">暗格</text>
+    <g class="plan-hidden" role="button" tabindex="0" aria-label="一块颜色略深的地砖"
+       onclick="mmPlanHidden()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mmPlanHidden();}">
+      <rect x="${fx(px(hidden.x) - 14)}" y="${fx(py(hidden.z) - 9)}" width="28" height="18" rx="2"
+        fill="#e6d6b2" stroke="#e0cfa8" stroke-width=".8"/>
     </g>`;
 
   const legendProps = (planFloor === 'all' ? ['L1', 'L2', 'L3', 'L4'] : [planFloor])
@@ -2609,7 +2648,7 @@ async function showPlan(floor = 'all') {
         ${starSvg}
         ${cabinetSvg}
         ${lampSvg}
-        ${hiddenSvg}
+        ${(planFloor === 'all' || planFloor === 'L1') ? hiddenSvg : ''}
         ${propSvg}
       </svg>
     </div>

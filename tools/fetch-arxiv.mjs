@@ -1,4 +1,4 @@
-// tools/fetch-arxiv.mjs · 前沿书架入库
+// tools/fetch-arxiv.mjs · 前沿观察入库
 // 用法：node tools/fetch-arxiv.mjs [--max 30]
 // 从 arXiv API 拉取 cs.AI / cs.CL / cs.CV / cs.LG 最新投稿，写入 content/frontier.json。
 // 定时任务（服务器）：crontab 每天 04:17 执行一次；
@@ -80,11 +80,20 @@ async function main() {
     console.error('arXiv 返回为空，未覆盖旧数据。');
     process.exit(1);
   }
+  // 保留已经编译好的中文科普导读（按原文链接对齐），避免每日刷新把 news 冲掉
+  const old = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : null;
+  const newsByLink = new Map();
+  if (old && Array.isArray(old.items)) {
+    for (const x of old.items) if (x.news && x.news.title_zh) newsByLink.set(x.link, x.news);
+  }
+  for (const x of items) {
+    if (!x.news && newsByLink.has(x.link)) x.news = newsByLink.get(x.link);
+  }
   const payload = {
     updated: new Date().toISOString(),
     source: 'arXiv API · cs.AI / cs.CL / cs.CV / cs.LG',
     sourceUrl: 'https://arxiv.org/list/cs.AI/recent',
-    note: '前沿书架只做「新纸入库」：标题、作者、摘要与原文链接均为 arXiv 元数据，本站不改写、不评价。摘要为英文原文，便于与论文逐字核对。',
+    note: '前沿观察每天从 arXiv 选新论文：中文标题/导读/为什么值得看由馆员编译，可能不完整；数字、结论与原文冲突时以 arXiv 原文为准。未编译的条目保留英文元数据。',
     count: items.length,
     items,
   };

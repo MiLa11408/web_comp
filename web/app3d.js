@@ -3634,6 +3634,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       return true;
     },
     setHiddenVisible: (v) => { hiddenBook.visible = !!v; },
+    isHiddenVisible: () => hiddenBook.visible,
     getFloor: () => currentFloor,
     toastFloor: () => toast(floorWelcome(currentFloor)),
     startTour,

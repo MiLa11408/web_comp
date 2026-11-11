@@ -301,21 +301,25 @@ ok('时间轴卡片可开章');
 await page.locator('.reader-float-close').first().click();
 await page.waitForTimeout(2000);
 
-// 3c. 前沿书架（arXiv 定时入库）
-await page.getByRole('button', { name: '前沿书架' }).click();
+// 3c. 前沿观察（arXiv 新论文 → 中文科普新闻）
+await page.getByRole('button', { name: '前沿观察' }).click();
 await page.waitForSelector('.fr-card, .fr-empty', { timeout: 10000 });
 const frCards = await page.locator('.fr-card').count();
 const frChips = await page.locator('.fr-chips button').count();
-frCards >= 1 ? ok('前沿书架入库条目', String(frCards)) : bad('前沿书架入库条目', String(frCards));
-frChips >= 2 ? ok('前沿书架领域筛选', String(frChips)) : bad('前沿书架领域筛选', String(frChips));
+frCards >= 1 ? ok('前沿观察新闻条目', String(frCards)) : bad('前沿观察新闻条目', String(frCards));
+frChips >= 2 ? ok('前沿观察领域筛选', String(frChips)) : bad('前沿观察领域筛选', String(frChips));
 if (frCards >= 1) {
+  const firstTitle = await page.locator('.fr-card h3').first().innerText();
+  /[\u4e00-\u9fff]/.test(firstTitle) ? ok('前沿新闻中文标题', firstTitle.slice(0, 24)) : bad('前沿新闻中文标题', firstTitle);
+  const firstTags = await page.locator('.fr-card .fr-tag').first().count();
+  firstTags >= 1 ? ok('前沿新闻标签') : bad('前沿新闻标签', '无');
   const firstLink = await page.locator('.fr-card h3 a').first().getAttribute('href');
   firstLink && firstLink.startsWith('https://arxiv.org/abs/') ? ok('前沿条目指向 arXiv 原文') : bad('前沿条目链接', String(firstLink));
   await page.locator('.fr-chips button').nth(1).click();
   await page.waitForTimeout(500);
   const filtered = await page.locator('.fr-card').count();
   const activeChip = await page.locator('.fr-chips button.on').innerText();
-  (filtered >= 1 && !activeChip.startsWith('全部')) ? ok('前沿书架筛选生效', activeChip) : bad('前沿书架筛选生效', `${activeChip}/${filtered}`);
+  (filtered >= 1 && !activeChip.startsWith('全部')) ? ok('前沿观察筛选生效', activeChip) : bad('前沿观察筛选生效', `${activeChip}/${filtered}`);
 }
 
 // 4. 书架视图 / 总览
@@ -443,6 +447,15 @@ const planShelves = await page.locator('.plan-svg g[onclick]').count();
 planShelves >= 8 ? ok('平面图书架组数', String(planShelves)) : bad('平面图书架组数', String(planShelves));
 const planTabs = await page.locator('.plan-tabs button.back').count();
 planTabs === 5 ? ok('平面图五档选层', String(planTabs)) : bad('平面图选层档位', String(planTabs));
+const hiddenTile = await page.locator('.plan-hidden').count();
+const hiddenLabel = await page.getByText('暗格', { exact: true }).count();
+(hiddenTile === 1 && hiddenLabel === 0) ? ok('平面图暗格不标字') : bad('平面图暗格', `tile=${hiddenTile} label=${hiddenLabel}`);
+if (hiddenTile === 1) {
+  await page.locator('.plan-hidden').click();
+  await page.waitForTimeout(500);
+  const hiddenHint = await page.locator('#mmToast.on').innerText().catch(() => '');
+  /地砖|松了|敲/.test(hiddenHint) ? ok('暗格点击只给线索', hiddenHint.slice(0, 20)) : bad('暗格点击提示', hiddenHint);
+}
 await page.locator('.plan-tabs button.back', { hasText: 'L4' }).click();
 await page.waitForTimeout(600);
 const l4Lit = await page.evaluate(() => [...document.querySelectorAll('.plan-svg g[onclick] text')]
