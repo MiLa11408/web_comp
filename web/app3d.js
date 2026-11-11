@@ -2453,7 +2453,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // ---------- UI：提示 / 提示条 / 遮罩 / 电梯面板 ----------
   const hint = document.createElement('div');
   hint.className = 'mm-hint';
-  hint.textContent = 'WASD 移动 · 拖拽转视角 · 点书抽出 · E 翻开 · Q 叠到 L1 长桌 · 右键放回';
+  hint.textContent = 'WASD 移动 · 拖拽转视角 · 点书抽出 · E 翻开 · Q 放到本层桌上 · 右键放回';
   root.appendChild(hint);
 
   // 触屏：左下虚拟摇杆负责移动，画面拖动转视角（canvas 的 pointer 事件已通用）
@@ -3061,6 +3061,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   function restoreToShelf(item, animate = true) {
     if (item.stacked) {
       item.stacked = false;
+      item.stackTable = null;
+      item.stackFloor = null;
       if (item.mesh.parent !== scene) scene.attach(item.mesh);
     }
     const si = stackItems.indexOf(item);
@@ -3097,38 +3099,48 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     requestAnimationFrame(step);
   }
 
-  // 桌上 3 摞，按书脊厚度自然加高
+  // 每层都有自己的桌子：Q 放到当前层桌上，各层独立叠放
+  const TABLE_BY_FLOOR = { all: t1, L1: t1, L2: bt, L3: desk, L4: wt };
+
+  // 桌上 3 摞，按书脊厚度自然加高（按桌分组，避免跨层堆到同一张桌）
   function layoutStack() {
-    const heights = {};
-    stackItems.forEach((it, i) => {
-      const col = i % 3;
-      const th = it.w || 0.2;
-      const h = heights[col] || 0;
-      it.mesh.position.set(-0.75 + col * 0.75, 0.82 + h + th / 2, 0.02);
-      it.mesh.quaternion.setFromEuler(new THREE.Euler(0, (i - 1) * 0.07, Math.PI / 2, 'YXZ'));
-      it.mesh.scale.setScalar(1);
-      heights[col] = h + th + 0.008;
-    });
+    const groups = new Map();
+    for (const it of stackItems) {
+      const table = it.stackTable || t1;
+      if (!groups.has(table)) groups.set(table, []);
+      groups.get(table).push(it);
+    }
+    for (const list of groups.values()) {
+      const heights = {};
+      list.forEach((it, i) => {
+        const col = i % 3;
+        const th = it.w || 0.2;
+        const h = heights[col] || 0;
+        it.mesh.position.set(-0.75 + col * 0.75, 0.82 + h + th / 2, 0.02);
+        it.mesh.quaternion.setFromEuler(new THREE.Euler(0, (i - 1) * 0.07, Math.PI / 2, 'YXZ'));
+        it.mesh.scale.setScalar(1);
+        heights[col] = h + th + 0.008;
+      });
+    }
   }
 
   function placeOnTable(item) {
     if (!item) return;
-    if (currentFloor !== 'L1') {
-      heldBook = null;
-      restoreToShelf(item);
-      toast('长桌在 L1 旧纸层，这本书先放回架上。');
-      return;
-    }
+    const table = TABLE_BY_FLOOR[currentFloor] || t1;
     heldBook = null;
     item.animating = false;
     item.stacked = true;
+    item.stackTable = table;
+    item.stackFloor = currentFloor;
     if (item.body) item.body.setEnabled(false);
-    if (item.mesh.parent !== t1) t1.attach(item.mesh);
+    if (item.mesh.parent !== table) table.attach(item.mesh);
     stackItems.push(item);
-    if (stackItems.length > 12) restoreToShelf(stackItems.shift());
+    const sameTable = stackItems.filter((x) => x.stackTable === table);
+    if (sameTable.length > 12) restoreToShelf(sameTable[0]);
     layoutStack();
     if (window.mmAudioPlay) window.mmAudioPlay('step');
-    toast(`《${item.book.title}》放在长桌上，已叠 ${stackItems.length} 本。`);
+    const floorLabel = currentFloor === 'all' ? '大厅' : (floors.find((f) => f.id === currentFloor)?.name || '本层');
+    toast(`《${item.book.title}》放在${floorLabel}的桌上，本桌已叠 ${sameTable.length} 本；点书可取回。`);
   }
 
   function putBackHeld(silent = false) {
@@ -3199,6 +3211,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     item.animating = true;
     if (item.stacked) {
       item.stacked = false;
+      item.stackTable = null;
+      item.stackFloor = null;
       if (item.mesh.parent !== scene) scene.attach(item.mesh);
       const si = stackItems.indexOf(item);
       if (si >= 0) stackItems.splice(si, 1);
@@ -3224,8 +3238,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         taking = false;
         heldBook = item;
         item.mesh.visible = true;
-        toast(`《${item.book.title}》已抽到手里：左键/E 翻开 · 右键 放回 · Q 放到长桌。`);
-        if (window.mmTip) window.mmTip('hand', '书在手里', '左键再点书 / E 翻开；右键 / Esc 放回；Q 放到 L1 长桌。');
+        toast(`《${item.book.title}》已抽到手里：左键/E 翻开 · 右键 放回 · Q 放到本层桌上。`);
+        if (window.mmTip) window.mmTip('hand', '书在手里', '左键再点书 / E 翻开；右键 / Esc 放回；Q 放到本层桌上。');
       }
     };
     requestAnimationFrame(step);
@@ -3379,6 +3393,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     stackItems.length = 0;
     for (const item of bookItems) {
       item.stacked = false;
+      item.stackTable = null;
+      item.stackFloor = null;
       if (item.mesh.parent !== scene) scene.attach(item.mesh);
       item.animating = false;
       item.mesh.position.copy(item.basePos);
@@ -3674,6 +3690,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     openHeld: () => { if (!heldBook) return false; openHeldBook(); return true; },
     stackHeld: () => { if (heldBook) { placeOnTable(heldBook); return true; } return false; },
     getStack: () => stackItems.map((it) => it.book.id),
+    getStackFloors: () => stackItems.map((it) => it.stackFloor),
   };
 }
 

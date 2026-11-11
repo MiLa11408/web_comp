@@ -192,6 +192,30 @@ await page.evaluate(() => window.mm3d.reset());
 await page.waitForTimeout(800);
 const stackAfterReset = await page.evaluate(() => window.mm3d.getStack());
 stackAfterReset.length === 0 ? ok('复位清空长桌') : bad('复位清空长桌', JSON.stringify(stackAfterReset));
+
+// 每层都有桌子：L2 取书 → 放到 L2 桌 → 切到 L1，书堆仍记在 L2，不串层
+const floorStack = await page.evaluate(async () => {
+  window.mm3d.setFloor('L2', true);
+  window.mm3d.grabBook('b3');
+  for (let i = 0; i < 40; i++) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (window.mm3d.heldInfo()) break;
+  }
+  window.mm3d.stackHeld();
+  await new Promise((r) => setTimeout(r, 350));
+  const onL2 = { ids: window.mm3d.getStack(), floors: window.mm3d.getStackFloors() };
+  window.mm3d.setFloor('L1', true);
+  await new Promise((r) => setTimeout(r, 350));
+  const afterSwitch = { ids: window.mm3d.getStack(), floors: window.mm3d.getStackFloors() };
+  window.mm3d.setFloor('L2', true);
+  window.mm3d.reset();
+  return { onL2, afterSwitch };
+});
+(floorStack.onL2.ids[0] === 'b3' && floorStack.onL2.floors[0] === 'L2'
+  && floorStack.afterSwitch.ids.length === 1 && floorStack.afterSwitch.floors[0] === 'L2')
+  ? ok('每层都可放桌且跨层不串', JSON.stringify(floorStack.afterSwitch.floors))
+  : bad('每层都可放桌且跨层不串', JSON.stringify(floorStack));
+await page.waitForTimeout(600);
 await page.evaluate(() => window.mm3d.setFloor('all', true));
 await page.waitForTimeout(600);
 
