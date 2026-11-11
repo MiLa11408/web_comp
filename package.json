@@ -12,7 +12,9 @@
     "verify": "node tools/verify.mjs",
     "verify:links": "node tools/verify.mjs --links",
     "fetch:arxiv": "node tools/fetch-arxiv.mjs --max 24",
+    "fetch:hot": "node tools/fetch-hot.mjs --auto 6",
     "rewrite:frontier": "node tools/rewrite-frontier.mjs --max 8",
+    "rewrite:hot": "node tools/rewrite-hot.mjs --max 6",
     "test:e2e": "node tests/e2e.mjs"
   },
   "dependencies": {

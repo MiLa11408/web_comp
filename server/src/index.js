@@ -358,14 +358,26 @@ app.post('/api/oracle', async (request, reply) => {
 
 app.get('/api/forks', async (request, reply) => jsonContent(reply, 'forks.json'));
 
-// 前沿观察：由 tools/fetch-arxiv.mjs 定时入库、tools/rewrite-frontier.mjs 编译，这里只读
+// 前沿观察：arXiv 论文 + 每周热点（hot 由 tools/fetch-hot.mjs 入库），这里只读
 app.get('/api/frontier', async (request, reply) => {
   try {
     const raw = readFileSync(path.join(CONTENT_DIR, 'frontier.json'), 'utf8');
+    let data;
+    try { data = JSON.parse(raw); } catch { data = null; }
+    if (data) {
+      try {
+        const hot = JSON.parse(readFileSync(path.join(CONTENT_DIR, 'frontier-hot.json'), 'utf8'));
+        data.hot = Array.isArray(hot.items) ? hot.items : [];
+        data.hotUpdated = hot.rewritten || hot.updated || null;
+        data.hotWeek = hot.week || '';
+        data.hotSource = hot.source || '';
+        data.hotNote = hot.note || '';
+      } catch { /* 热点尚未入库时只返回论文 */ }
+    }
     reply.header('cache-control', 'public, max-age=900');
-    return reply.type('application/json; charset=utf-8').send(raw);
+    return reply.type('application/json; charset=utf-8').send(data ? JSON.stringify(data) : raw);
   } catch (e) {
-    return reply.send({ updated: null, count: 0, items: [], note: '前沿观察尚未入库。' });
+    return reply.send({ updated: null, count: 0, items: [], hot: [], note: '前沿观察尚未入库。' });
   }
 });
 

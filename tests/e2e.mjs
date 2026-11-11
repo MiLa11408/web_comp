@@ -374,6 +374,13 @@ const frCards = await page.locator('.fr-card').count();
 const frChips = await page.locator('.fr-chips button').count();
 frCards >= 1 ? ok('前沿观察新闻条目', String(frCards)) : bad('前沿观察新闻条目', String(frCards));
 frChips >= 2 ? ok('前沿观察领域筛选', String(frChips)) : bad('前沿观察领域筛选', String(frChips));
+const hotCards = await page.locator('.fr-hot-card').count();
+const hotWrap = await page.locator('.fr-hot-wrap').count();
+(hotWrap === 1 && hotCards >= 4) ? ok('前沿本周热点', `${hotCards} 条`) : bad('前沿本周热点', `wrap=${hotWrap} cards=${hotCards}`);
+const hotText = await page.locator('.fr-hot-wrap').innerText();
+(hotText.includes('DeepSeek') && /V4\.1/.test(hotText)) ? ok('热点含 DeepSeek V4.1 Flash') : bad('热点含 DeepSeek V4.1 Flash', hotText.slice(0, 80));
+const hotLink = hotCards ? await page.locator('.fr-hot-card').first().getAttribute('href') : '';
+hotLink && hotLink.startsWith('https://') ? ok('热点卡片外链') : bad('热点卡片外链', String(hotLink));
 if (frCards >= 1) {
   const firstTitle = await page.locator('.fr-card h3').first().innerText();
   /[\u4e00-\u9fff]/.test(firstTitle) ? ok('前沿新闻中文标题', firstTitle.slice(0, 24)) : bad('前沿新闻中文标题', firstTitle);

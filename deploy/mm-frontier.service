@@ -1,5 +1,5 @@
 [Unit]
-Description=Machine Memory · fetch new arXiv papers into the frontier shelf
+Description=Machine Memory · fetch new arXiv papers and weekly hot releases
 After=network-online.target
 Wants=network-online.target
 
@@ -7,6 +7,6 @@ Wants=network-online.target
 Type=oneshot
 User=ubuntu
 WorkingDirectory=/opt/machine-memory
-ExecStart=/bin/sh -c '/usr/bin/node tools/fetch-arxiv.mjs --max 30 && /usr/bin/node tools/rewrite-frontier.mjs --max 8'
-TimeoutStartSec=300
+ExecStart=/bin/sh -c '/usr/bin/node tools/fetch-arxiv.mjs --max 30 && /usr/bin/node tools/fetch-hot.mjs --auto 6 && /usr/bin/node tools/rewrite-frontier.mjs --max 8 && /usr/bin/node tools/rewrite-hot.mjs --max 6'
+TimeoutStartSec=420
 Nice=10

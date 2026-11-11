@@ -1,5 +1,5 @@
 [Unit]
-Description=Machine Memory · daily arXiv ingestion at 04:17
+Description=Machine Memory · daily frontier refresh (arXiv + weekly hot) at 04:17
 
 [Timer]
 OnCalendar=*-*-* 04:17:00

@@ -475,6 +475,23 @@
   .fr-why b { color: #c8a24a; font-weight: 500; }
   .fr-guide { color: #8a7a5c; font-size: 11.5px; line-height: 1.8; border-left: 2px solid #4a3a24; padding-left: 10px; margin: 6px 0 10px; }
   .fr-guide b { color: #c8a24a; font-weight: 500; }
+  /* 每周热点：官方发布在前，官方 RSS 补入近期更新 */
+  .fr-hot-wrap { border: 1px solid #4a3a24; background: linear-gradient(160deg, #251b12, #191310); padding: 12px 14px 13px; margin: 6px 0 16px; }
+  .fr-hot-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid #3a2f22; padding-bottom: 8px; margin-bottom: 10px; }
+  .fr-hot-kicker { color: #e8c877; font-family: var(--font-serif); font-size: 16px; letter-spacing: 3px; }
+  .fr-hot-kicker::before { content: 'HOT'; font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: #1b1510; background: #c8a24a; padding: 2px 5px; margin-right: 8px; vertical-align: 2px; }
+  .fr-hot-sub { color: #8a7a5c; font-size: 11px; }
+  .fr-hot-stamp { margin-left: auto; color: #7d6e55; font-size: 10.5px; letter-spacing: .5px; }
+  .fr-hot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+  .fr-hot-card { display: flex; gap: 10px; padding: 9px 10px; border: 1px solid #33281c; background: #1d1610; text-decoration: none; color: inherit; transition: border-color .2s, background .2s; }
+  .fr-hot-card:hover { border-color: #c8a24a; background: #241b12; }
+  .fr-hot-rank { color: #8a6320; font-family: var(--font-mono); font-size: 14px; line-height: 1.5; min-width: 24px; }
+  .fr-hot-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .fr-hot-main b { color: #e6d9bd; font-size: 13px; font-weight: 500; line-height: 1.55; }
+  .fr-hot-line { color: #b09a72; font-size: 11.5px; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .fr-hot-meta { color: #7d6e55; font-size: 10.5px; letter-spacing: .3px; }
+  .fr-hot-meta i { font-style: normal; color: #c8a24a; }
+  @media (max-width: 700px) { .fr-hot-grid { grid-template-columns: 1fr; } .fr-hot-stamp { width: 100%; margin-left: 0; } }
   .fr-card details summary { color: #8a7a5c; font-size: 11.5px; cursor: pointer; outline: none; }
   .fr-card details summary:hover { color: var(--gold); }
   .fr-actions { display: flex; gap: 8px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
@@ -1841,15 +1858,31 @@ window.mmFrontierSearch = mmFrontierSearch;
 
 async function showFrontier(keep) {
   document.body.classList.add('grid');
-  mmTip('frontier', '前沿观察', '每天从 arXiv 选新论文，馆员编译成中文科普；先看导读，再决定要不要读原文。');
+  mmTip('frontier', '前沿观察', '热点每周复核，官方发布优先；论文每天从 arXiv 更新。先看导读，再决定要不要读原文。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   if (!keep) app.innerHTML = '<div class="empty">正在登记新到馆的纸页……</div>';
   const d = await ensureFrontier();
   const items = d.items || [];
+  const hot = Array.isArray(d.hot) ? d.hot : [];
   const fields = ['全部', ...new Set(items.map((x) => x.field))];
   const list = frontierField === '全部' ? items : items.filter((x) => x.field === frontierField);
   const stamp = d.newsUpdated || d.updated;
   const updated = stamp ? new Date(stamp).toLocaleString('zh-CN', { hour12: false }) : '尚未入库';
+  const hotStamp = d.hotUpdated ? new Date(d.hotUpdated).toLocaleString('zh-CN', { hour12: false }) : '';
+  const hotCards = hot.map((x, i) => {
+    const title = x.title_zh || x.title;
+    const line = x.lede || x.plain || x.why || '';
+    const meta = [x.date, x.level, x.points ? `${x.points} 热度` : ''].filter(Boolean).join(' · ');
+    return `
+    <a class="fr-hot-card" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">
+      <span class="fr-hot-rank">${String(i + 1).padStart(2, '0')}</span>
+      <span class="fr-hot-main">
+        <b>${esc(title)}</b>
+        ${line ? `<span class="fr-hot-line">${esc(line)}</span>` : ''}
+        <span class="fr-hot-meta"><i>${esc(x.source || '官方')}</i>${meta ? ' · ' + esc(meta) : ''}</span>
+      </span>
+    </a>`;
+  }).join('');
   const cards = list.map((x) => {
     const n = x.news || {};
     const title = n.title_zh || x.title;
@@ -1881,14 +1914,22 @@ async function showFrontier(keep) {
     <div class="rail-head"><span>前沿观察 · 科普新闻</span>
       <span class="head-links"><a onclick="enterTimeline()">时间轴 →</a> · <a onclick="enterRail()">书轨 →</a></span>
     </div>
-    <div class="fr-guide"><b>怎么读</b>：先看中文标题和「说人话」，再看术语小抄；想核对数字，展开英文原文。中文导读由馆员编译，原文为准。</div>
+    ${hot.length ? `<div class="fr-hot-wrap">
+      <div class="fr-hot-head">
+        <span class="fr-hot-kicker">本周热点</span>
+        <span class="fr-hot-sub">${esc(d.hotNote || '每周更新：官方发布优先，官方 RSS 补入近期更新。')}</span>
+        ${hotStamp ? `<span class="fr-hot-stamp">${esc(d.hotSource || '馆员热榜')} · 更新 ${esc(hotStamp)}${d.hotWeek ? ` · ${esc(d.hotWeek)}` : ''}</span>` : ''}
+      </div>
+      <div class="fr-hot-grid">${hotCards}</div>
+    </div>` : ''}
+    <div class="fr-guide"><b>怎么读</b>：先看「本周热点」了解最近发布了什么，再看下面的新论文；中文标题和「说人话」帮助理解，想核对数字就展开英文原文。中文导读由馆员编译，原文为准。</div>
     <div class="rail-sub">${esc(d.note || '每天从 arXiv 选新论文，馆员编译成中文科普；只做导读，原文为准。')}</div>
     <div class="fr-toolbar">
       <div class="fr-chips">${fields.map((f) => `<button class="${f === frontierField ? 'on' : ''}" onclick="mmFrontierFilter('${esc(f)}')">${esc(f)}${f === '全部' ? ` · ${items.length}` : ''}</button>`).join('')}</div>
       <span class="fr-updated">${esc(d.source || 'arXiv')} · 编译 ${esc(updated)}</span>
     </div>
     ${list.length ? `<div class="fr-grid">${cards}</div>` : '<div class="fr-empty">这一栏还没有新纸。<br>库房每天凌晨会再去 arXiv 取一次；也可以先回书架读已编目的旧书。</div>'}
-    <div class="size-scale">前沿观察与馆藏分开：馆藏是已核验、已写成的 384 章；这里是新论文的中文科普导读，由馆员编译，可能不完整。「说人话」和「术语小抄」只帮助理解，不替代原文；数字、结论与原文冲突时，以 arXiv 原文为准。想追根，再去「卡片目录」找它的来路。</div>
+    <div class="size-scale">前沿观察与馆藏分开：馆藏是已核验、已写成的 384 章；这里是新论文与近期热点的中文导读，由馆员编译，可能不完整。热榜每周复核，论文每天更新；「说人话」和「术语小抄」只帮助理解，不替代原文；数字、结论与原文冲突时，以原文为准。想追根，再去「卡片目录」找它的来路。</div>
   </div>`;
 }
 window.showFrontier = showFrontier;

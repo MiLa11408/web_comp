@@ -1,0 +1,226 @@
+{
+  "updated": "2026-11-11T17:40:37.200Z",
+  "week": "2026-W46",
+  "source": "馆员热榜 · 官方发布 + 官方 RSS",
+  "note": "每周更新：馆员挑选发布级事件，其余由 OpenAI / Google 官方 RSS 自动补入近 14 天的更新；中文导读只依据官方标题与摘要，细节以原文为准。",
+  "count": 12,
+  "items": [
+    {
+      "id": "anthropic-claude-5-2",
+      "date": "2026-11-09",
+      "source": "Anthropic 官方",
+      "link": "https://www.anthropic.com/claude-fable-and-mythos-5-2",
+      "title": "Introducing Claude Fable 5.2 and Claude Mythos 5.2",
+      "title_zh": "Anthropic 发布 Claude Fable 5.2 与 Mythos 5.2",
+      "lede": "面向高难度技术工作的新一代 Claude，官方称在编程、金融与科研任务上设定了新基准。",
+      "plain": "11 月 9 日，Anthropic 更新两款旗舰模型 Fable 5.2 与 Mythos 5.2。官方把它们定位为处理高难度技术工作的模型，重点提升编程、金融和科学研究任务；具体能力、开放范围与价格以官方页面为准。",
+      "why": "Claude 是闭源模型里编程与 Agent 任务的重要一极，这轮更新会直接影响开发者选型。",
+      "tags": [
+        "Claude",
+        "模型发布",
+        "编程"
+      ],
+      "level": "入门",
+      "curated": true,
+      "points": 0
+    },
+    {
+      "id": "google-gemini-4-carbon",
+      "date": "2026-11-10",
+      "source": "Google DeepMind 官方",
+      "link": "https://deepmind.google/models/model-cards/gemini-4-carbon/",
+      "title": "Gemini 4 Carbon model card",
+      "title_zh": "Google 更新 Gemini 4 Carbon 模型卡",
+      "lede": "DeepMind 在 11 月 10 日更新 Gemini 4 Carbon 模型卡；11 月 5 日还更新了 Gemini Omni 1.2 Flash。",
+      "plain": "模型卡是官方披露模型设计、能力边界与评测方式的文档。Gemini 4 Carbon 的模型卡在 11 月 10 日更新，Gemini Omni 1.2 Flash 在 11 月 5 日更新；这通常意味着能力或安全评估有变化。具体能力与开放范围以模型卡和产品页为准。",
+      "why": "Gemini 4 系列的模型卡更新往往先于产品开放，是观察 Google 下一步能力边界的窗口。",
+      "tags": [
+        "Gemini",
+        "模型卡",
+        "多模态"
+      ],
+      "level": "进阶",
+      "curated": true,
+      "points": 0
+    },
+    {
+      "id": "tencent-hunyuan-hy4",
+      "date": "2026-11-04",
+      "source": "腾讯混元官方",
+      "link": "https://aistudio.tencent.com/modelSquare/home/list",
+      "title": "Tencent Hunyuan Hy4",
+      "title_zh": "腾讯混元发布 Hy4：770B MoE，首次支持视觉与电脑操作",
+      "lede": "Hy4 采用 770B 总参数、49B 激活参数的 MoE 架构，首次加入视觉理解与 Computer Use，并计划开源权重。",
+      "plain": "11 月 4 日，腾讯混元发布新一代大语言模型 Hy4。它采用 770B 总参数、约 49B 激活参数的 MoE 架构，支持最长 960K 输入、64K 输出；相比前代首次加入图像与图表理解、电脑操作能力，偏好多模态 Agent 与长程任务。官方表示将开源模型权重并发布系统卡。",
+      "why": "这是本周中文开源模型里参数与能力跨度最大的一次发布，直接影响 Agent 与多模态应用选型。",
+      "tags": [
+        "混元",
+        "开源",
+        "MoE"
+      ],
+      "level": "进阶",
+      "curated": true,
+      "points": 0
+    },
+    {
+      "id": "openai-chatgpt-businesses",
+      "date": "2026-11-10",
+      "source": "OpenAI 官方",
+      "link": "https://openai.com/index/introducing-businesses-chatgpt/",
+      "title": "Introducing businesses in ChatGPT",
+      "title_zh": "ChatGPT 上线商家功能：管理信息、查看呈现洞察",
+      "lede": "OpenAI 在 ChatGPT 里加入商家入口，让商家管理自己的信息、查看在对话中的呈现情况。",
+      "plain": "11 月 10 日，OpenAI 推出 ChatGPT 商家功能。商家可以在 ChatGPT 内管理自己的商家信息，查看自己的呈现情况与用户兴趣数据，并把兴趣转成行动。它意味着 ChatGPT 正从问答工具继续向带商业入口的助手演进；具体开放地区和计费方式以官方页面为准。",
+      "why": "搜索与推荐之后，对话式入口正在改写本地商业的流量分配，值得持续观察。",
+      "tags": [
+        "OpenAI",
+        "商业化",
+        "ChatGPT"
+      ],
+      "level": "入门",
+      "curated": true,
+      "points": 0
+    },
+    {
+      "id": "deepseek-v4-1-flash-1017",
+      "date": "2026-10-17",
+      "source": "DeepSeek 官方",
+      "link": "https://api-docs.deepseek.com/news/news261017/",
+      "title": "DeepSeek-V4.1-Flash-1017: Wish-Driven Programming Made Real",
+      "title_zh": "DeepSeek V4.1 Flash 升级 1017 版：同价、更快、更省",
+      "lede": "9 月 10 日发布的 V4.1 Flash 在 10 月 17 日升级为 V4.1-Flash-1017，API 价格不变，同时开放联网搜索与抓取。",
+      "plain": "DeepSeek 在 9 月 10 日发布 V4.1 Flash，主打更小、更快、更省，并原生支持视觉理解；10 月 17 日升级到 V4.1-Flash-1017，官方称在一批基准上提升，同时缩短任务耗时与输出长度，API 调用方式和价格保持不变。同一批更新里，DeepSeek 还把站内搜索 API 对外开放。",
+      "why": "它是 2026 年下半年“低成本 Flash 路线”的代表样本，也是理解模型价格战的一手材料。",
+      "tags": [
+        "DeepSeek",
+        "模型发布",
+        "推理成本"
+      ],
+      "level": "入门",
+      "curated": true,
+      "points": 0
+    },
+    {
+      "id": "kimi-k3-1-pro",
+      "date": "2026-10-23",
+      "source": "月之暗面官方",
+      "link": "https://www.moonshot.cn/",
+      "title": "Kimi K3.1 Pro",
+      "title_zh": "Kimi K3.1 Pro：3 万亿参数、100 万 token 上下文",
+      "lede": "月之暗面发布 K3.1 系列首款旗舰 K3.1 Pro，面向长程编程、3D 创作、金融研究与复杂 Agent。",
+      "plain": "10 月 23 日至 24 日，月之暗面发布 Kimi K3.1 Pro。官方称这是 K3.1 系列第一款模型，也是其迄今最强、参数规模达 3 万亿级的模型，支持 100 万 token 上下文，重点提升长程编程、3D 创作、金融研究和复杂 Agent 任务。",
+      "why": "百万上下文与 3T 参数是 2026 年旗舰模型的两条主线，K3.1 Pro 是观察长上下文能否真正落地 Agent 的样本。",
+      "tags": [
+        "Kimi",
+        "长上下文",
+        "Agent"
+      ],
+      "level": "进阶",
+      "curated": true,
+      "points": 0
+    },
+    {
+      "id": "feed-blog-google-products-and-platforms-platforms-android-gemini-",
+      "date": "2026-11-10",
+      "source": "Google 官方",
+      "link": "https://blog.google/products-and-platforms/platforms/android/gemini-intelligence-november-features-devices/",
+      "title": "Gemini Intelligence: New features, on more devices",
+      "summary": "Gemini Intelligence is rolling out to more devices. See how expanded capabilities across these devices help you do more.",
+      "tags": [
+        "AI助手",
+        "多设备",
+        "功能更新"
+      ],
+      "level": "入门",
+      "title_zh": "Gemini 智能：新功能登陆更多设备",
+      "lede": "Gemini 智能功能正扩展到更多设备，其增强的能力旨在帮助用户完成更多任务。",
+      "why": "这指向了 AI 助手功能在多设备生态中的普及与整合趋势。"
+    },
+    {
+      "id": "feed-openai-com-index-control-room",
+      "date": "2026-11-09",
+      "source": "OpenAI 官方",
+      "link": "https://openai.com/index/control-room",
+      "title": "Control Room: A central system to track and stop model workloads across our research infrastructure",
+      "summary": "Learn how OpenAI’s Control Room tracks model workloads across our research infrastructure and can rapidly stop them when safety or security concerns arise.",
+      "tags": [
+        "AI安全",
+        "基础设施",
+        "模型监控"
+      ],
+      "level": "进阶",
+      "title_zh": "控制室：追踪并停止研究基础设施中模型工作负载的中心系统",
+      "lede": "OpenAI 介绍了一个中心系统，用来追踪研究基础设施里的模型工作负载，并在出现安全隐患时快速停止它们。",
+      "why": "它指向了大型AI模型在研发过程中的安全监控与紧急干预机制。"
+    },
+    {
+      "id": "feed-openai-com-index-measuring-how-ai-agents-handle-wet-lab-scie",
+      "date": "2026-11-06",
+      "source": "OpenAI 官方",
+      "link": "https://openai.com/index/measuring-how-ai-agents-handle-wet-lab-science",
+      "title": "Measuring how AI agents handle everyday wet-lab science",
+      "summary": "OpenAI introduces BioBasicsBench, a 100-task benchmark measuring how well AI agents interpret raw experimental data and handle everyday wet-lab science.",
+      "tags": [
+        "AI 基准测试",
+        "科学实验",
+        "智能体"
+      ],
+      "level": "进阶",
+      "title_zh": "OpenAI 发布 BioBasicsBench：衡量 AI 智能体做湿实验",
+      "lede": "OpenAI 发布了包含 100 项任务的基准测试 BioBasicsBench，用于衡量 AI 智能体解读原始实验数据和处理日常湿实验科学的能力。",
+      "why": "它指向了 AI 在需要物理操作和复杂数据解读的真实世界科学实验中的应用潜力。"
+    },
+    {
+      "id": "feed-blog-google-innovation-and-ai-technology-developers-tools-in",
+      "date": "2026-11-05",
+      "source": "Google 官方",
+      "link": "https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemini-omni-1-2-flash/",
+      "title": "Gemini Omni 1.2 Flash: Fast and cost-effective with longer clips",
+      "summary": "Gemini Omni 1.2 Flash brings native 15-second video generation and editing, stronger consistency, and 30% lower pricing.",
+      "tags": [
+        "视频生成",
+        "模型更新",
+        "成本优化"
+      ],
+      "level": "进阶",
+      "title_zh": "Gemini Omni 1.2 Flash：支持更长片段，快速且经济",
+      "lede": "Gemini Omni 1.2 Flash 模型原生支持 15 秒视频生成与编辑，一致性更强，价格降低 30%。",
+      "why": "它展示了 AI 视频生成在时长、质量与成本控制方面的持续进展。"
+    },
+    {
+      "id": "feed-openai-com-index-updated-model-spec",
+      "date": "2026-10-29",
+      "source": "OpenAI 官方",
+      "link": "https://openai.com/index/updated-model-spec",
+      "title": "An updated Model Spec for more capable and beneficial AI",
+      "summary": "OpenAI’s updated Model Spec outlines five core values to guide more capable AI toward sound judgment, human agency, and faithfulness to human intent.",
+      "tags": [
+        "AI 对齐",
+        "模型规范",
+        "OpenAI"
+      ],
+      "level": "入门",
+      "title_zh": "OpenAI 更新模型规范，明确五项核心价值",
+      "lede": "OpenAI 发布更新的模型规范，旨在通过五项核心价值引导 AI 模型做出更合理的判断。",
+      "why": "它明确了指导 AI 发展的核心价值框架，涉及判断力、人类能动性与意图对齐等关键话题。"
+    },
+    {
+      "id": "feed-openai-com-index-how-we-detect-frontier-model-misalignment",
+      "date": "2026-10-29",
+      "source": "OpenAI 官方",
+      "link": "https://openai.com/index/how-we-detect-frontier-model-misalignment",
+      "title": "How we detect frontier model misalignment",
+      "summary": "OpenAI uses layered monitoring to detect frontier model misalignment and unauthorized agent behavior so responders can intervene before incidents escalate.",
+      "tags": [
+        "AI安全",
+        "模型监控",
+        "OpenAI"
+      ],
+      "level": "进阶",
+      "title_zh": "我们如何检测前沿模型失准",
+      "lede": "OpenAI 采用分层监控来检测前沿模型的失准和未经授权的智能体行为，以便响应人员在事件升级前进行干预。",
+      "why": "它指向了如何在实际部署中监控和约束强大AI行为这一关键安全议题。"
+    }
+  ],
+  "rewritten": "2026-11-11T17:41:23.189Z"
+}
