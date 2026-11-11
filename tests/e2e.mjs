@@ -691,17 +691,17 @@ ok('catalog 竞态可用', `并发目录接口 ${catalogMs}ms`);
 burst.every((r) => r.ok()) ? ok('20 并发检索全部 200', `${burstMs}ms 总耗时`) : bad('20 并发检索', '存在非 200');
 ok('单次检索响应', `≤ ${maxSearch}ms`);
 
-// 7b. 首页按钮：从 2D 书架视图回到全馆大厅
+// 7b. 站名即首页：从 2D 书架视图点左上角馆名回到全馆大厅
 await page.locator('.reader-float-close').first().click().catch(() => {});
 await page.waitForTimeout(1800);
 await page.getByRole('button', { name: '书架视图' }).click();
 await page.waitForSelector('.unit', { timeout: 10000 });
-await page.getByRole('button', { name: '首页' }).click();
+await page.locator('#brandHome').click();
 await page.waitForFunction(() => !document.body.classList.contains('grid') && !document.body.classList.contains('reading')
   && !window.mmViewBusy && window.mm3d && window.mm3d.getFloor() === 'all', null, { timeout: 45000 });
 await page.waitForTimeout(800);
 const homeFloor = await page.evaluate(() => window.mm3d.getFloor());
-homeFloor === 'all' ? ok('首页回到全馆大厅') : bad('首页回大厅', homeFloor);
+homeFloor === 'all' ? ok('点馆名回全馆大厅') : bad('点馆名回大厅', homeFloor);
 
 // 8. 移动端 390×844
 const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
