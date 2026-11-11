@@ -55,10 +55,11 @@ body.reading .mm-root, body.grid .mm-root { display: none; }
 .mm-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   color: #9a8a6f; font-size: 14px; letter-spacing: 6px; background: #120e0b; z-index: 20; }
 .mm-hint { position: absolute; left: 24px; bottom: 18px; color: #8a7a5c; font-size: 12px; letter-spacing: 1px;
-  background: rgba(18,14,11,.55); padding: 6px 10px; border: 1px solid #2c2116; }
+  background: rgba(18,14,11,.55); padding: 6px 10px; border: 1px solid #2c2116;
+  pointer-events: none; user-select: none; -webkit-user-select: none; }
 .mm-toast { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); background: rgba(27,21,16,.96);
   color: #e6d9bd; border: 1px solid #c8a24a; padding: 10px 16px; font-size: 13px; z-index: 25; opacity: 0;
-  transition: opacity .3s; max-width: 72%; text-align: center; pointer-events: none; }
+  transition: opacity .3s; max-width: 72%; text-align: center; pointer-events: none; user-select: none; -webkit-user-select: none; }
 .mm-toast.show { opacity: 1; }
 .mm-fade { position: absolute; inset: 0; background: #0b0805; opacity: 0; pointer-events: none;
   transition: opacity .3s; z-index: 40; }
@@ -2783,6 +2784,16 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   let lastY = 0;
   let downX = 0;
   let downY = 0;
+
+  // 选字 / 切窗 / 指针取消时释放所有输入，避免 keyup 丢失导致一直移动
+  function releaseInputs() {
+    for (const k in keys) keys[k] = false;
+    dragging = false;
+  }
+  window.addEventListener('blur', releaseInputs);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseInputs(); });
+  document.addEventListener('selectionchange', releaseInputs);
+  window.addEventListener('pointercancel', () => { dragging = false; });
 
   el.addEventListener('pointerdown', (e) => {
     if (tour) return;

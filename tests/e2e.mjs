@@ -102,6 +102,32 @@ aisleZ < -2.6 ? ok('可从空隙走到两排书架之间', `z=${aisleZ}`) : bad(
 await page.evaluate(() => window.mm3d.reset());
 await page.waitForTimeout(700);
 
+// 选字不再卡住移动：操作说明不可选，选到别处文字也会释放 WASD 状态
+const hintSelect = await page.evaluate(() => {
+  const h = document.querySelector('.mm-hint');
+  if (!h) return null;
+  const cs = getComputedStyle(h);
+  return { userSelect: cs.userSelect || cs.webkitUserSelect, pointerEvents: cs.pointerEvents };
+});
+(hintSelect && hintSelect.userSelect === 'none' && hintSelect.pointerEvents === 'none')
+  ? ok('3D 操作说明不可选字') : bad('3D 操作说明不可选字', JSON.stringify(hintSelect));
+await page.keyboard.down('w');
+await page.waitForTimeout(500);
+const h1box = await page.locator('header h1').boundingBox();
+if (h1box) {
+  await page.mouse.move(h1box.x + 10, h1box.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(h1box.x + 140, h1box.y + 10, { steps: 8 });
+  await page.mouse.up();
+}
+await page.keyboard.up('w');
+const stopZ1 = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
+await page.waitForTimeout(1000);
+const stopZ2 = await page.evaluate(() => Math.round(window.mm3d.player.pos.z * 100) / 100);
+Math.abs(stopZ2 - stopZ1) < 0.05 ? ok('选字后不再持续移动', `z=${stopZ1}→${stopZ2}`) : bad('选字后仍在移动', `z=${stopZ1}→${stopZ2}`);
+await page.evaluate(() => window.mm3d.reset());
+await page.waitForTimeout(700);
+
 // 3D 失窃展柜：9 件 + 可定位
 const stolenPlan = await page.evaluate(() => window.mm3d.getStolenPlan().length);
 stolenPlan === 9 ? ok('3D 失窃展柜 9 件', String(stolenPlan)) : bad('3D 失窃展柜数量', String(stolenPlan));
