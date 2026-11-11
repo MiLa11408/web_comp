@@ -81,7 +81,7 @@ Explore/ai-library/
 | GET | `/api/books` `/api/books/:id` | 书目与单书详情 |
 | GET | `/api/catalog` | 全量书目 + 章节索引（3D/视图共用） |
 | GET | `/api/floors` `/api/shelves` `/api/fragments` `/api/rail` | 分级 / 书架容量 / 残页 / 书轨 |
-| GET | `/api/frontier` | 前沿观察：arXiv 每日入库 + 中文科普导读（标题/一句话/为什么值得看/标签/原文链接） |
+| GET | `/api/frontier` | 前沿观察：arXiv 每日入库 + 每周热点（官方发布/RSS）+ 中文科普导读 |
 | GET | `/api/models` `/api/failures` `/api/stolen` `/api/restless` `/api/whatif` | 尺寸墙 / 失败博物馆 / 失窃页 / 躁动书页 / 暗门十本假如之书 |
 | GET | `/api/chapters/:id` | 单章正文（meta + content） |
 | GET | `/api/search?q=` `/api/suggest?q=` | 四级排序检索 / 补全 |

@@ -204,14 +204,16 @@ sudo systemctl start machine-memory
 
 ## 7.1 前沿观察定时入库 + 中文科普编译
 
-「前沿观察」的数据来自 `content/frontier.json`，由 `tools/fetch-arxiv.mjs` 从 arXiv API 拉取 cs.AI / cs.CL / cs.CV / cs.LG 最新投稿；随后 `tools/rewrite-frontier.mjs` 用 `.env` 里的 `DEEPSEEK_API_KEY` 把新论文编译成中文科普新闻（中文标题 / 一句话 / 为什么值得看 / 标签），并保留原文链接与英文摘要。
+「前沿观察」的数据来自 `content/frontier.json`（arXiv 论文）与 `content/frontier-hot.json`（每周热点）。`tools/fetch-arxiv.mjs` 拉取 cs.AI / cs.CL / cs.CV / cs.LG 最新投稿；`tools/fetch-hot.mjs` 合并馆员精选 `content/frontier-picks.json` 与 OpenAI / Google 官方 RSS，写入近期发布热点。随后 `tools/rewrite-frontier.mjs` / `tools/rewrite-hot.mjs` 用 `.env` 里的 `DEEPSEEK_API_KEY` 编译中文标题、一句话、说人话与标签，保留原文链接。
 
 ```bash
 # 手动入库 + 编译一次
 cd /opt/machine-memory && npm run fetch:arxiv
+cd /opt/machine-memory && npm run fetch:hot
 cd /opt/machine-memory && node tools/rewrite-frontier.mjs --max 8
+cd /opt/machine-memory && node tools/rewrite-hot.mjs --max 6
 
-# 每天 04:17 自动入库并编译最多 8 条新论文
+# 每天 04:17 自动复核：论文 + 热点，各编译最多 8 / 6 条
 sudo cp deploy/mm-frontier.service deploy/mm-frontier.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now mm-frontier.timer
@@ -219,7 +221,7 @@ sudo systemctl list-timers mm-frontier.timer
 journalctl -u mm-frontier.service -n 30 --no-pager   # 看最近一次结果
 ```
 
-拉取失败时会保留上一次的 `frontier.json`，不会把库清空；`fetch-arxiv.mjs` 会按原文链接保留已编译的 `news` 字段。没有配置 `DEEPSEEK_API_KEY` 时，编译脚本安全退出，页面继续显示英文元数据；服务器无外网时可改为本地生成后 `scp` 上去。
+拉取失败时会保留上一次的 `frontier.json` / `frontier-hot.json`，不会把库清空；两个 fetch 脚本都会按原文链接保留已编译的中文字段。没有配置 `DEEPSEEK_API_KEY` 时，编译脚本安全退出，页面继续显示英文元数据；服务器无外网时可改为本地生成后 `scp` 上去。热点中的馆员精选条目在 `content/frontier-picks.json`，每周按官方发布手动换一批；官方 RSS 会自动补入近 14 天的更新。
 
 ## 7.2 /ai/ 反代 CSP（登录按钮无反应的坑）
 
