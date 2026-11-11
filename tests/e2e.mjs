@@ -52,6 +52,18 @@ await page.waitForTimeout(550);
 const navExpanded = await page.locator('#navShell:not(.nav-collapsed)').count();
 navExpanded === 1 ? ok('顶部导航可展开') : bad('顶部导航可展开', String(navExpanded));
 
+// 音效：开启后有房间底噪 + 提示音，关闭后底噪停止
+const soundBtn = page.locator('#soundBtn');
+await soundBtn.click();
+await page.waitForTimeout(500);
+const sndOn = await page.evaluate(() => ({ on: window.mmAudioOn(), state: window.mmAudioState(), amb: window.mmAudioAmbient() }));
+(sndOn.on && sndOn.state === 'running' && sndOn.amb)
+  ? ok('音效开启 + 房间底噪', JSON.stringify(sndOn)) : bad('音效开启', JSON.stringify(sndOn));
+await soundBtn.click();
+await page.waitForTimeout(350);
+const sndOff = await page.evaluate(() => ({ on: window.mmAudioOn(), amb: window.mmAudioAmbient() }));
+(!sndOff.on && !sndOff.amb) ? ok('音效关闭 + 底噪停止') : bad('音效关闭', JSON.stringify(sndOff));
+
 // 清掉首张区域提示卡，避免后续卡片叠在点击区域
 if (await page.locator('#mmTipCard.show').count()) {
   await page.locator('#mmTipCard [data-tip-ok]').click();
