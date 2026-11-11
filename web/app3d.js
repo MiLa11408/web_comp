@@ -1929,8 +1929,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const t1 = addTable(p1, -3.4, 5.0, 4.2, 1.3, wood, woodDark);
   addChair(p1, -5.95, 5.0, -Math.PI / 2, woodDark);
   addChair(p1, -0.85, 5.0, Math.PI / 2, woodDark);
-  put(t1, boxG(0.6, 0.06, 0.44), propMats.paper, -0.8, 0.84, 0);
-  put(t1, boxG(0.55, 0.05, 0.4), propMats.paper, -0.74, 0.89, 0.03);
+  put(t1, boxG(0.6, 0.06, 0.44), propMats.paper, 1.5, 0.84, 0);
+  put(t1, boxG(0.55, 0.05, 0.4), propMats.paper, 1.56, 0.89, 0.03);
   // 放大镜桌
   const t2 = addTable(p1, 4.4, 3.4, 1.9, 0.9, wood, woodDark);
   const mag = new THREE.Group();
@@ -2027,7 +2027,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // 账桌 + 铜秤 + 算盘
   const desk = addTable(p3, -3.4, 4.6, 3.2, 1.4, wood, woodDark);
   const scale = new THREE.Group();
-  scale.position.set(-0.8, 0.82, 0);
+  scale.position.set(-0.8, 0.82, -0.4);
   desk.add(scale);
   put(scale, cylG(0.22, 0.28, 0.06, 16), brassDark, 0, 0.03, 0, true);
   put(scale, cylG(0.03, 0.03, 0.7, 8), brassMat, 0, 0.38, 0);
@@ -2037,7 +2037,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     put(scale, cylG(0.12, 0.14, 0.03, 16), brassMat, side * 0.42, 0.52, 0);
   }
   const abacus = new THREE.Group();
-  abacus.position.set(1.0, 0.92, 0);
+  abacus.position.set(1.0, 0.92, -0.45);
   abacus.rotation.x = -0.45;
   desk.add(abacus);
   put(abacus, boxG(0.92, 0.6, 0.06), woodDark, 0, 0, 0, true);
@@ -2049,13 +2049,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
   }
   // 桌上报表 / 账本（让切层后第一眼能看到账房元素）
-  for (const [rx2, rz2] of [[0.15, 0.36], [0.45, -0.34]]) {
+  for (const [rx2, rz2] of [[-0.25, -0.3], [0.25, -0.3]]) {
     for (let i = 0; i < 4; i++) {
       const paperPile = put(desk, boxG(0.5, 0.055, 0.36), propMats.paper, rx2, 0.86 + i * 0.055, rz2);
       paperPile.rotation.y = (i % 2 - 0.5) * 0.1;
     }
   }
-  put(desk, boxG(0.48, 0.12, 0.36), propMats.ledger, 0.2, 0.91, -0.42);
+  put(desk, boxG(0.48, 0.12, 0.36), propMats.ledger, -1.35, 0.91, 0.42);
   // 账本架
   const rack = new THREE.Group();
   rack.position.set(10.8, 0, -3.6);
@@ -2117,10 +2117,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // 封蜡桌 + 封蜡文件
   const wt = addTable(p4, 3.0, 4.8, 2.0, 1.0, woodDark, propMats.iron);
   for (let i = 0; i < 3; i++) {
-    const doc = put(wt, planeG(0.52, 0.38), propMats.parchment, -0.5 + i * 0.5, 0.82, -0.1 + (i % 2) * 0.2);
+    const doc = put(wt, planeG(0.52, 0.38), propMats.parchment, -0.5 + i * 0.5, 0.82, -0.3 + (i % 2) * 0.06);
     doc.rotation.x = -Math.PI / 2;
     doc.rotation.z = (i - 1) * 0.12;
-    put(wt, sphereG(0.06, 8), propMats.redSeal, -0.5 + i * 0.5, 0.845, -0.1 + (i % 2) * 0.2);
+    put(wt, sphereG(0.06, 8), propMats.redSeal, -0.5 + i * 0.5, 0.845, -0.3 + (i % 2) * 0.06);
   }
   // 多出来的一张备忘：暗门的线索，点一下会读出内容
   const clueCanvas = document.createElement('canvas');
@@ -2147,7 +2147,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     emissive: 0x2a1c0a, emissiveIntensity: 0.18,
   });
   const clueGroup = new THREE.Group();
-  clueGroup.position.set(0.72, 0.82, 0.22);
+  clueGroup.position.set(0.55, 0.835, -0.3);
   wt.add(clueGroup);
   const cluePlane = put(clueGroup, planeG(0.42, 0.29), clueMat, 0, 0, 0);
   cluePlane.rotation.x = -Math.PI / 2;
@@ -3101,6 +3101,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // 每层都有自己的桌子：Q 放到当前层桌上，各层独立叠放
   const TABLE_BY_FLOOR = { all: t1, L1: t1, L2: bt, L3: desk, L4: wt };
+  // 书籍在桌面上的落点：L3/L4 的桌面有账本、封蜡文件，书往前排空位放
+  const STACK_ZONE = new Map([
+    [t1, { spread: 0.75, z: 0.02 }],
+    [bt, { spread: 0.75, z: 0.02 }],
+    [desk, { spread: 0.75, z: 0.3 }],
+    [wt, { spread: 0.58, z: 0.3 }],
+  ]);
 
   // 桌上 3 摞，按书脊厚度自然加高（按桌分组，避免跨层堆到同一张桌）
   function layoutStack() {
@@ -3110,13 +3117,14 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       if (!groups.has(table)) groups.set(table, []);
       groups.get(table).push(it);
     }
-    for (const list of groups.values()) {
+    for (const [table, list] of groups) {
+      const zone = STACK_ZONE.get(table) || { spread: 0.75, z: 0.02 };
       const heights = {};
       list.forEach((it, i) => {
         const col = i % 3;
         const th = it.w || 0.2;
         const h = heights[col] || 0;
-        it.mesh.position.set(-0.75 + col * 0.75, 0.82 + h + th / 2, 0.02);
+        it.mesh.position.set(-zone.spread + col * zone.spread, 0.83 + h + th / 2, zone.z);
         it.mesh.quaternion.setFromEuler(new THREE.Euler(0, (i - 1) * 0.07, Math.PI / 2, 'YXZ'));
         it.mesh.scale.setScalar(1);
         heights[col] = h + th + 0.008;
