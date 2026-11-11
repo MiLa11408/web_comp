@@ -1134,6 +1134,7 @@ function applyStampVisual(id, animate, dateText) {
     void stamp.offsetWidth;
     stamp.classList.add('fresh');
     mmStampBurst();
+    if (window.mmAudioPlay) window.mmAudioPlay('stamp');
   }
   readerActions.stamped = true;
   updateReaderTools(id);
@@ -2429,6 +2430,7 @@ window.mmPlanHidden = async () => {
       return;
     }
     if (!window.mm3d) return mmToast('地板松了，但 3D 阅览室还没准备好。', 4200);
+    if (window.mmAudioPlay) window.mmAudioPlay('door');
     window.mm3d.setHiddenVisible(true);
     enter3D();
     setTimeout(() => mmToast('地板松了。卡片柜后面那本没有编号的黑书，可以拿走了。', 5600), 1300);

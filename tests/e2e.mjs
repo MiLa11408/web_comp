@@ -205,6 +205,8 @@ const starLegend = await page.locator('.mm-star3d-legend span').count();
 starNodes >= 36 ? ok('立体星图节点数', String(starNodes)) : bad('立体星图节点数', String(starNodes));
 starCanvas === 1 ? ok('星图 WebGL 画布') : bad('星图 WebGL 画布', String(starCanvas));
 starLegend === 4 ? ok('星图四层图例', String(starLegend)) : bad('星图四层图例', String(starLegend));
+const starAudioOn = await page.evaluate(() => !!(window.mmAudioStarOn && window.mmAudioStarOn()));
+starAudioOn ? ok('星图星河流转音效挂载') : bad('星图星河流转音效挂载', '未挂载');
 // 星图文字版关系列表：WebGL 不可用 / 键盘读者也能读完关系
 await page.locator('.mm-star3d-listbtn').click();
 await page.waitForTimeout(400);
@@ -217,6 +219,8 @@ await page.waitForTimeout(350);
 await page.keyboard.press('Escape');
 await page.waitForTimeout(400);
 (await page.locator('#mm-star-overlay').count()) === 0 ? ok('星图 Esc 关闭') : bad('星图 Esc 关闭');
+const starAudioOff = await page.evaluate(() => !!(window.mmAudioStarOn && window.mmAudioStarOn()));
+!starAudioOff ? ok('星图关闭后音效释放') : bad('星图关闭后音效释放', '仍在播放');
 
 // 2. 书轨视图（线路图 + 换乘线 + 发车）
 await page.getByRole('button', { name: '书轨' }).click();

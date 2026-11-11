@@ -5,6 +5,9 @@
   let master = null;
   let ambientSrc = null;
   let ambientGain = null;
+  let starNodes = [];
+  let starOpen = false;
+  let lastSound = '';
 
   function enabled() {
     return localStorage.getItem('mm_sound') === 'on';
@@ -16,7 +19,7 @@
       if (!AC) return null;
       ac = new AC();
       master = ac.createGain();
-      master.gain.value = 0.8;
+      master.gain.value = 0.62;
       master.connect(ac.destination);
     }
     if (ac.state === 'suspended') ac.resume().catch(() => {});
@@ -83,7 +86,7 @@
     lp.type = 'lowpass';
     lp.frequency.value = 360;
     ambientGain = a.createGain();
-    ambientGain.gain.value = 0.05;
+    ambientGain.gain.value = 0.035;
     ambientSrc.connect(lp).connect(ambientGain).connect(master);
     ambientSrc.start();
   }
@@ -100,23 +103,81 @@
     }
   }
 
+  // 星图：很轻的星河流转 pad + 高频微光，进出星图时淡入淡出
+  function startStar(a) {
+    starOpen = true;
+    if (!a || starNodes.length) return;
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.018, a.currentTime + 1.4);
+    const o1 = a.createOscillator(); o1.type = 'sine'; o1.frequency.value = 196;
+    const o2 = a.createOscillator(); o2.type = 'sine'; o2.frequency.value = 293.66;
+    const o3 = a.createOscillator(); o3.type = 'triangle'; o3.frequency.value = 392;
+    const lfo = a.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.07;
+    const lg = a.createGain(); lg.gain.value = 0.006;
+    lfo.connect(lg).connect(g.gain);
+    const len = Math.max(1, Math.floor(a.sampleRate * 2));
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.22;
+    const src = a.createBufferSource(); src.buffer = buf; src.loop = true;
+    const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 0.8;
+    const ng = a.createGain(); ng.gain.value = 0.012;
+    o1.connect(g); o2.connect(g); o3.connect(g);
+    src.connect(bp).connect(ng).connect(g);
+    g.connect(master);
+    o1.start(); o2.start(); o3.start(); lfo.start(); src.start();
+    starNodes = [o1, o2, o3, lfo, src, g, ng];
+  }
+
+  function stopStar() {
+    starOpen = false;
+    if (!starNodes.length) return;
+    const [o1, o2, o3, lfo, src, g, ng] = starNodes;
+    try {
+      g.gain.cancelScheduledValues(ac.currentTime);
+      g.gain.setTargetAtTime(0.0001, ac.currentTime, 0.22);
+    } catch (e) { /* 忽略 */ }
+    setTimeout(() => {
+      try { o1.stop(); o2.stop(); o3.stop(); lfo.stop(); src.stop(); } catch (e) { /* 已停止 */ }
+      try { g.disconnect(); ng.disconnect(); } catch (e) { /* 忽略 */ }
+      starNodes = [];
+    }, 800);
+  }
+
   function render(name, a) {
+    lastSound = name;
     if (name === 'page') {
-      noiseAt(a, 0.12, 0.16, 2200);
-      noiseAt(a, 0.18, 0.12, 1500, 0.09);
+      noiseAt(a, 0.12, 0.1, 2200);
+      noiseAt(a, 0.18, 0.075, 1500, 0.09);
     } else if (name === 'step') {
-      toneAt(a, 72, 0.1, 'sine', 0.09);
+      toneAt(a, 72, 0.1, 'sine', 0.06);
     } else if (name === 'elevator') {
-      toneAt(a, 210, 0.95, 'sine', 0.06, 120);
-      noiseAt(a, 0.9, 0.03, 380);
+      toneAt(a, 210, 0.95, 'sine', 0.045, 120);
+      noiseAt(a, 0.9, 0.02, 380);
+    } else if (name === 'ding') {
+      toneAt(a, 660, 0.65, 'sine', 0.05);
+      toneAt(a, 990, 0.85, 'sine', 0.032, null, 0.06);
     } else if (name === 'frag') {
-      noiseAt(a, 0.2, 0.14, 2800);
-      toneAt(a, 880, 0.12, 'triangle', 0.04, 1040);
+      noiseAt(a, 0.2, 0.1, 2800);
+      toneAt(a, 880, 0.12, 'triangle', 0.03, 1040);
+    } else if (name === 'lampOn') {
+      noiseAt(a, 0.04, 0.03, 1800);
+      toneAt(a, 440, 0.12, 'sine', 0.04, 520);
+    } else if (name === 'lampOff') {
+      noiseAt(a, 0.04, 0.03, 1400);
+      toneAt(a, 360, 0.14, 'sine', 0.035, 220);
+    } else if (name === 'stamp') {
+      noiseAt(a, 0.06, 0.07, 900);
+      toneAt(a, 120, 0.18, 'sine', 0.055);
+    } else if (name === 'door') {
+      noiseAt(a, 0.35, 0.045, 300);
+      toneAt(a, 80, 0.5, 'sine', 0.04, 55);
     } else if (name === 'on') {
-      toneAt(a, 520, 0.16, 'sine', 0.1);
-      toneAt(a, 780, 0.22, 'sine', 0.07, null, 0.12);
+      toneAt(a, 520, 0.16, 'sine', 0.08);
+      toneAt(a, 780, 0.22, 'sine', 0.055, null, 0.12);
     } else if (name === 'off') {
-      toneAt(a, 360, 0.18, 'sine', 0.08, 220);
+      toneAt(a, 360, 0.18, 'sine', 0.06, 220);
     }
   }
 
@@ -128,14 +189,19 @@
   function toggle() {
     const on = enabled();
     if (on) {
-      // 先响一个下行提示音，再关掉底噪
+      // 先响一个下行提示音，再关掉底噪与星图 pad
       withAudio((a) => render('off', a));
       localStorage.setItem('mm_sound', 'off');
       stopAmbient();
+      stopStar();
       return false;
     }
     localStorage.setItem('mm_sound', 'on');
-    withAudio((a) => { startAmbient(a); render('on', a); });
+    withAudio((a) => {
+      startAmbient(a);
+      if (starOpen) startStar(a);
+      render('on', a);
+    });
     return true;
   }
 
@@ -151,4 +217,11 @@
   window.mmAudioOn = isOn;
   window.mmAudioState = () => (ac ? ac.state : 'none');
   window.mmAudioAmbient = () => !!ambientSrc;
+  window.mmAudioStarStart = () => {
+    starOpen = true;
+    if (enabled()) withAudio((a) => startStar(a));
+  };
+  window.mmAudioStarStop = stopStar;
+  window.mmAudioStarOn = () => starOpen;
+  window.mmAudioLast = () => lastSound;
 })();

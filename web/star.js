@@ -240,6 +240,7 @@ export async function showStarMap() {
     </div>
     <div class="mm-star3d-hint">拖拽环顾 · 滚轮远近 · 悬停看关系 · 点击开书 · L 关系列表 · Esc 关闭</div>`;
   document.body.appendChild(overlay);
+  if (window.mmAudioStarStart) window.mmAudioStarStart();
   window.__mmStarNodes = data.nodes.length;
 
   const tip = document.createElement('div');
@@ -843,6 +844,7 @@ export async function showStarMap() {
   function close() {
     if (closed) return;
     closed = true;
+    if (window.mmAudioStarStop) window.mmAudioStarStop();
     stopLoop();
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);

@@ -1503,7 +1503,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     lampLight.intensity = lampOn ? 1.6 : 0;
     lampShade.material.emissiveIntensity = lampOn ? 0.55 : 0.05;
     toast(lampOn ? '台灯亮了。' : '台灯灭了，书脊上的烫金字看不清了。');
-    if (window.mmAudioPlay) window.mmAudioPlay('step');
+    if (window.mmAudioPlay) window.mmAudioPlay(lampOn ? 'lampOn' : 'lampOff');
   }
 
   const zoomGroup = new THREE.Group();
@@ -2325,6 +2325,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   let veilAnim = 0;
   function revealSecretDoor(instant = false) {
     if (secretDoorRevealed) return false;
+    if (window.mmAudioPlay) window.mmAudioPlay('door');
     if (instant) {
       secretDoorRevealed = true;
       veilAnim = 0;
@@ -3359,7 +3360,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     setDoors(0);
     await new Promise((r) => setTimeout(r, 260));
     fade(false);
-    setTimeout(() => toast(floorWelcome(fid)), 320);
+    setTimeout(() => {
+      if (window.mmAudioPlay) window.mmAudioPlay('ding');
+      toast(floorWelcome(fid));
+    }, 320);
     hint.style.opacity = '1';
     traveling = false;
   }
@@ -3657,6 +3661,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     focusStolen,
     getStolenPlan,
     toggleLens,
+    toggleLamp,
     isLensOn: () => lensOn,
     // 抽书 / 叠书（也供 E2E 与后续脚本调用）
     grabBook: (id) => {
