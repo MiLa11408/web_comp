@@ -1998,9 +1998,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   p2.add(ladder);
   for (const lx of [-0.34, 0.34]) put(ladder, boxG(0.08, 3.2, 0.08), propMats.steel, lx, 0, 0, true);
   for (let i = 0; i < 7; i++) put(ladder, boxG(0.76, 0.05, 0.05), propMats.steel, 0, -1.4 + i * 0.46, 0);
-  // 钢架
+  // 钢架：靠到工作台旁，给电梯门口让出通道
   const scaffold = new THREE.Group();
-  scaffold.position.set(-11.6, 0, -1.0);
+  scaffold.position.set(-11.6, 0, 3.8);
   p2.add(scaffold);
   for (const sx of [-0.8, 0.8]) put(scaffold, boxG(0.1, 3.2, 0.1), propMats.steel, sx, 1.6, 0, true);
   for (const sy of [0.3, 1.6, 3.05]) put(scaffold, boxG(1.8, 0.08, 0.08), propMats.steel, 0, sy, 0);
