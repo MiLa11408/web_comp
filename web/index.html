@@ -2034,7 +2034,7 @@ async function mmOpenHiddenBook() {
     el.className = 'frag-modal';
     el.innerHTML = `
       <div class="frag-box">
-        <div class="frag-kicker">${esc(d.kicker || '未编目')} · 索书号不存在</div>
+        <div class="frag-kicker">${esc(d.kicker || '馆员私藏')}</div>
         <h3>${esc(d.title)}</h3>
         <p>${esc(d.text).replace(/\n/g, '<br>')}</p>
         <div class="frag-actions"><button id="fragClose">收起来</button></div>
@@ -2050,9 +2050,8 @@ async function mmCheckHiddenBook() {
     const d = await (await fetch('api/stats?reader_id=' + encodeURIComponent(readerKey()), { headers: authHeaders() })).json();
     const me = d.me || {};
     const frags = (me.fragments || []).length;
-    if ((me.chapters || 0) >= 12 || frags >= 3) {
-      if (window.mm3d && window.mm3d.setHiddenVisible) window.mm3d.setHiddenVisible(true);
-    }
+    // 只记录资格，不再自动显形：书要读者自己在地砖/线索里找到
+    window.mmHiddenEligible = (me.chapters || 0) >= 12 || frags >= 3;
   } catch (e) { /* 忽略 */ }
 }
 window.mmCheckHiddenBook = mmCheckHiddenBook;
@@ -2407,7 +2406,7 @@ window.mmPlanHidden = async () => {
     if (!window.mm3d) return mmToast('地板松了，但 3D 阅览室还没准备好。', 4200);
     window.mm3d.setHiddenVisible(true);
     enter3D();
-    setTimeout(() => mmToast('地板松了。入口右手边那本没有编号的黑书，可以拿走了。', 5600), 1300);
+    setTimeout(() => mmToast('地板松了。卡片柜后面那本没有编号的黑书，可以拿走了。', 5600), 1300);
   } catch (e) {
     mmToast('地砖是空的，但今天听不清。', 3600);
   }

@@ -1522,10 +1522,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   scene.add(zoomGroup);
 
   const hiddenBook = new THREE.Mesh(
-    new THREE.BoxGeometry(0.24, 0.62, 0.42),
-    new THREE.MeshStandardMaterial({ color: 0x120f0c, emissive: 0x6a1a1a, emissiveIntensity: 0.35, roughness: 0.85 })
+    new THREE.BoxGeometry(0.24, 0.07, 0.34),
+    new THREE.MeshStandardMaterial({ color: 0x100d0a, emissive: 0x3a0e0e, emissiveIntensity: 0.08, roughness: 0.92 })
   );
-  hiddenBook.position.set(0.6, 0.35, 7.4);
+  hiddenBook.position.set(11.65, 0.04, 3.45);
   hiddenBook.rotation.y = 0.18;
   hiddenBook.visible = false;
   scene.add(hiddenBook);
