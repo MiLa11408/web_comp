@@ -79,7 +79,7 @@ class DemoPresentation {
           </div>
           
           <div style="margin-top: 10px; color: #8a7a5c; font-size: 11px; line-height: 1.6;">
-            <span id="demo-hint">空格 或 → 下一步 | ← 上一步 | P 暂停/继续 | Esc 退出</span>
+            <span id="demo-hint">空格 或 → 下一步 | ← 上一步 | P 暂停/继续 | F9 退出</span>
           </div>
         </div>
         
@@ -133,8 +133,8 @@ class DemoPresentation {
   
   bindKeys() {
     document.addEventListener('keydown', (e) => {
-      // Ctrl+Shift+P 开启演示模式
-      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+      // F9 一键启动演示模式
+      if (e.key === 'F9') {
         e.preventDefault();
         this.show();
         return;
