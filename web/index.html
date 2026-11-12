@@ -353,7 +353,7 @@
   #gate-map { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; opacity: .74; pointer-events: none; }
   #gate.leaving { pointer-events: none; background: transparent; }
   .gate-doors { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-  .gate-doors .door { position: absolute; top: 0; bottom: 0; width: 50.5%; background: linear-gradient(90deg, #17110c, #2b1f13 55%, #17110c); box-shadow: inset 0 0 60px rgba(0,0,0,.7); transition: transform 1s cubic-bezier(.76,0,.24,1); }
+  .gate-doors .door { position: absolute; top: 0; bottom: 0; width: 50.5%; background: linear-gradient(180deg, #1b1510, #14100c); box-shadow: inset 0 0 70px rgba(0,0,0,.72); transition: transform 1s cubic-bezier(.76,0,.24,1); }
   .gate-doors .door::after { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(200,162,74,.18); }
   .gate-doors .door.left { left: 0; border-right: 1px solid #6b5a3a; transform-origin: left center; }
   .gate-doors .door.right { right: 0; border-left: 1px solid #6b5a3a; transform-origin: right center; }
@@ -872,8 +872,7 @@
     if (kind === 'checking') {
       gate.classList.add('verifying');
       gate.classList.remove('denied');
-      mapNeedsRedraw = true;
-      scheduleGateMap();
+      if (lowMotion) drawGateMap();
     } else if (kind === 'error') {
       gate.classList.remove('verifying');
       gate.classList.add('denied');
@@ -889,81 +888,225 @@
   let mapFrame = 0;
   let mapRaf = 0;
   let mapW = 0, mapH = 0, mapDpr = 1;
-  let mapNeedsRedraw = true;
+  let backdrop = null;
+  let backdropKey = '';
+  let mx = 0, my = 0, tmx = 0, tmy = 0;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lowMotion = reducedMotion || window.innerWidth < 760 || (navigator.deviceMemory && navigator.deviceMemory <= 4);
   const gateHash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-  const points = Array.from({ length: lowMotion ? 32 : 56 }, (_, i) => ({
-    x: .08 + gateHash(i + 1) * .84,
-    y: .12 + gateHash(i + 97) * .76,
-    layer: i % 4,
-    phase: gateHash(i + 193) * Math.PI * 2,
+
+  // Bridson 泊松盘采样：节点之间保持最小距离，不会撞在一起
+  function poissonPoints(count, minDist) {
+    const out = [];
+    const cell = minDist / Math.SQRT2;
+    const gx = Math.ceil(1 / cell), gy = Math.ceil(1 / cell);
+    const grid = new Array(gx * gy).fill(-1);
+    const active = [];
+    const fits = (x, y) => {
+      if (x < .05 || x > .95 || y < .1 || y > .9) return false;
+      const cx = Math.floor(x / cell), cy = Math.floor(y / cell);
+      for (let iy = Math.max(0, cy - 2); iy <= Math.min(gy - 1, cy + 2); iy++) {
+        for (let ix = Math.max(0, cx - 2); ix <= Math.min(gx - 1, cx + 2); ix++) {
+          const id = grid[iy * gx + ix];
+          if (id < 0) continue;
+          const p = out[id];
+          if ((p.x - x) ** 2 + (p.y - y) ** 2 < minDist * minDist) return false;
+        }
+      }
+      return true;
+    };
+    const add = (x, y) => {
+      out.push({ x, y });
+      grid[Math.floor(y / cell) * gx + Math.floor(x / cell)] = out.length - 1;
+      active.push(out.length - 1);
+    };
+    add(.5, .5);
+    let guard = 0;
+    while (active.length && out.length < count && guard++ < 8000) {
+      const ai = Math.floor(gateHash(guard * 3.7) * active.length) % active.length;
+      const base = out[active[ai]];
+      let placed = false;
+      for (let k = 0; k < 20; k++) {
+        const a = gateHash(guard * 11 + k * 7.3) * Math.PI * 2;
+        const r = minDist * (1 + gateHash(guard * 5 + k * 3.1));
+        const x = base.x + Math.cos(a) * r, y = base.y + Math.sin(a) * r;
+        if (fits(x, y)) { add(x, y); placed = true; break; }
+      }
+      if (!placed) active.splice(ai, 1);
+    }
+    return out;
+  }
+
+  const nodes = poissonPoints(lowMotion ? 26 : 54, lowMotion ? .155 : .105).map((p, i) => ({
+    bx: p.x, by: p.y,
+    layer: Math.min(3, Math.floor(p.y * 4)),
+    phase: gateHash(i * 13.7) * Math.PI * 2,
+    amp: .005 + gateHash(i * 29.3) * .011,
     code: String.fromCharCode(65 + (i % 26)) + String(i + 1).padStart(2, '0'),
   }));
+  // 邻接表预先算好，每帧不再做 O(n²) 扫描
+  const edges = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const cand = [];
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[j].bx - nodes[i].bx, dy = nodes[j].by - nodes[i].by;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < .032) cand.push({ j, d2 });
+    }
+    cand.sort((a, b) => a.d2 - b.d2);
+    cand.slice(0, 2).forEach((c) => edges.push([i, c.j]));
+  }
+  window.mmGateDebug = {
+    nodes: nodes.length,
+    edges: edges.length,
+    minDist: Math.min(...nodes.map((n, i) => Math.min(...nodes.slice(i + 1).map((m) => Math.hypot(m.bx - n.bx, m.by - n.by)).concat([9])))),
+  };
+
+  // 细线图书馆剖面：书架、层板、书脊与穹顶，只画一次到离屏画布
+  function buildBackdrop() {
+    const key = `${mapW}x${mapH}@${mapDpr}`;
+    if (backdrop && backdropKey === key) return;
+    backdropKey = key;
+    backdrop = document.createElement('canvas');
+    backdrop.width = Math.round(mapW * mapDpr);
+    backdrop.height = Math.round(mapH * mapDpr);
+    const g = backdrop.getContext('2d');
+    g.setTransform(mapDpr, 0, 0, mapDpr, 0, 0);
+    const W = mapW, H = mapH;
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(200,162,74,.09)';
+    for (let row = 0; row < 4; row++) {
+      const y = H * (.2 + row * .2);
+      g.beginPath(); g.moveTo(W * .05, y); g.lineTo(W * .95, y); g.stroke();
+      g.fillStyle = 'rgba(230,217,189,.22)';
+      g.font = '10px Consolas, monospace';
+      g.fillText(`L${row + 1} / INDEX`, W * .035, y - 7);
+    }
+    const cx = W * .5, baseY = H * .78;
+    const unitW = Math.max(104, Math.min(W * .155, 176));
+    const unitH = Math.min(H * .52, unitW * 2.05);
+    const skew = unitW * .26, lift = unitW * .16;
+    const drawShelf = (x0, y0, mirror) => {
+      const sx = mirror ? -1 : 1;
+      g.strokeStyle = 'rgba(200,162,74,.19)';
+      g.strokeRect(x0, y0, unitW, unitH);
+      g.beginPath();
+      g.moveTo(x0, y0); g.lineTo(x0 + skew * sx, y0 - lift);
+      g.lineTo(x0 + unitW + skew * sx, y0 - lift); g.lineTo(x0 + unitW, y0);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(x0 + unitW, y0); g.lineTo(x0 + unitW + skew * sx, y0 - lift);
+      g.lineTo(x0 + unitW + skew * sx, y0 + unitH - lift); g.lineTo(x0 + unitW, y0 + unitH);
+      g.stroke();
+      g.strokeStyle = 'rgba(200,162,74,.13)';
+      const rows = 4;
+      for (let s = 1; s < rows; s++) {
+        const sy = y0 + (unitH / rows) * s;
+        g.beginPath(); g.moveTo(x0, sy); g.lineTo(x0 + unitW, sy); g.stroke();
+      }
+      for (let r = 0; r < rows; r++) {
+        const top = y0 + (unitH / rows) * r + 3;
+        const bottom = y0 + (unitH / rows) * (r + 1) - 4;
+        const books = Math.max(5, Math.round(unitW / 14));
+        for (let b = 1; b < books; b++) {
+          const bx = x0 + (unitW / books) * b;
+          const gap = gateHash(b * 7.1 + r * 3.3 + unitW) * (bottom - top) * .22;
+          g.beginPath(); g.moveTo(bx, top + gap); g.lineTo(bx, bottom); g.stroke();
+        }
+      }
+    };
+    // 两翼书架：把登记卡框在一条阅览通道里，而不是全被卡片挡住
+    drawShelf(Math.max(16, W * .055), baseY - unitH, false);
+    drawShelf(Math.min(W - unitW - 16, W * .945 - unitW), baseY - unitH, true);
+    // 穹顶与地面透视线
+    g.strokeStyle = 'rgba(200,162,74,.1)';
+    g.beginPath();
+    g.arc(cx, baseY - unitH * .92, Math.min(W * .34, unitW * 2.6), Math.PI * 1.08, Math.PI * 1.92);
+    g.stroke();
+    for (let i = -4; i <= 4; i++) {
+      g.beginPath();
+      g.moveTo(cx + i * unitW * .38, baseY);
+      g.lineTo(cx + i * W * .17, H * 1.0);
+      g.stroke();
+    }
+    // 中央书桌轮廓，低一点，避免和登记卡打架
+    g.strokeStyle = 'rgba(200,162,74,.08)';
+    g.beginPath();
+    g.moveTo(cx - unitW * 1.1, baseY + 24);
+    g.lineTo(cx + unitW * 1.1, baseY + 24);
+    g.lineTo(cx + unitW * .82, baseY + 58);
+    g.lineTo(cx - unitW * .82, baseY + 58);
+    g.closePath();
+    g.stroke();
+  }
+
   function resizeGateMap() {
     if (!canvas || !ctx) return;
     mapDpr = Math.min(1.5, window.devicePixelRatio || 1);
     mapW = window.innerWidth; mapH = window.innerHeight;
     canvas.width = Math.round(mapW * mapDpr); canvas.height = Math.round(mapH * mapDpr);
     ctx.setTransform(mapDpr, 0, 0, mapDpr, 0, 0);
-    mapNeedsRedraw = true;
+    buildBackdrop();
+    if (lowMotion) drawGateMap();
   }
+
   function drawGateMap() {
     mapRaf = 0;
     if (!ctx || !gate.isConnected || document.hidden) return;
-    if (!lowMotion || mapNeedsRedraw) mapFrame += 1;
+    mapFrame += 1;
+    mx += (tmx - mx) * .055;
+    my += (tmy - my) * .055;
+    const t = mapFrame * .009;
     ctx.clearRect(0, 0, mapW, mapH);
-    const colors = ['#c8a24a', '#91a58f', '#9aaab1', '#a97d75'];
-    const cx = mapW * .5, cy = mapH * .48;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(200,162,74,.11)'; ctx.lineWidth = 1;
-    for (let row = 0; row < 4; row++) {
-      const y = mapH * (.2 + row * .2);
-      ctx.beginPath(); ctx.moveTo(mapW * .07, y); ctx.lineTo(mapW * .93, y); ctx.stroke();
-      ctx.fillStyle = 'rgba(230,217,189,.32)'; ctx.font = '10px Consolas, monospace';
-      ctx.fillText(`L${row + 1} / INDEX`, mapW * .035, y - 7);
+    if (backdrop) ctx.drawImage(backdrop, mx * 6, my * 4, mapW, mapH);
+    // 节点位置：轻微漂浮 + 鼠标分层视差
+    const pos = nodes.map((n) => [
+      (n.bx + Math.sin(t + n.phase) * n.amp * (lowMotion ? 0 : 1)) * mapW + mx * (7 + n.layer * 5),
+      (n.by + Math.cos(t * .8 + n.phase) * n.amp * (lowMotion ? 0 : 1)) * mapH + my * (5 + n.layer * 4),
+    ]);
+    ctx.lineWidth = 1;
+    for (const [a, b] of edges) {
+      const [x1, y1] = pos[a], [x2, y2] = pos[b];
+      const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+      ctx.strokeStyle = 'rgba(200,162,74,.12)';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(midX + (midY - y1) * .06, midY, x2, y2);
+      ctx.stroke();
     }
-    for (let i = 0; i < points.length; i++) {
-      const p = points[i], x = p.x * mapW, y = p.y * mapH;
-      let nearest = -1, nd = Infinity;
-      for (let j = i + 1; j < points.length; j++) {
-        const q = points[j], dx = (q.x - p.x) * mapW, dy = (q.y - p.y) * mapH, d = dx * dx + dy * dy;
-        if (d < nd) { nd = d; nearest = j; }
+    const colors = ['#c8a24a', '#91a58f', '#9aaab1', '#a97d75'];
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i], [x, y] = pos[i];
+      const pulse = lowMotion ? 1 : .74 + Math.sin(mapFrame * .018 + n.phase) * .2;
+      ctx.fillStyle = colors[n.layer];
+      ctx.globalAlpha = .56 * pulse;
+      ctx.beginPath();
+      ctx.arc(x, y, n.layer === 3 ? 2.3 : 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      if (i % 6 === 0) {
+        ctx.globalAlpha = .3;
+        ctx.fillStyle = '#e6d9bd';
+        ctx.font = '9px Consolas, monospace';
+        ctx.fillText(n.code, x + 5, y - 4);
       }
-      if (nearest >= 0 && nd < Math.pow(Math.min(mapW, mapH) * .14, 2)) {
-        const q = points[nearest];
-        ctx.strokeStyle = `rgba(200,162,74,${lowMotion ? .10 : .13})`;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + q.x * mapW) / 2 + (cy - y) * .04, (y + q.y * mapH) / 2, q.x * mapW, q.y * mapH); ctx.stroke();
-      }
-      const pulse = lowMotion ? 1 : .76 + Math.sin(mapFrame * .018 + p.phase) * .18;
-      ctx.fillStyle = colors[p.layer];
-      ctx.globalAlpha = .54 * pulse;
-      ctx.beginPath(); ctx.arc(x, y, p.layer === 3 ? 2.4 : 1.7, 0, Math.PI * 2); ctx.fill();
-      if (i % 5 === 0) { ctx.globalAlpha = .35; ctx.fillStyle = '#e6d9bd'; ctx.font = '9px Consolas, monospace'; ctx.fillText(p.code, x + 5, y - 4); }
     }
     ctx.globalAlpha = 1;
-    if (!lowMotion) {
-      const scan = (mapFrame % 240) / 240;
-      const sx = mapW * (.08 + scan * .84);
-      const grad = ctx.createLinearGradient(sx - 90, 0, sx + 90, 0);
-      grad.addColorStop(0, 'rgba(200,162,74,0)'); grad.addColorStop(.5, 'rgba(200,162,74,.16)'); grad.addColorStop(1, 'rgba(200,162,74,0)');
-      ctx.fillStyle = grad; ctx.fillRect(sx - 90, 0, 180, mapH);
-    }
-    ctx.strokeStyle = 'rgba(200,162,74,.24)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(cx, cy, Math.min(mapW, mapH) * .27, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore();
-    mapNeedsRedraw = false;
     if (!lowMotion && !document.hidden && gate.isConnected) mapRaf = requestAnimationFrame(drawGateMap);
   }
-  function scheduleGateMap() {
-    if (!ctx || !gate.isConnected || document.hidden || mapRaf || (lowMotion && !mapNeedsRedraw)) return;
-    mapRaf = requestAnimationFrame(drawGateMap);
+
+  function onGatePointer(e) {
+    tmx = (e.clientX / Math.max(1, window.innerWidth) - .5) * 2;
+    tmy = (e.clientY / Math.max(1, window.innerHeight) - .5) * 2;
+  }
+  function onGateVisibility() {
+    if (!document.hidden && !lowMotion && !mapRaf) mapRaf = requestAnimationFrame(drawGateMap);
   }
   if (canvas && ctx) {
     resizeGateMap();
-    scheduleGateMap();
+    if (!lowMotion) mapRaf = requestAnimationFrame(drawGateMap);
     window.addEventListener('resize', resizeGateMap, { passive: true });
-    document.addEventListener('visibilitychange', scheduleGateMap);
+    window.addEventListener('pointermove', onGatePointer, { passive: true });
+    document.addEventListener('visibilitychange', onGateVisibility);
   }
   if (saved) userIn.value = saved;
 
@@ -973,7 +1116,8 @@
     if (mapRaf) cancelAnimationFrame(mapRaf);
     mapRaf = 0;
     window.removeEventListener('resize', resizeGateMap);
-    document.removeEventListener('visibilitychange', scheduleGateMap);
+    window.removeEventListener('pointermove', onGatePointer);
+    document.removeEventListener('visibilitychange', onGateVisibility);
     setTimeout(() => {
       gate.remove();
       // 新手提示改为分区域卡片：第一次进哪里，才在哪里出现，不再把整套教程塞到首页

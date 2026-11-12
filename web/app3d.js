@@ -57,8 +57,10 @@ body.reading .mm-root, body.grid .mm-root { display: none; }
 .mm-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   color: #9a8a6f; font-size: 14px; letter-spacing: 6px; background: #120e0b; z-index: 20; }
 .mm-hint { position: absolute; left: 24px; bottom: 18px; color: #8a7a5c; font-size: 12px; letter-spacing: 1px;
-  background: rgba(18,14,11,.55); padding: 6px 10px; border: 1px solid #2c2116;
+  background: rgba(18,14,11,.55); padding: 6px 10px; border: 1px solid #2c2116; z-index: 2;
   pointer-events: none; user-select: none; -webkit-user-select: none; }
+.mm-vignette { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 42%, rgba(5,4,3,.5) 100%); }
 .mm-toast { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); background: rgba(27,21,16,.96);
   color: #e6d9bd; border: 1px solid #c8a24a; padding: 10px 16px; font-size: 13px; z-index: 25; opacity: 0;
   transition: opacity .3s; max-width: 72%; text-align: center; pointer-events: none; user-select: none; -webkit-user-select: none; }
@@ -746,6 +748,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;';
   root.appendChild(renderer.domElement);
+  const vignette = document.createElement('div');
+  vignette.className = 'mm-vignette';
+  vignette.setAttribute('aria-hidden', 'true');
+  root.appendChild(vignette);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x171009);
@@ -777,10 +783,52 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     return false;
   }
 
+  // ---------- 程序化室内环境贴图：黄铜/玻璃有真实反射，木料只吃漫反射 ----------
+  function buildEnvironment() {
+    const envScene = new THREE.Scene();
+    const shell = new THREE.Mesh(
+      new THREE.SphereGeometry(36, 24, 16),
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        uniforms: {
+          cTop: { value: new THREE.Color(0x27313c) },
+          cMid: { value: new THREE.Color(0x5c4530) },
+          cBottom: { value: new THREE.Color(0x171009) },
+        },
+        vertexShader: 'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: 'varying vec3 vDir; uniform vec3 cTop; uniform vec3 cMid; uniform vec3 cBottom; void main(){ float h = normalize(vDir).y * 0.5 + 0.5; vec3 c = h > 0.5 ? mix(cMid, cTop, (h - 0.5) * 2.0) : mix(cBottom, cMid, h * 2.0); gl_FragColor = vec4(c, 1.0); }',
+      }),
+    );
+    envScene.add(shell);
+    const warmMat = new THREE.MeshBasicMaterial({ color: 0xffcf92 });
+    const coolMat = new THREE.MeshBasicMaterial({ color: 0x9fc4e4 });
+    const cards = [
+      [-15, 4.6, -3, 5.5, 4, coolMat], [15, 4.6, 2, 5.5, 4, coolMat],
+      [0, 5.6, -10, 7, 3, warmMat], [-7, 2.4, 8, 3.6, 1.8, warmMat], [7, 2.4, 8, 3.6, 1.8, warmMat],
+    ];
+    for (const [x, y, z, w, h, mat] of cards) {
+      const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      card.position.set(x, y, z);
+      card.lookAt(0, 2.6, 0);
+      envScene.add(card);
+    }
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const target = pmrem.fromScene(envScene, 0.05);
+    pmrem.dispose();
+    envScene.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); if (o.material !== shell.material) o.material.dispose(); } });
+    shell.material.dispose();
+    return target.texture;
+  }
+  const envTexture = LOW_SPEC ? null : buildEnvironment();
+  if (envTexture) {
+    scene.environment = envTexture;
+    scene.environmentIntensity = 0.55;
+  }
+
   // ---------- 灯光 ----------
-  const ambient = new THREE.AmbientLight(0x7a6a52, 2.2);
+  const ambient = new THREE.AmbientLight(0x6f6858, 1.75);
   scene.add(ambient);
-  const hemi = new THREE.HemisphereLight(0x9a8a6a, 0x3a2f22, 1.6);
+  const hemi = new THREE.HemisphereLight(0x9a8a6a, 0x3a2f22, 1.35);
   scene.add(hemi);
 
   const key = new THREE.DirectionalLight(0xffe3b0, 2.2);
@@ -824,6 +872,19 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     scene.add(l);
     wallLights.push(l);
   }
+  // 窗光：冷色侧光从两翼打入，走近窗边时明暗会明显不同
+  const windowLights = [];
+  if (!LOW_SPEC) {
+    for (const [wx, wz, tx] of [[-13.6, -2.2, 1], [13.6, 1.6, -1]]) {
+      const wl = new THREE.SpotLight(0xa8c8e8, 2.4, 26, 0.72, 0.85, 1.4);
+      wl.position.set(wx, 4.3, wz);
+      wl.target.position.set(tx, 1.2, wz * -0.4);
+      scene.add(wl);
+      scene.add(wl.target);
+      windowLights.push(wl);
+    }
+  }
+
   // 机密层警示灯（常态关闭，L4 脉冲）
   const beaconLight = new THREE.PointLight(0xff2a2a, 0, 10, 2);
   beaconLight.position.set(8.6, 2.6, 3.2);
@@ -2523,6 +2584,18 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     mergeRemoved += r.removed;
     mergeAdded += r.added;
   }
+  // 金属吃反射、木料只吃漫反射：避免木头出现塑料高光
+  if (scene.environment) {
+    scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        if (!m || !m.isMeshStandardMaterial) continue;
+        const metal = typeof m.metalness === 'number' ? m.metalness : 0;
+        m.envMapIntensity = 0.3 + metal * 1.35;
+      }
+    });
+  }
   console.info(`[3D] 静态合批：${mergeRemoved} 个网格 → ${mergeAdded} 个`);
   const __tMerge = performance.now();
   __buildMs = Math.round(__tBuild - __t0);
@@ -2746,11 +2819,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // 楼层氛围：越高层，雾越浓、光越暗、尘埃越少（但保证可读）
   const ATMOS = {
-    all: { near: 12, far: 48, bg: 0x171009, amb: 2.2, spot: 5.4, dir: 2.2, dust: 0.38 },
-    L1: { near: 10.5, far: 42, bg: 0x1a130b, amb: 2.5, spot: 6.0, dir: 2.4, dust: 0.42 },
-    L2: { near: 9.5, far: 38, bg: 0x0e1620, amb: 2.1, spot: 5.4, dir: 2.1, dust: 0.36 },
-    L3: { near: 8.5, far: 34, bg: 0x1a140c, amb: 1.9, spot: 4.8, dir: 1.9, dust: 0.30 },
-    L4: { near: 7.0, far: 28, bg: 0x120f1a, amb: 2.2, spot: 5.2, dir: 1.9, dust: 0.24 },
+    all: { near: 12, far: 48, bg: 0x171009, amb: 1.85, spot: 5.4, dir: 2.2, dust: 0.38, env: 0.58 },
+    L1: { near: 10.5, far: 42, bg: 0x1a130b, amb: 2.0, spot: 6.0, dir: 2.4, dust: 0.42, env: 0.62 },
+    L2: { near: 9.5, far: 38, bg: 0x0e1620, amb: 1.8, spot: 5.4, dir: 2.1, dust: 0.36, env: 0.6 },
+    L3: { near: 8.5, far: 34, bg: 0x1a140c, amb: 1.65, spot: 4.8, dir: 1.9, dust: 0.30, env: 0.52 },
+    L4: { near: 7.0, far: 28, bg: 0x120f1a, amb: 1.9, spot: 5.2, dir: 1.9, dust: 0.24, env: 0.46 },
   };
   // 楼层主题：书架 / 墙面 / 地面 / 尘埃 / 灯光色温（越高层越冷、越神秘）
   const THEME = {
@@ -2827,6 +2900,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     accent.color.setHex(th.accentLight);
     accent.intensity = th.acc;
     renderer.toneMappingExposure = th.exposure;
+    if (scene.environment) scene.environmentIntensity = a.env;
 
     floor.material = floorMats[fid] || floorMats.all;
     for (const w of wallMeshes) w.material = wallMats[fid] || wallMats.all;
@@ -2871,6 +2945,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       wallLights[i].color.setHex(isFloorLamp ? th.floorLamp : th.wallLamp);
       wallLights[i].intensity = isFloorLamp ? th.floorInt : th.wallInt;
     }
+    for (const wl of windowLights) wl.color.setHex(th.sideR);
     beaconLight.intensity = 0;
 
     for (const id of Object.keys(propGroups)) propGroups[id].visible = fid === id;
@@ -3819,6 +3894,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       buildMs: __buildMs,
       mergeMs: __mergeMs,
       firstFrameMs: __firstFrameMs,
+      env: !!scene.environment,
+      envIntensity: scene.environment ? scene.environmentIntensity : 0,
+      windowLights: windowLights.length,
       calls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
       geometries: renderer.info.memory.geometries,

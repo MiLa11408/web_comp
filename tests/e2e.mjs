@@ -40,6 +40,10 @@ const gateMapMotion = await page.evaluate(async () => {
   return a !== c.toDataURL();
 });
 gateMapMotion ? ok('门厅索引持续演算') : bad('门厅索引持续演算', '画面未变化');
+const gateDebug = await page.evaluate(() => window.mmGateDebug || null);
+(gateDebug && gateDebug.nodes >= 20 && gateDebug.edges >= 10 && gateDebug.minDist > 0.08)
+  ? ok('门厅星网节点不重叠', `${gateDebug.nodes} 节点 / ${gateDebug.edges} 连线 / 最近 ${gateDebug.minDist.toFixed(3)}`)
+  : bad('门厅星网节点', JSON.stringify(gateDebug));
 await page.locator('#gateUser').fill('e2e_probe');
 await page.locator('#gatePass').fill('testing-password');
 await page.route('**/api/login', async (route) => {
@@ -180,6 +184,13 @@ const drawInfo = await page.evaluate(() => ({
   tris: window.mm3d.renderer.info.render.triangles,
 }));
 (drawInfo.calls > 0 && drawInfo.calls <= 650) ? ok('3D draw call 预算', `${drawInfo.calls} 次 / ${drawInfo.tris} 三角形`) : bad('3D draw call 预算', JSON.stringify(drawInfo));
+const envInfo = await page.evaluate(() => {
+  const p = window.mm3d.getTechProfile();
+  return { env: p.env, envIntensity: p.envIntensity, windowLights: p.windowLights };
+});
+(envInfo.env && envInfo.envIntensity > 0.2)
+  ? ok('3D 环境反射已启用', `强度 ${envInfo.envIntensity} · 窗光 ${envInfo.windowLights}`)
+  : bad('3D 环境反射', JSON.stringify(envInfo));
 
 // 物理书架：抽出到手里 → 叠到 L1 长桌 → 再抽一本翻开
 await page.evaluate(async () => {
