@@ -175,7 +175,7 @@
         <div class="wi-oracle-copy">
           <div class="no">第十一本 · 未写之书</div>
           <h3>「如果没有……会怎么样？」</h3>
-          <p>这本没有正文。写下你的假设，暗门后的馆员只为你写一个与这个问题直接相关的小故事。</p>
+          <p>这本没有正文。写下你的假设，空白页会自己长出与这个问题直接相关的小故事。</p>
         </div>
         <div class="go">写下假设 →</div>
       </article>
@@ -401,7 +401,7 @@
         <div class="no">第十一本 · 未写之书</div>
         <h2>如果没有……会怎么样？</h2>
         <div class="yr">只写你问的那一个假如</div>
-        <p>这本书没有正文。写下你的假设，暗门后的馆员会让它长成一篇短故事。它不会回答别的问题，也不会跑去写别的话题。</p>
+        <p>这本书没有正文。写下你的假设，空白页会自己长成一篇短故事。它不会回答别的问题，也不会跑去写别的话题。</p>
       </div>
       <div class="wi-oracle-form">
         <label for="oracleQ">你的假设</label>
@@ -458,8 +458,8 @@
     }
     const old = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '馆员正在写……';
-    box.innerHTML = '<div class="wi-oracle-loading">暗门后的馆员正在把这一页写出来</div>';
+    btn.textContent = '书页正在自己长字……';
+    box.innerHTML = '<div class="wi-oracle-loading">暗门里没有笔，空白页正自己浮出字迹</div>';
     try {
       const r = await fetch('api/oracle', {
         method: 'POST',
@@ -468,7 +468,7 @@
       });
       let d = {};
       try { d = await r.json(); } catch (e) { d = {}; }
-      if (!r.ok) throw new Error((d.error && d.error.message) || '暗门后的馆员暂时没回应。');
+      if (!r.ok) throw new Error((d.error && d.error.message) || '这一页暂时没有浮出字迹，稍后再试。');
       const content = String(d.content || '').trim();
       if (!content) throw new Error('这一页还是空白，再问一次。');
       const paras = content.split(/\n{2,}|\r?\n/).map((p) => p.trim()).filter(Boolean);
@@ -478,7 +478,7 @@
         <div class="ws-kicker">未写之书 · ${esc(modelLabel)}</div>
         <h3>${esc(q)}</h3>
         ${paras.map((p) => `<p>${esc(p)}</p>`).join('')}
-        <div class="ws-quote">馆员批注：这本书只回答你问的那一个「如果没有」。它没有写别的，也不打算写。</div>
+        <div class="ws-quote">页边浮字：这本书只回答你问的那一个「如果没有」。它没有写别的，也不打算写。</div>
         <div class="ws-actions">
           <button onclick="mmOpenOracle()">再问一个假如</button>
           <button onclick="mmOpenWhatIfRoom()">回暗门书架</button>
@@ -486,7 +486,7 @@
       </div>`;
       box.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
-      box.innerHTML = `<div class="wi-oracle-error">${esc(e.message || '暗门后的馆员暂时没回应，稍后再试。')}</div>`;
+      box.innerHTML = `<div class="wi-oracle-error">${esc(e.message || '这一页暂时没有浮出字迹，稍后再试。')}</div>`;
     } finally {
       btn.disabled = false;
       btn.textContent = old;

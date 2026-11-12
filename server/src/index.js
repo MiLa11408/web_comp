@@ -344,7 +344,7 @@ app.post('/api/oracle', async (request, reply) => {
       if (upstream.status === 401 || upstream.status === 403) {
         return fail(reply, 502, 'AUTH', '密钥无效或已过期，请馆长更换 DEEPSEEK_API_KEY。');
       }
-      return fail(reply, 502, 'UPSTREAM', '暗门后的馆员暂时没回应，稍后再试。');
+      return fail(reply, 502, 'UPSTREAM', '这一页暂时没有浮出字迹，稍后再试。');
     }
     const data = await upstream.json();
     const content = String(data.choices?.[0]?.message?.content || '').trim();
@@ -352,7 +352,7 @@ app.post('/api/oracle', async (request, reply) => {
     return { content, model: data.model || model, usage: data.usage || null };
   } catch (err) {
     request.log.warn({ err }, 'oracle request failed');
-    return fail(reply, 502, 'UPSTREAM', '暗门后的馆员暂时没回应，稍后再试。');
+    return fail(reply, 502, 'UPSTREAM', '这一页暂时没有浮出字迹，稍后再试。');
   }
 });
 
