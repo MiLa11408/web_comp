@@ -350,7 +350,7 @@
   /* ---------- 入馆登记门厅 ---------- */
   #gate { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: radial-gradient(900px 520px at 50% 28%, #2a1f14, #0c0906 72%); transition: opacity .55s ease, transform .55s ease; }
   #gate::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(200,162,74,.035) 0 1px, transparent 1px 88px); pointer-events: none; }
-  #gate-map { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; opacity: .74; pointer-events: none; }
+  #gate-map { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; opacity: .74; pointer-events: none; }
   #gate.leaving { pointer-events: none; background: transparent; }
   .gate-doors { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
   .gate-doors .door { position: absolute; top: 0; bottom: 0; width: 50.5%; background: linear-gradient(90deg, #17110c, #2b1f13 55%, #17110c); box-shadow: inset 0 0 60px rgba(0,0,0,.7); transition: transform 1s cubic-bezier(.76,0,.24,1); }
