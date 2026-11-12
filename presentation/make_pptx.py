@@ -44,7 +44,7 @@ RW = Inches(0.9)   # 右页边距
 CW = Inches(13.333 - 1.8)  # 内容宽 11.533"
 
 TEAM_LINE = "动态组 · 塔之诅咒队 · 盛梓杨 · 2421010219"
-URL_ONLINE = "http://150.158.1.111:82/ai/"
+URL_ONLINE = "https://150.158.1.111/ai/"
 
 # ---------------- 基础工具 ----------------
 def R(text, size=None, color=None, font=None, bold=None, italic=None):
@@ -515,7 +515,7 @@ def build_quality(prs, n):
          "内容校验 · npm run verify", big="0 FAIL · 0 WARN",
          body="384 章全自动校验：字数、来源、双向关系、索书号唯一性")
     card(slide, Inches(6.93), Inches(2.0), Inches(4.6), Inches(1.9),
-         "端到端 · npm run test:e2e", big="116 项全绿",
+         "端到端 · npm run test:e2e", big="144 项全绿",
          body="Playwright + 系统 Chrome：入馆、取书、检索、电梯、书轨、星图、暗门、未写之书、盖章撤销、移动端")
     bullets(slide, LX, Inches(4.25), CW, [
         [R("四身份走查打磨：目标用户 / 评委 / 路过开发者 / 路人", size=14, color=INK)],
@@ -629,7 +629,7 @@ def build_end(prs, n):
             align=PP_ALIGN.CENTER)
     bullets(slide, Inches(4.0), Inches(3.5), Inches(5.33), [
         [R("线上　", size=13, color=DIM, font=SANS), R(URL_ONLINE, size=13, color=GOLD2, font=MONO)],
-        [R("48 本书 · 384 章 · 116 项 E2E 全绿", size=13, color=INK, font=SANS)],
+        [R("48 本书 · 384 章 · 144 项 E2E 全绿", size=13, color=INK, font=SANS)],
         [R("「假如」都标注为推测，史实都有来源", size=13, color=INK, font=SANS)],
     ], size=13, gap=6)
     rect(slide, Inches(3.87), Inches(4.9), Inches(5.6), Inches(0.52),

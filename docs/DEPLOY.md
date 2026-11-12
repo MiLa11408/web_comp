@@ -1,6 +1,6 @@
 # 部署说明 · 机忆书库（/ai/ 子路径，端口 3300）
 
-本文对应服务器环境：**Ubuntu 22.04 / 24.04（或同类 Linux）+ nginx + systemd**。目标是把整站挂在 `<站点>/ai/`（HTTP 与 HTTPS 均可用），后端只监听 `127.0.0.1:3300`，由 nginx 反代。线上直接用 `http://150.158.1.111:82/ai/` 访问；`https://150.158.1.111/ai/` 同样可用，但证书为自签，浏览器会提示不安全。
+本文对应服务器环境：**Ubuntu 22.04 / 24.04（或同类 Linux）+ nginx + systemd**。目标是把整站挂在 `<站点>/ai/`，后端只监听 `127.0.0.1:3300`，由 nginx 反代。线上主入口为 `https://150.158.1.111/ai/`（Let's Encrypt IP 证书，浏览器锁标）；`http://150.158.1.111:82/ai/` 保留为 HTTP 备用。
 
 > 前端所有请求已改为相对路径（`api/...`、`vendor/...`），因此 `/ai/` 子路径不需要改后端任何路由。`proxy_pass` 末尾的 `/` 是关键。
 
@@ -236,6 +236,47 @@ sudo docker exec dachuang-frontend-1 nginx -t && sudo docker exec dachuang-front
 
 改完用浏览器控制台确认没有 `Executing inline event handler violates...` 报错；验收标准是「新办借书证」能关掉门厅、刷新后能用同一账号「入馆」。**容器重建后配置会丢**，重建后重跑一次脚本；固定副本在 `/opt/machine-memory/deploy/nginx-default.conf.fixed`。
 
+## 7.3 HTTPS：Let's Encrypt IP 证书（无需域名）
+
+Let's Encrypt 从 2026 年起支持给**公网 IP** 签证书（shortlived profile，6 天有效），所以不用买域名也能去掉浏览器的“不安全”。
+
+```bash
+# 1. 安装支持 IP 证书的 certbot（>= 5.4，apt 的 4.x 不支持）
+sudo snap install certbot --classic
+/snap/bin/certbot --version
+
+# 2. 首次签发（80 端口被 dachuang-frontend 容器占用，用 standalone + hooks 临时让出）
+sudo /snap/bin/certbot certonly --standalone \
+  --preferred-profile shortlived \
+  --ip-address 150.158.1.111 \
+  --cert-name 150.158.1.111 \
+  --agree-tos --register-unsafely-without-email \
+  --pre-hook 'docker stop dachuang-frontend-1' \
+  --post-hook 'docker start dachuang-frontend-1' \
+  --deploy-hook 'systemctl reload nginx'
+
+# 3. nginx 指向新证书
+sudo tee /etc/nginx/snippets/machine-memory-tls.conf >/dev/null <<'EOF'
+ssl_certificate /etc/letsencrypt/live/150.158.1.111/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/150.158.1.111/privkey.pem;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 1d;
+EOF
+sudo nginx -t && sudo systemctl reload nginx
+
+# 4. 验收
+curl -I https://150.158.1.111/ai/
+openssl s_client -connect 150.158.1.111:443 -servername 150.158.1.111 </dev/null 2>/dev/null | openssl x509 -noout -issuer -dates
+sudo systemctl list-timers | grep certbot
+```
+
+说明：
+- 证书 6 天有效，certbot 会在剩余约 1/2 生命周期时自动续；hooks 已写入 `/etc/letsencrypt/renewal/150.158.1.111.conf`，续期时会短暂停/启 `dachuang-frontend-1`（约 10 秒），**容器名变更后要同步改 hooks**。
+- 只保留 snap 的 `snap.certbot.renew.timer`；apt 的 `certbot.timer` 已 `disable`，避免旧版 certbot 抢续期。
+- 入口：`https://150.158.1.111/ai/`；`http://150.158.1.111:82/ai/` 保留为备用。Cookie 在 HTTPS 下自动带 `Secure`。
+- 把 80 端口的 ACME 校验让给 certbot 时，原导学系统会短暂 502；续期同理，选低峰期即可。
+
 ## 8. 常见问题
 
 | 现象 | 原因 | 处理 |
@@ -252,7 +293,7 @@ sudo docker exec dachuang-frontend-1 nginx -t && sudo docker exec dachuang-front
 ## 9. 安全与合规
 
 - 生产环境用 systemd 里的 `HOST=127.0.0.1`，只让 nginx 访问 3300；同时用防火墙挡住 3300。
-- 站点用 HTTPS；借书证口令在服务端哈希存储，Cookie 为 HttpOnly + SameSite=Lax。
+- 站点用 HTTPS（Let's Encrypt IP 证书，6 天自动续期）；借书证口令在服务端哈希存储，Cookie 为 HttpOnly + SameSite=Lax。
 - **会话只走 HttpOnly Cookie**：前端不再把 token 写进 localStorage；`/api/me`、盖章、批注、进度都由 Cookie 鉴权。Bearer 仅保留给 API/测试客户端。
 - 注册/登录已有 IP 级限流（`server/src/auth.js`）；批注引文/正文有长度上限；安全响应头由 Fastify 与 nginx 双重补齐。
 - CSP 仍保留 `'unsafe-inline'`（页面内联 `onclick`），这是当前唯一已知的 CSP 收窄项；后续改事件委托后可去掉。
