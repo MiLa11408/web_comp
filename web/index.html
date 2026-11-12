@@ -175,6 +175,14 @@
   .demo-dock .dd-grid button { background: #241c14; border: 1px solid #5a4526; color: #cbb892; padding: 7px 6px; font-size: 12px; cursor: pointer; font-family: inherit; }
   .demo-dock .dd-grid button:hover { border-color: var(--gold); color: var(--gold); }
   .demo-dock .dd-tip { margin-top: 8px; color: #8a7a5c; font-size: 10.5px; line-height: 1.6; }
+  .demo-profile { margin-top: 9px; padding: 9px 10px; border-top: 1px solid #5a4526; background: rgba(10,8,6,.42); color: #cbb892; font: 11px/1.8 var(--font-mono); }
+  .demo-profile[hidden] { display: none; }
+  .demo-profile .dp-title { color: var(--gold); letter-spacing: 2px; font-family: var(--font-ui); font-size: 11px; }
+  .demo-profile .dp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 5px; }
+  .demo-profile b { color: #e6d9bd; font-weight: 500; }
+  .demo-profile .dp-foot { color: #8a7a5c; font: 10px/1.6 var(--font-ui); margin-top: 5px; }
+  .demo-profile .dp-refresh { margin-top: 6px; padding: 3px 7px; background: transparent; border: 1px solid #5a4526; color: #cbb892; font: 10px var(--font-ui); cursor: pointer; }
+  .demo-profile .dp-refresh:hover { border-color: var(--gold); color: var(--gold); }
 
   /* ---------- 接待卡 ---------- */
   .reception { border: 1px dashed #8f7a52; background: #f6edda; color: #3b3020; padding: 10px 14px; margin-bottom: 18px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.85; transform: rotate(-.2deg); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
@@ -341,7 +349,8 @@
   }
   /* ---------- 入馆登记门厅 ---------- */
   #gate { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: radial-gradient(900px 520px at 50% 28%, #2a1f14, #0c0906 72%); transition: opacity .55s ease, transform .55s ease; }
-  #gate::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(200,162,74,.045) 0 2px, transparent 2px 88px); pointer-events: none; }
+  #gate::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(200,162,74,.035) 0 1px, transparent 1px 88px); pointer-events: none; }
+  #gate-map { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .74; pointer-events: none; }
   #gate.leaving { pointer-events: none; background: transparent; }
   .gate-doors { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
   .gate-doors .door { position: absolute; top: 0; bottom: 0; width: 50.5%; background: linear-gradient(90deg, #17110c, #2b1f13 55%, #17110c); box-shadow: inset 0 0 60px rgba(0,0,0,.7); transition: transform 1s cubic-bezier(.76,0,.24,1); }
@@ -352,7 +361,7 @@
   #gate.leaving .door.right { transform: translateX(102%); }
   .gate-card { z-index: 2; }
   #gate.leaving .gate-card { opacity: 0; transform: translateY(-12px) scale(.97); transition: opacity .3s, transform .3s; }
-  .gate-card { position: relative; width: min(560px, 92vw); max-height: 92vh; overflow-y: auto; border: 1px solid #5a4526; background: linear-gradient(165deg, #1d1610, #14100c); padding: 34px 38px 28px; box-shadow: 0 30px 90px rgba(0,0,0,.7); animation: gateRise .7s cubic-bezier(.2,.8,.3,1) both; }
+  .gate-card { position: relative; width: min(560px, 92vw); max-height: 92vh; overflow-y: auto; border: 1px solid #5a4526; background: linear-gradient(165deg, rgba(29,22,16,.97), rgba(20,16,12,.96)); padding: 34px 38px 28px; box-shadow: 0 30px 90px rgba(0,0,0,.7); animation: gateRise .7s cubic-bezier(.2,.8,.3,1) both; backdrop-filter: blur(5px); }
   @keyframes gateRise { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
   .gate-card::after { content: ""; position: absolute; inset: 6px; border: 1px dashed rgba(200,162,74,.26); pointer-events: none; }
   .gate-kicker { color: #8a7a5c; font-size: 11px; letter-spacing: 4px; }
@@ -367,8 +376,19 @@
   .gate-btn:hover { background: #3a2d1c; }
   .gate-btn.ghost { border-color: #5a4526; color: #cbb892; background: transparent; }
   .gate-btn.ghost:hover { border-color: var(--gold); color: var(--gold); }
-  .gate-msg { min-height: 18px; color: #d08a5a; font-size: 12px; margin-top: 10px; line-height: 1.6; }
+  .gate-msg { min-height: 18px; color: #d08a5a; font-size: 12px; margin-top: 10px; line-height: 1.6; transition: color .22s, opacity .22s; }
   .gate-msg.ok { color: #9ec27a; }
+  .gate-msg.checking { color: #d8bd7e; }
+  .gate-msg.error { color: #d58c73; animation: gateNudge .28s ease; }
+  .gate-msg.success { color: #a5c58b; }
+  #gate.verifying .gate-card { border-color: #a9833d; box-shadow: 0 30px 90px rgba(0,0,0,.7), 0 0 0 1px rgba(200,162,74,.2), 0 0 34px rgba(200,162,74,.12); }
+  #gate.verifying .gate-card::after { border-color: rgba(226,193,124,.55); animation: verifyFrame 1.8s ease-in-out infinite; }
+  #gate.verifying #gate-map { opacity: .98; filter: saturate(1.16); }
+  #gate.verifying .gate-kicker::after { content: ' · INDEXING'; color: #e2c17c; letter-spacing: 2px; }
+  #gate.denied .gate-card { border-color: #8b4435; }
+  @keyframes verifyFrame { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+  @keyframes gateNudge { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+  @media (prefers-reduced-motion: reduce) { .gate-card, .gate-msg.error, #gate.verifying .gate-card::after { animation: none; } #gate-map { opacity: .34; } }
   .gate-foot { margin-top: 14px; border-top: 1px dashed #3a2f22; padding-top: 10px; color: #7d6e55; font-size: 11px; line-height: 1.7; }
 
   /* ---------- 书轨 · 主题线路图 ---------- */
@@ -816,6 +836,7 @@
 </head>
 <body>
 <div id="gate">
+  <canvas id="gate-map" aria-hidden="true"></canvas>
   <div class="gate-doors"><div class="door left"></div><div class="door right"></div></div>
   <div class="gate-card">
     <div class="gate-kicker">MACHINE MEMORY · FRONT DESK</div>
@@ -844,13 +865,115 @@
   const userIn = document.getElementById('gateUser');
   const passIn = document.getElementById('gatePass');
   window.mmAuthed = false;
-  const say = (text, ok) => { if (msg) { msg.textContent = text; msg.className = 'gate-msg' + (ok ? ' ok' : ''); } };
+  const say = (text, kind = '') => {
+    if (!msg) return;
+    msg.textContent = text;
+    msg.className = `gate-msg${kind ? ` ${kind}` : ''}${kind === 'success' ? ' ok' : ''}`;
+    if (kind === 'checking') {
+      gate.classList.add('verifying');
+      gate.classList.remove('denied');
+      mapNeedsRedraw = true;
+      scheduleGateMap();
+    } else if (kind === 'error') {
+      gate.classList.remove('verifying');
+      gate.classList.add('denied');
+    } else if (kind === 'success') {
+      gate.classList.remove('verifying', 'denied');
+    } else {
+      gate.classList.remove('denied');
+    }
+  };
   const saved = localStorage.getItem('mm_gate_user');
+  const canvas = document.getElementById('gate-map');
+  const ctx = canvas?.getContext('2d');
+  let mapFrame = 0;
+  let mapRaf = 0;
+  let mapW = 0, mapH = 0, mapDpr = 1;
+  let mapNeedsRedraw = true;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const lowMotion = reducedMotion || window.innerWidth < 760 || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+  const gateHash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const points = Array.from({ length: lowMotion ? 32 : 56 }, (_, i) => ({
+    x: .08 + gateHash(i + 1) * .84,
+    y: .12 + gateHash(i + 97) * .76,
+    layer: i % 4,
+    phase: gateHash(i + 193) * Math.PI * 2,
+    code: String.fromCharCode(65 + (i % 26)) + String(i + 1).padStart(2, '0'),
+  }));
+  function resizeGateMap() {
+    if (!canvas || !ctx) return;
+    mapDpr = Math.min(1.5, window.devicePixelRatio || 1);
+    mapW = window.innerWidth; mapH = window.innerHeight;
+    canvas.width = Math.round(mapW * mapDpr); canvas.height = Math.round(mapH * mapDpr);
+    ctx.setTransform(mapDpr, 0, 0, mapDpr, 0, 0);
+    mapNeedsRedraw = true;
+  }
+  function drawGateMap() {
+    mapRaf = 0;
+    if (!ctx || !gate.isConnected || document.hidden) return;
+    if (!lowMotion || mapNeedsRedraw) mapFrame += 1;
+    ctx.clearRect(0, 0, mapW, mapH);
+    const colors = ['#c8a24a', '#91a58f', '#9aaab1', '#a97d75'];
+    const cx = mapW * .5, cy = mapH * .48;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(200,162,74,.11)'; ctx.lineWidth = 1;
+    for (let row = 0; row < 4; row++) {
+      const y = mapH * (.2 + row * .2);
+      ctx.beginPath(); ctx.moveTo(mapW * .07, y); ctx.lineTo(mapW * .93, y); ctx.stroke();
+      ctx.fillStyle = 'rgba(230,217,189,.32)'; ctx.font = '10px Consolas, monospace';
+      ctx.fillText(`L${row + 1} / INDEX`, mapW * .035, y - 7);
+    }
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i], x = p.x * mapW, y = p.y * mapH;
+      let nearest = -1, nd = Infinity;
+      for (let j = i + 1; j < points.length; j++) {
+        const q = points[j], dx = (q.x - p.x) * mapW, dy = (q.y - p.y) * mapH, d = dx * dx + dy * dy;
+        if (d < nd) { nd = d; nearest = j; }
+      }
+      if (nearest >= 0 && nd < Math.pow(Math.min(mapW, mapH) * .14, 2)) {
+        const q = points[nearest];
+        ctx.strokeStyle = `rgba(200,162,74,${lowMotion ? .10 : .13})`;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo((x + q.x * mapW) / 2 + (cy - y) * .04, (y + q.y * mapH) / 2, q.x * mapW, q.y * mapH); ctx.stroke();
+      }
+      const pulse = lowMotion ? 1 : .76 + Math.sin(mapFrame * .018 + p.phase) * .18;
+      ctx.fillStyle = colors[p.layer];
+      ctx.globalAlpha = .54 * pulse;
+      ctx.beginPath(); ctx.arc(x, y, p.layer === 3 ? 2.4 : 1.7, 0, Math.PI * 2); ctx.fill();
+      if (i % 5 === 0) { ctx.globalAlpha = .35; ctx.fillStyle = '#e6d9bd'; ctx.font = '9px Consolas, monospace'; ctx.fillText(p.code, x + 5, y - 4); }
+    }
+    ctx.globalAlpha = 1;
+    if (!lowMotion) {
+      const scan = (mapFrame % 240) / 240;
+      const sx = mapW * (.08 + scan * .84);
+      const grad = ctx.createLinearGradient(sx - 90, 0, sx + 90, 0);
+      grad.addColorStop(0, 'rgba(200,162,74,0)'); grad.addColorStop(.5, 'rgba(200,162,74,.16)'); grad.addColorStop(1, 'rgba(200,162,74,0)');
+      ctx.fillStyle = grad; ctx.fillRect(sx - 90, 0, 180, mapH);
+    }
+    ctx.strokeStyle = 'rgba(200,162,74,.24)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, Math.min(mapW, mapH) * .27, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    mapNeedsRedraw = false;
+    if (!lowMotion && !document.hidden && gate.isConnected) mapRaf = requestAnimationFrame(drawGateMap);
+  }
+  function scheduleGateMap() {
+    if (!ctx || !gate.isConnected || document.hidden || mapRaf || (lowMotion && !mapNeedsRedraw)) return;
+    mapRaf = requestAnimationFrame(drawGateMap);
+  }
+  if (canvas && ctx) {
+    resizeGateMap();
+    scheduleGateMap();
+    window.addEventListener('resize', resizeGateMap, { passive: true });
+    document.addEventListener('visibilitychange', scheduleGateMap);
+  }
   if (saved) userIn.value = saved;
 
   function closeGate(text) {
-    if (text) say(text, true);
+    if (text) say(text, 'success');
     gate.classList.add('leaving');
+    if (mapRaf) cancelAnimationFrame(mapRaf);
+    mapRaf = 0;
+    window.removeEventListener('resize', resizeGateMap);
+    document.removeEventListener('visibilitychange', scheduleGateMap);
     setTimeout(() => {
       gate.remove();
       // 新手提示改为分区域卡片：第一次进哪里，才在哪里出现，不再把整套教程塞到首页
@@ -876,30 +999,35 @@
     try { d = await r.json(); } catch (e) { d = {}; }
     return { ok: r.ok, d };
   }
+  function setGateBusy(busy) {
+    document.querySelectorAll('.gate-actions button').forEach((button) => { button.disabled = busy; });
+  }
   window.gateLogin = async () => {
     const username = userIn.value.trim(), password = passIn.value;
-    if (!username || !password) return say('借书证号和口令都要填。没证的话，点「新办借书证」。');
-    say('正在核对借书证……');
+    if (!username || !password) return say('借书证号和口令都要填。没证的话，点「新办借书证」。', 'error');
+    say('正在核对借书证……', 'checking');
+    setGateBusy(true);
     try {
       const { ok, d } = await post('api/login', { username, password });
-      if (!ok) return say(d?.error?.message || '入馆失败，请稍后再试。');
+      if (!ok) { setGateBusy(false); return say(d?.error?.message || '入馆失败，请稍后再试。', 'error'); }
       window.mmAuthed = true;
       localStorage.setItem('mm_gate_user', d.user.username);
-      closeGate(`欢迎回来，${d.user.username}。`);
-    } catch (e) { say('连不上前台，请检查网络或稍后再试。'); }
+      closeGate(`借书证已识别。欢迎回来，${d.user.username}。`);
+    } catch (e) { setGateBusy(false); say('连不上前台，请检查网络或稍后再试。', 'error'); }
   };
   window.gateRegister = async () => {
     const username = userIn.value.trim(), password = passIn.value;
-    if (username.length < 3) return say('借书证号至少 3 个字符。');
-    if (password.length < 8) return say('口令至少 8 位。');
-    say('正在制证……');
+    if (username.length < 3) return say('借书证号至少 3 个字符。', 'error');
+    if (password.length < 8) return say('口令至少 8 位。', 'error');
+    say('正在为你刻制借书证……', 'checking');
+    setGateBusy(true);
     try {
       const { ok, d } = await post('api/register', { username, password });
-      if (!ok) return say(d?.error?.message || '办证失败，请稍后再试。');
+      if (!ok) { setGateBusy(false); return say(d?.error?.message || '办证失败，请稍后再试。', 'error'); }
       window.mmAuthed = true;
       localStorage.setItem('mm_gate_user', d.user.username);
-      closeGate(`借书证办好了：${d.user.username}。`);
-    } catch (e) { say('连不上前台，请检查网络或稍后再试。'); }
+      closeGate(`新借书证已建立：${d.user.username}。`);
+    } catch (e) { setGateBusy(false); say('连不上前台，请检查网络或稍后再试。', 'error'); }
   };
   // 会话只走 HttpOnly Cookie，前端不再保存 token
   fetch('api/me', { credentials: 'same-origin' })
@@ -908,7 +1036,7 @@
       if (!d) return;
       window.mmAuthed = true;
       userIn.value = d.user.username;
-      say(`已识别借书证：${d.user.username}。直接入馆，或换号。`, true);
+      say(`已识别借书证：${d.user.username}。直接入馆，或换号。`, 'success');
     })
     .catch(() => {});
 })();
@@ -969,6 +1097,7 @@
     <button type="button" onclick="mmDemo('reset')">重置</button>
   </div>
   <div class="dd-tip">Ctrl+Shift+D 开关 · 不占正式导航</div>
+  <section id="demoProfile" class="demo-profile" aria-live="polite" hidden></section>
 </div>
 <script src="audio.js"></script>
 <script src="whatif.js"></script>
@@ -4134,10 +4263,39 @@ qIn.addEventListener('blur', () => { hideTimer = setTimeout(() => { sugBox.inner
 qIn.addEventListener('focus', () => clearTimeout(hideTimer));
 
 // ---------- 决赛演示编排（Ctrl+Shift+D；不占正式导航） ----------
+function renderTechProfile() {
+  const box = document.getElementById('demoProfile');
+  if (!box) return;
+  const p = window.mm3d && typeof window.mm3d.getTechProfile === 'function' ? window.mm3d.getTechProfile() : null;
+  if (!p) {
+    box.hidden = false;
+    box.innerHTML = '<div class="dp-title">技术剖面 · 等待阅览室</div><div>3D 尚未就绪，打开「3D 阅览室」后再读取实测指标。</div>';
+    return;
+  }
+  const yesNo = (v) => v ? '开' : '关';
+  const rapier = { ready: '已加载', loading: '加载中', pending: '待加载', failed: '失败后静态', 'skipped-low-spec': '低配跳过' }[p.rapier] || p.rapier;
+  box.hidden = false;
+  box.innerHTML = `<div class="dp-title">技术剖面 · 当前设备实测</div>
+    <div class="dp-grid">
+      <span>楼层 <b>${esc(p.floor)}</b></span><span>DPR <b>${Number(p.dpr).toFixed(2)}</b></span>
+      <span>阴影 <b>${yesNo(p.shadows)}</b></span><span>物理 <b>${esc(rapier)}</b></span>
+      <span>Draw calls <b>${p.calls}</b></span><span>三角形 <b>${p.triangles}</b></span>
+      <span>几何体 <b>${p.geometries}</b></span><span>纹理 <b>${p.textures}</b></span>
+      <span>构建 <b>${p.buildMs}ms</b></span><span>合批 <b>${p.mergeMs}ms</b></span>
+    </div>
+    <div class="dp-foot">指标来自当前 WebGLRenderer；低配设备会主动关闭阴影并跳过 Rapier，保证核心阅览仍可用。</div>
+    <button type="button" class="dp-refresh" onclick="mmDemoTech()">刷新当前读数</button>`;
+}
+window.mmDemoTech = () => {
+  const dock = document.getElementById('demoDock');
+  if (dock) dock.hidden = false;
+  renderTechProfile();
+};
 window.mmDemoToggle = (show) => {
   const d = document.getElementById('demoDock');
   if (!d) return;
   d.hidden = show === false ? true : !d.hidden;
+  if (!d.hidden) renderTechProfile();
 };
 function mmWhenRoomReady(fn) {
   let tries = 0;
@@ -4266,7 +4424,5 @@ if (!document.getElementById('gate')) window.mmBoot3D().catch(() => {});
   else setTimeout(kick, 1500);
 })();
 </script>
-<script src="./login-particles.js"></script>
-<script src="./demo-presentation.js"></script>
 </body>
 </html>

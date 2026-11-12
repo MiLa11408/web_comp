@@ -263,18 +263,18 @@
       <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">直接引出三个关键词：<b>空间、线路、残缺</b>——这是后文全部展开的骨架。</span></div>
     </section>
 
-    <!-- 03 内容深度 48×384 -->
-    <section class="slide" data-deck-label="内容深度 48×384">
+    <!-- 03 内容深度 56×448 -->
+    <section class="slide" data-deck-label="内容深度 56×448">
       <header class="hd"><span class="kicker">内容<span class="en">CONTENT</span></span><span class="pg">03 / 16</span></header>
       <div class="ghost-num">03</div>
       <div class="body">
-        <div class="title-block"><h2>内容深度 · 48 本书 × 384 章</h2></div>
+        <div class="title-block"><h2>内容深度 · 56 本书 × 448 章</h2></div>
         <div class="stat-hero">
-          <div class="stat-big"><span>48</span><span class="x">×</span><span>8</span><span class="dim">= 384 章 · 约 80 万字</span></div>
+          <div class="stat-big"><span>56</span><span class="x">×</span><span>8</span><span class="dim">= 448 章 · 约 90 万字</span></div>
         </div>
         <table>
           <tr><th>指标</th><th>规模</th></tr>
-          <tr><td>书目</td><td><span class="num">48</span> 本 × 8 章 = 384 章，约 80 万字</td></tr>
+          <tr><td>书目</td><td><span class="num">56</span> 本 × 8 章 = 448 章，约 90 万字</td></tr>
           <tr><td>时间跨度</td><td>1936 图灵机 → 2026 前沿（每日更新 arXiv）</td></tr>
           <tr><td>每章骨架</td><td>9 段固定骨架：时间人物 → 机制 → 影响 → 争议 → 关系 → 来源</td></tr>
           <tr><td>来源</td><td>每章 ≥3 条实开核验来源，checked: true</td></tr>
@@ -303,10 +303,10 @@
             <p>5 条主线 + 7 条支线 + <b>55 站</b></p>
             <div class="note">同一本书跨线出现 = 「换乘站」。</div></div>
           <div class="card" data-no="G"><div class="c-kick">星图 · GRAPH</div><h4>概念关系</h4>
-            <p>48 个节点 · <b>30 条</b>关系弧线</p>
+            <p>56 个节点 · <b>30 条</b>关系弧线</p>
             <div class="note">节点分布在四层球壳。</div></div>
           <div class="card" data-no="T"><div class="c-kick">时间 · TIME</div><h4>年代与尺度</h4>
-            <p>384 张年代卡 · 12 项参数标尺 · 20 件失败案例</p>
+            <p>448 张年代卡 · 12 项参数标尺 · 20 件失败案例</p>
             <div class="note">时间轴 / 模型尺寸墙 / 失败博物馆。</div></div>
         </div>
         <div class="rule">一句话 · IN SHORT</div>
@@ -335,7 +335,7 @@
         <ul class="points">
           <li>输入补全：书名 / 章节 / 人物 / 标签，<b>边输边出</b></li>
           <li>命中词在正文中<b>高亮</b>，检索侧栏可跳转</li>
-          <li>书架总览一键列出全部 48 本书、索书号、年份与进度</li>
+          <li>书架总览一键列出全部 56 本书、索书号、年份与进度</li>
         </ul>
       </div>
       <div class="notes"><span class="tag">提词 · NOTES</span><span class="txt">现场可演示搜「神经网络」——命中优先落在神经书系，而不是散在全文里。</span></div>
@@ -460,9 +460,9 @@
         <div class="grid g2" style="margin-bottom:24px;">
           <div class="card"><div class="c-kick">内容校验 · npm run verify</div>
             <div class="big">0 FAIL · 0 WARN</div>
-            <p>384 章全自动校验：字数、来源、双向关系、索书号唯一性</p></div>
+            <p>448 章全自动校验：字数、来源、双向关系、索书号唯一性</p></div>
           <div class="card"><div class="c-kick">端到端 · npm run test:e2e</div>
-            <div class="big">145 项全绿</div>
+            <div class="big">151 项全绿</div>
             <p>Playwright + 系统 Chrome：入馆、取书、检索、电梯、书轨、星图、暗门、未写之书、盖章撤销、移动端</p></div>
         </div>
         <ul class="points">
@@ -569,7 +569,7 @@ npm run test:e2e   <span class="cm"># 端到端测试（需本机 Chrome/Edge）
         <div class="close-line">不替你下结论，只把线索摆在你面前。</div>
         <ul class="points" style="margin-top:20px;">
           <li>线上　<span class="url">https://150.158.1.111/ai/</span></li>
-          <li>48 本书 · 384 章 · 145 项 E2E 全绿</li>
+          <li>56 本书 · 448 章 · 151 项 E2E 全绿</li>
           <li>「假如」都标注为推测，史实都有来源</li>
         </ul>
         <div class="cover-team" style="margin-top:64px;">
@@ -662,7 +662,7 @@ npm run test:e2e   <span class="cm"># 端到端测试（需本机 Chrome/Edge）
   // 总览索引卡
   var labels = slides.map(function(s){ return s.getAttribute('data-deck-label')||''; });
   var titles = [
-    '封面 · THE MACHINE MEMORY','一句话定位','内容深度 48×384','知识结构','查找与检索',
+    '封面 · THE MACHINE MEMORY','一句话定位','内容深度 56×448','知识结构','查找与检索',
     '馆藏玩法','L4 的暗门','可玩演示与导览','技术方案','3D 阅览室','工程质量','安全性',
     '数据与统计','运行方式','演示路线','结束页'
   ];

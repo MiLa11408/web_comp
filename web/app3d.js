@@ -258,8 +258,38 @@ function canvasTexture(w, h, painter) {
   return tex;
 }
 
+const microNormalCache = new Map();
+function makeMicroNormal(kind, size = 64) {
+  const key = `${kind}:${size}`;
+  if (microNormalCache.has(key)) return microNormalCache.get(key);
+  const data = new Uint8Array(size * size * 4);
+  const seed = { wood: 17, metal: 29, plaster: 41, cloth: 53, stone: 67, dark: 79 }[kind] || 1;
+  const rnd = seededRand(seed);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const wave = kind === 'wood'
+        ? Math.sin(x * .17 + Math.sin(y * .07) * 2) * 10
+        : kind === 'metal'
+          ? Math.sin(x * .38) * 6
+          : Math.sin(x * .09 + y * .13) * 4;
+      const n = Math.max(0, Math.min(255, Math.round(128 + wave + (rnd() - .5) * 28)));
+      data[i] = n; data[i + 1] = Math.max(0, Math.min(255, Math.round(128 + (rnd() - .5) * 18)));
+      data[i + 2] = 255; data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(kind === 'wood' ? 3 : 2, kind === 'wood' ? 2 : 2);
+  tex.needsUpdate = true;
+  microNormalCache.set(key, tex);
+  return tex;
+}
+
 function makeFloorTexture(kind) {
   const tex = canvasTexture(512, 512, (g, W, H) => {
+    const rnd = seededRand(({ wood: 101, metal: 211, stone: 307, dark: 401 })[kind] || 503);
     if (kind === 'wood') {
       g.fillStyle = '#402e1d';
       g.fillRect(0, 0, W, H);
@@ -268,13 +298,13 @@ function makeFloorTexture(kind) {
         g.fillStyle = tones[(y / 64) % tones.length];
         g.fillRect(0, y, W, 64);
         for (let i = 0; i < 18; i++) {
-          g.strokeStyle = `rgba(18,11,5,${0.06 + Math.random() * 0.09})`;
+          g.strokeStyle = `rgba(18,11,5,${0.06 + rnd() * 0.09})`;
           g.lineWidth = 1;
           g.beginPath();
-          let yy = y + Math.random() * 64;
+          let yy = y + rnd() * 64;
           g.moveTo(0, yy);
           for (let x = 0; x <= W; x += 48) {
-            yy += Math.sin((x + i * 33 + y) / 70) * 1.8 + (Math.random() - 0.5) * 1.6;
+            yy += Math.sin((x + i * 33 + y) / 70) * 1.8 + (rnd() - 0.5) * 1.6;
             g.lineTo(x, yy);
           }
           g.stroke();
@@ -285,8 +315,8 @@ function makeFloorTexture(kind) {
         for (let x = off; x < W; x += 256) g.fillRect(x, y, 1, 64);
       }
       for (let i = 0; i < 12; i++) {
-        const kx = Math.random() * W;
-        const ky = Math.random() * H;
+        const kx = rnd() * W;
+        const ky = rnd() * H;
         g.strokeStyle = 'rgba(20,12,6,.35)';
         for (let r = 3; r < 11; r += 3) {
           g.beginPath();
@@ -329,16 +359,16 @@ function makeFloorTexture(kind) {
         g.stroke();
       }
       for (let i = 0; i < 1300; i++) {
-        g.fillStyle = `rgba(160,180,195,${Math.random() * 0.05})`;
-        g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+        g.fillStyle = `rgba(160,180,195,${rnd() * 0.05})`;
+        g.fillRect(rnd() * W, rnd() * H, 2, 2);
       }
     } else if (kind === 'stone') {
       g.fillStyle = '#33251a';
       g.fillRect(0, 0, W, H);
       for (let y = 0; y < H; y += 128) {
         for (let x = 0; x < W; x += 128) {
-          const t = 0.04 + Math.random() * 0.07;
-          g.fillStyle = `rgba(${Math.random() < 0.5 ? '90,70,50' : '60,45,32'},${t})`;
+          const t = 0.04 + rnd() * 0.07;
+          g.fillStyle = `rgba(${rnd() < 0.5 ? '90,70,50' : '60,45,32'},${t})`;
           g.fillRect(x + 3, y + 3, 122, 122);
           g.strokeStyle = 'rgba(16,10,6,.65)';
           g.lineWidth = 3;
@@ -349,26 +379,26 @@ function makeFloorTexture(kind) {
         g.strokeStyle = 'rgba(10,7,4,.35)';
         g.lineWidth = 1;
         g.beginPath();
-        let x = Math.random() * W;
-        let y = Math.random() * H;
+        let x = rnd() * W;
+        let y = rnd() * H;
         g.moveTo(x, y);
         for (let s = 0; s < 6; s++) {
-          x += (Math.random() - 0.5) * 70;
-          y += (Math.random() - 0.5) * 70;
+          x += (rnd() - 0.5) * 70;
+          y += (rnd() - 0.5) * 70;
           g.lineTo(x, y);
         }
         g.stroke();
       }
       for (let i = 0; i < 1400; i++) {
-        g.fillStyle = `rgba(20,13,8,${Math.random() * 0.08})`;
-        g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+        g.fillStyle = `rgba(20,13,8,${rnd() * 0.08})`;
+        g.fillRect(rnd() * W, rnd() * H, 2, 2);
       }
     } else {
       g.fillStyle = '#181420';
       g.fillRect(0, 0, W, H);
       for (let y = 0; y < H; y += 96) {
         for (let x = 0; x < W; x += 96) {
-          g.fillStyle = `rgba(${40 + Math.random() * 16},${34 + Math.random() * 12},${56 + Math.random() * 18},.35)`;
+          g.fillStyle = `rgba(${40 + rnd() * 16},${34 + rnd() * 12},${56 + rnd() * 18},.35)`;
           g.fillRect(x + 2, y + 2, 92, 92);
           g.strokeStyle = 'rgba(6,5,10,.7)';
           g.lineWidth = 2;
@@ -385,19 +415,19 @@ function makeFloorTexture(kind) {
       for (let i = 0; i < 10; i++) {
         g.strokeStyle = 'rgba(160,40,50,.14)';
         g.beginPath();
-        let x = Math.random() * W;
-        let y = Math.random() * H;
+        let x = rnd() * W;
+        let y = rnd() * H;
         g.moveTo(x, y);
         for (let s = 0; s < 4; s++) {
-          x += (Math.random() - 0.5) * 110;
-          y += (Math.random() - 0.5) * 110;
+          x += (rnd() - 0.5) * 110;
+          y += (rnd() - 0.5) * 110;
           g.lineTo(x, y);
         }
         g.stroke();
       }
       for (let i = 0; i < 1200; i++) {
-        g.fillStyle = `rgba(150,130,180,${Math.random() * 0.04})`;
-        g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+        g.fillStyle = `rgba(150,130,180,${rnd() * 0.04})`;
+        g.fillRect(rnd() * W, rnd() * H, 2, 2);
       }
     }
   });
@@ -409,18 +439,19 @@ function makeFloorTexture(kind) {
 
 function makePlasterTexture() {
   const tex = canvasTexture(256, 256, (g, W, H) => {
+    const rnd = seededRand(809);
     g.fillStyle = '#b8b2a8';
     g.fillRect(0, 0, W, H);
     for (let i = 0; i < 2600; i++) {
-      const v = Math.random();
-      g.fillStyle = v < 0.5 ? `rgba(40,34,28,${Math.random() * 0.09})` : `rgba(255,250,240,${Math.random() * 0.05})`;
-      g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+      const v = rnd();
+      g.fillStyle = v < 0.5 ? `rgba(40,34,28,${rnd() * 0.09})` : `rgba(255,250,240,${rnd() * 0.05})`;
+      g.fillRect(rnd() * W, rnd() * H, 2, 2);
     }
     for (let i = 0; i < 8; i++) {
-      g.strokeStyle = `rgba(50,40,30,${0.04 + Math.random() * 0.05})`;
+      g.strokeStyle = `rgba(50,40,30,${0.04 + rnd() * 0.05})`;
       g.lineWidth = 1;
       g.beginPath();
-      let x = Math.random() * W;
+      let x = rnd() * W;
       g.moveTo(x, 0);
       for (let y = 0; y <= H; y += 32) g.lineTo(x + Math.sin(y / 20) * 3, y);
       g.stroke();
@@ -686,6 +717,10 @@ function makeDecorTexture(kind) {
 
 export async function init3D({ container, books, floors, shelfConfig = {}, onOpenBook, onOpenStolen }) {
   const __t0 = performance.now();
+  let __buildMs = 0;
+  let __mergeMs = 0;
+  let __firstFrameMs = null;
+  let __rapierState = 'pending';
   injectCss();
 
   const root = document.createElement('div');
@@ -815,20 +850,24 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (!floorTexCache[kind]) floorTexCache[kind] = makeFloorTexture(kind);
     floorMats[fid] = new THREE.MeshStandardMaterial({
       map: floorTexCache[kind],
-      roughness: kind === 'metal' ? 0.42 : kind === 'dark' ? 0.78 : 0.9,
-      metalness: kind === 'metal' ? 0.38 : 0.04,
+      normalMap: makeMicroNormal(kind),
+      normalScale: new THREE.Vector2(kind === 'metal' ? 0.22 : 0.12, kind === 'wood' ? 0.08 : 0.12),
+      roughness: kind === 'metal' ? 0.36 : kind === 'dark' ? 0.8 : 0.88,
+      metalness: kind === 'metal' ? 0.44 : 0.04,
     });
   }
 
-  // 每层墙面材质：同一张灰泥贴图，颜色/粗糙度/金属度不同
+  // 每层墙面材质：灰泥底纹 + 微法线，光线掠过时保留墙体颗粒感
   const plasterTex = makePlasterTexture();
+  const plasterNormal = makeMicroNormal('plaster');
   const wallHex = { all: 0x342a20, L1: 0x3f3021, L2: 0x2b3740, L3: 0x3a2c1e, L4: 0x2a2436 };
   const wallMats = {};
   for (const fid of Object.keys(wallHex)) {
     wallMats[fid] = new THREE.MeshStandardMaterial({
-      color: wallHex[fid], map: plasterTex,
-      roughness: fid === 'L2' ? 0.6 : 0.92,
-      metalness: fid === 'L2' ? 0.28 : 0.03,
+      color: wallHex[fid], map: plasterTex, normalMap: plasterNormal,
+      normalScale: new THREE.Vector2(fid === 'L2' ? 0.18 : 0.11, fid === 'L2' ? 0.12 : 0.09),
+      roughness: fid === 'L2' ? 0.56 : 0.9,
+      metalness: fid === 'L2' ? 0.25 : 0.03,
     });
   }
 
@@ -1248,9 +1287,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     });
     const spineMat = new THREE.MeshStandardMaterial({
       map: spineTexture(book, variant, ordinal),
-      roughness: [0.62, 0.48, 0.8][variant], metalness: [0.05, 0.18, 0.02][variant],
-      emissive: baseColor.clone().multiplyScalar(variant === 2 ? 0.18 : 0.25),
-      emissiveIntensity: variant === 2 ? 0.28 : 0.35,
+      normalMap: makeMicroNormal(variant === 0 ? 'cloth' : 'wood'),
+      normalScale: new THREE.Vector2(0.1, 0.065),
+      roughness: [0.68, 0.48, 0.82][variant], metalness: [0.045, 0.2, 0.025][variant],
+      emissive: baseColor.clone().multiplyScalar(variant === 2 ? 0.1 : 0.12),
+      emissiveIntensity: variant === 2 ? 0.18 : 0.2,
     });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(thickness, height, 0.40), [sideMat, sideMat, sideMat, sideMat, spineMat, sideMat]);
     mesh.position.copy(basePos);
@@ -2354,16 +2395,17 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // 尘埃：位置只在初始化时写一次，漂浮交给顶点着色器。
   // 这样每帧不再更新 2150 个 position、也不再整块上传 BufferAttribute。
   function buildDust(count, size, speed, opacity, color) {
+    const rnd = seededRand(strHash(`${color}|${count}|${size}`));
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
     const seed = new Float32Array(count);
     for (let i = 0; i < count; i++) {
       const j = i * 3;
-      pos[j] = (Math.random() - 0.5) * 27.6;
+      pos[j] = (rnd() - 0.5) * 27.6;
       // 层高 6.6：粒子全部留在可见空间里，不再有 9.1 的“天花板外空转”
-      pos[j + 1] = 0.06 + Math.random() * 6.24;
-      pos[j + 2] = -6.6 + Math.random() * 16.6;
-      seed[i] = Math.random();
+      pos[j + 1] = 0.06 + rnd() * 6.24;
+      pos[j + 2] = -6.6 + rnd() * 16.6;
+      seed[i] = rnd();
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
@@ -2483,7 +2525,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
   console.info(`[3D] 静态合批：${mergeRemoved} 个网格 → ${mergeAdded} 个`);
   const __tMerge = performance.now();
-  console.info(`[3D] 构建 ${Math.round(__tBuild - __t0)}ms · 合批 ${Math.round(__tMerge - __tBuild)}ms`);
+  __buildMs = Math.round(__tBuild - __t0);
+  __mergeMs = Math.round(__tMerge - __tBuild);
+  console.info(`[3D] 构建 ${__buildMs}ms · 合批 ${__mergeMs}ms`);
 
   // 每帧只推进 uniform，不再碰顶点数组
   function updateDust(layer, dt) {
@@ -2496,6 +2540,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   async function setupPhysics() {
     if (world || physicsLoading) return;
     physicsLoading = true;
+    __rapierState = 'loading';
     try {
       const RAPIER = (await import('./vendor/rapier.mjs')).default;
       await RAPIER.init();
@@ -2522,8 +2567,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         world.createCollider(RAPIER.ColliderDesc.cuboid(item.w / 2, item.h / 2, 0.20).setFriction(0.98).setRestitution(0.02), rb);
         item.body = rb;
       }
+      __rapierState = 'ready';
       console.info(`[3D] Rapier 就绪（${bookItems.filter((x) => x.body).length} 本书有物理体）`);
     } catch (e) {
+      __rapierState = 'failed';
       console.warn('[3D] Rapier 初始化失败，退化为静态摆放', e);
     } finally {
       physicsLoading = false;
@@ -2532,6 +2579,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // 首帧渲染之后再下载 4.3MB 的 Rapier，让门厅与 3D 场景先出现
   // 手机/低配跳过物理：书只会被抽起/翻开/放桌，不需要刚体模拟，省 1.8MB 流量
   if (LOW_SPEC) {
+    __rapierState = 'skipped-low-spec';
     console.info('[3D] 低配/移动端跳过 Rapier');
   } else {
     const kickPhysics = () => { setupPhysics(); };
@@ -3680,7 +3728,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     renderer.render(scene, camera);
     if (__firstFrame) {
       __firstFrame = false;
-      console.info(`[3D] 首帧渲染 ${Math.round(performance.now() - __r0)}ms · 距 init3D 开始 ${Math.round(performance.now() - __t0)}ms`);
+      __firstFrameMs = Math.round(performance.now() - __t0);
+      console.info(`[3D] 首帧渲染 ${Math.round(performance.now() - __r0)}ms · 距 init3D 开始 ${__firstFrameMs}ms`);
     }
     drawLens();
   }
@@ -3762,6 +3811,20 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   console.info(`[3D] init3D 完成 ${Math.round(performance.now() - __t0)}ms`);
   return {
     reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups, shelfUnits: SHELF_UNITS,
+    getTechProfile: () => ({
+      lowSpec: LOW_SPEC,
+      dpr: renderer.getPixelRatio(),
+      shadows: renderer.shadowMap.enabled,
+      rapier: __rapierState,
+      buildMs: __buildMs,
+      mergeMs: __mergeMs,
+      firstFrameMs: __firstFrameMs,
+      calls: renderer.info.render.calls,
+      triangles: renderer.info.render.triangles,
+      geometries: renderer.info.memory.geometries,
+      textures: renderer.info.memory.textures,
+      floor: currentFloor,
+    }),
     secretDoor,
     secretVeil,
     revealSecretDoor,

@@ -32,6 +32,27 @@ if (gateTitle.includes('机忆书库')) ok('入馆门厅显示', `${gateMs}ms`);
 else bad('入馆门厅显示', gateTitle);
 const gateBtns = await page.locator('.gate-btn').count();
 gateBtns === 3 ? ok('门厅三个按钮', String(gateBtns)) : bad('门厅三个按钮', String(gateBtns));
+const gateMapMotion = await page.evaluate(async () => {
+  const c = document.getElementById('gate-map');
+  if (!c || !c.width) return false;
+  const a = c.toDataURL();
+  await new Promise((r) => setTimeout(r, 450));
+  return a !== c.toDataURL();
+});
+gateMapMotion ? ok('门厅索引持续演算') : bad('门厅索引持续演算', '画面未变化');
+await page.locator('#gateUser').fill('e2e_probe');
+await page.locator('#gatePass').fill('testing-password');
+await page.route('**/api/login', async (route) => {
+  await new Promise((r) => setTimeout(r, 450));
+  await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { message: '测试用拒绝' } }) });
+});
+await page.evaluate(() => { void window.gateLogin(); });
+const checkingState = await page.locator('#gate').evaluate((el) => ({ verifying: el.classList.contains('verifying'), disabled: [...el.querySelectorAll('.gate-actions button')].every((b) => b.disabled) }));
+checkingState.verifying && checkingState.disabled ? ok('登录开始进入核验动画') : bad('登录核验状态', JSON.stringify(checkingState));
+await page.waitForFunction(() => document.getElementById('gate')?.classList.contains('denied'), null, { timeout: 3000 });
+await page.unroute('**/api/login');
+const deniedState = await page.locator('#gate').evaluate((el) => ({ denied: el.classList.contains('denied'), verifying: el.classList.contains('verifying'), enabled: [...el.querySelectorAll('.gate-actions button')].every((b) => !b.disabled) }));
+deniedState.denied && !deniedState.verifying && deniedState.enabled ? ok('登录失败后可重试') : bad('登录失败状态', JSON.stringify(deniedState));
 
 await page.evaluate(() => localStorage.setItem('mm_tutorial_seen', '1'));
 await page.getByRole('button', { name: '以访客身份入馆' }).click();
@@ -700,6 +721,15 @@ const dockVisible = await page.locator('#demoDock').isVisible();
 dockVisible ? ok('演示编排面板可打开') : bad('演示编排面板', '不可见');
 const dockButtons = await page.locator('#demoDock .dd-grid button').count();
 dockButtons >= 6 ? ok('演示编排六个入口', String(dockButtons)) : bad('演示编排入口', String(dockButtons));
+await page.evaluate(() => window.mmDemoTech());
+const techProfile = await page.locator('#demoProfile').innerText();
+const techExpected = await page.evaluate(() => {
+  const p = window.mm3d.getTechProfile();
+  return [`${p.calls}`, `${p.triangles}`, `${p.dpr.toFixed(2)}`, `${p.buildMs}ms`];
+});
+techExpected.every((v) => techProfile.includes(v))
+  ? ok('技术剖面显示真实渲染读数', techExpected.join(' / '))
+  : bad('技术剖面真实读数', `${techExpected.join(' / ')} != ${techProfile}`);
 await page.evaluate(() => window.mmDemoToggle(false));
 
 // 6g. 尘埃改为 GPU 着色器
