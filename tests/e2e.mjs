@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
 // 运行：node tests/e2e.mjs   （需本机 Chrome 或 Edge，服务已在 3300 启动）
 // 可用 BASE=http://127.0.0.1:3300/ 覆盖地址。
 import { chromium } from 'playwright-core';
