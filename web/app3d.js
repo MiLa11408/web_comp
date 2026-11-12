@@ -2,6 +2,10 @@
 // 书架程序化生成、书脊 Canvas 排版、取书翻开动画、黄铜电梯选层、尘埃与星图台。
 import * as THREE from './vendor/three.module.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { EffectComposer } from './vendor/postprocessing/EffectComposer.js';
+import { RenderPass } from './vendor/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from './vendor/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from './vendor/postprocessing/OutputPass.js';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const DECAY = ['完好', '轻残', '中残', '高残'];
@@ -742,7 +746,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   renderer.setPixelRatio(LOW_SPEC ? Math.min(1.25, BASE_DPR) : BASE_DPR);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = !LOW_SPEC;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // r187 起 PCFSoftShadowMap 已移除，软边由 shadow.radius 控制
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.info.autoReset = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.7;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -760,6 +766,31 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // 竖屏手机用更大的 FOV，避免一进门只看见两排书脊
   const camera = new THREE.PerspectiveCamera(LOW_SPEC ? 66 : 55, window.innerWidth / window.innerHeight, 0.1, 95);
   camera.rotation.order = 'YXZ';
+
+  // ---------- 后处理：只让灯火/黄铜/窗光泛出柔光，保持古籍的暗部 ----------
+  // 低配（手机 / 低内存）直接跳过整条后处理链，省下两次全屏 pass 与五级模糊。
+  let composer = null;
+  let bloomPass = null;
+  if (!LOW_SPEC) {
+    try {
+      composer = new EffectComposer(renderer);
+      composer.setPixelRatio(renderer.getPixelRatio());
+      composer.setSize(window.innerWidth, window.innerHeight);
+      composer.addPass(new RenderPass(scene, camera));
+      bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.34, // strength：克制，避免整屏发灰
+        0.68, // radius：光晕扩散范围
+        0.74, // threshold：灯火、黄铜与窗光参与，木质暗部保持干净
+      );
+      composer.addPass(bloomPass);
+      composer.addPass(new OutputPass());
+    } catch (err) {
+      console.warn('[3D] 后处理不可用，回退为直接渲染', err);
+      composer = null;
+      bloomPass = null;
+    }
+  }
   // 第一人称：WASD 移动 + 鼠标拖拽转视角
   const player = {
     pos: new THREE.Vector3(0, 1.68, 9.1),
@@ -848,8 +879,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   spot.position.set(CHANDELIER_POS.x, CHANDELIER_POS.y, CHANDELIER_POS.z);
   spot.target.position.set(0, 0.6, CHANDELIER_POS.z);
   spot.castShadow = true;
-  spot.shadow.mapSize.set(1024, 1024);
-  spot.shadow.bias = -0.0005;
+  const shadowSize = LOW_SPEC ? 512 : 2048;
+  spot.shadow.mapSize.set(shadowSize, shadowSize);
+  spot.shadow.bias = -0.00035;
+  spot.shadow.normalBias = 0.022;
+  spot.shadow.radius = 2.6;
+  spot.shadow.camera.near = 1.2;
+  spot.shadow.camera.far = 16;
   scene.add(spot);
   scene.add(spot.target);
 
@@ -884,6 +920,14 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       windowLights.push(wl);
     }
   }
+
+  // 展品聚焦光：点开失窃展柜时把一束暖光打在玻璃罩上，其余环境不压暗
+  const caseSpot = new THREE.SpotLight(0xffe2b0, 0, 5.2, 0.42, 0.72, 1.2);
+  caseSpot.position.set(0, 3.4, 0);
+  caseSpot.target.position.set(0, 0.85, 0);
+  scene.add(caseSpot);
+  scene.add(caseSpot.target);
+  let caseSpotTarget = 0;
 
   // 机密层警示灯（常态关闭，L4 脉冲）
   const beaconLight = new THREE.PointLight(0xff2a2a, 0, 10, 2);
@@ -2961,6 +3005,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   function setFloor(fid, silent = false) {
     currentFloor = fid;
     clearHover(); // 切层后旧高亮目标可能已隐藏，先还原缩放
+    caseSpotTarget = 0;
     applyAtmos(fid);
     for (const it of bookItems) {
       // 手里的书、桌上叠着的书不跟楼层隐藏，否则拿在手上会突然消失
@@ -3610,6 +3655,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     if (tour) endTour();
     clearHover();
     joyReset();
+    caseSpotTarget = 0;
     if (lensOn) toggleLens(false);
     taking = false;
     heldBook = null;
@@ -3706,6 +3752,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const dt = Math.min(0.06, Math.max(0.001, (nowMs - lastFrame) / 1000));
     lastFrame = nowMs;
     elapsed += dt;
+    // 展品聚光：点开展柜后淡入，切层 / 复位时淡出
+    caseSpot.intensity += (caseSpotTarget - caseSpot.intensity) * Math.min(1, dt * 5);
     // 导览：用 override 驱动相机，动画 900ms easeInOut，到位后停在目标
     if (tour) {
       if (tour.anim) {
@@ -3800,7 +3848,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       heldBook.mesh.visible = true;
     }
     const __r0 = performance.now();
-    renderer.render(scene, camera);
+    // 关闭 autoReset 后手动清零：整帧（场景 + 阴影 + 后处理）的 draw call 都计入渲染预算
+    renderer.info.reset();
+    if (composer) composer.render(); else renderer.render(scene, camera);
     if (__firstFrame) {
       __firstFrame = false;
       __firstFrameMs = Math.round(performance.now() - __t0);
@@ -3815,6 +3865,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    if (composer) composer.setSize(window.innerWidth, window.innerHeight);
     const dpr = renderer.getPixelRatio();
     dustNear.mat.uniforms.uPixelRatio.value = dpr;
     dustFar.mat.uniforms.uPixelRatio.value = dpr;
@@ -3873,6 +3924,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const dz = found.item.z - pz;
     player.tYaw = Math.atan2(-dx, -dz);
     player.tPitch = Math.atan2(0.85 - player.pos.y, Math.hypot(dx, dz));
+    // 展陈聚光：从展柜斜上方打下来，像博物馆里被单独照亮的展品
+    caseSpot.position.set(found.item.x + fx * 0.9, 3.5, found.item.z + fz * 0.9);
+    caseSpot.target.position.set(found.item.x, 0.82, found.item.z);
+    caseSpotTarget = 7.2;
     snapCamToPreset();
     return true;
   }
@@ -3897,6 +3952,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       env: !!scene.environment,
       envIntensity: scene.environment ? scene.environmentIntensity : 0,
       windowLights: windowLights.length,
+      bloom: !!composer,
+      bloomStrength: bloomPass ? bloomPass.strength : 0,
+      shadowMap: shadowSize,
       calls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
       geometries: renderer.info.memory.geometries,
@@ -3924,6 +3982,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     setCollectibleStates,
     focusStolen,
     getStolenPlan,
+    getCaseSpot: () => ({ intensity: Number(caseSpot.intensity.toFixed(2)), target: caseSpotTarget }),
     toggleLens,
     toggleLamp,
     isLensOn: () => lensOn,

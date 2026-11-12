@@ -16,7 +16,7 @@ const DEMO_META = {
   },
   attention: {
     title: '注意力 · 词与词的连线',
-    sub: '输入一句中文，切成二元组，再看看每个词把“注意力”分给了谁。',
+    sub: '输入一句中文，切成二元组，看 token×token 的注意力矩阵；换一个头，关注方式就换了。',
     foot: '这里的权重是启发式近似，不是模型学到的注意力',
   },
   rules: {
@@ -34,11 +34,16 @@ const DEMO_META = {
     sub: '调参数量、数据量与算力，看一条简化幂律把「能力分」拉到曲线的哪个位置。',
     foot: '真实缩放定律是经验拟合，这里只是示意',
   },
+  cnn: {
+    title: '卷积网络 · 一层一层看出图案',
+    sub: '把一张像素图喂给 3×3 卷积核，看它怎样滑动、激活、池化，最后得到分类分数。',
+    foot: '示意：真实 CNN 的卷积核由训练学得，这里用固定核演示运算过程',
+  },
 };
 
 const CSS = `
 .mm-demo-overlay {
-  position: fixed; inset: 0; z-index: 80;
+  position: fixed; inset: 0; z-index: 92;
   display: flex; align-items: center; justify-content: center;
   padding: 18px;
   background: radial-gradient(900px 500px at 50% 20%, rgba(42,31,20,.94), rgba(8,6,4,.9));
@@ -290,6 +295,97 @@ const CSS = `
   margin-top: 16px; padding-top: 10px; border-top: 1px dashed #3a2f22;
   color: #7d6e55; font-size: 11px; line-height: 1.6;
 }
+.mm-cnn-top {
+  display: flex; flex-wrap: wrap; align-items: flex-start;
+  justify-content: space-between; gap: 12px; margin-bottom: 12px;
+}
+.mm-cnn-kernels { display: flex; flex-wrap: wrap; gap: 6px; }
+.mm-cnn-kernel-btn {
+  padding: 6px 10px; border: 1px solid #4a3a24; background: #211a13;
+  color: #a8977a; font-size: 12px; cursor: pointer;
+}
+.mm-cnn-kernel-btn:hover { border-color: #c8a24a; color: #c8a24a; }
+.mm-cnn-kernel-btn[aria-pressed="true"] { background: #c8a24a; border-color: #c8a24a; color: #14100d; }
+.mm-cnn-kernel-view { flex: 0 0 auto; }
+.mm-cnn-kernel-label {
+  margin-bottom: 5px; color: #8a7a5c;
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 10.5px; letter-spacing: 1px;
+}
+.mm-cnn-ker {
+  display: grid; grid-template-columns: repeat(3, 30px); gap: 1px;
+  padding: 1px; border: 1px solid #3a2f22; background: #2c2116;
+}
+.mm-cnn-ker-cell {
+  display: flex; align-items: center; justify-content: center;
+  height: 28px; background: #181310; color: #9a8a6f;
+  font-family: Consolas, monospace; font-size: 11px;
+}
+.mm-cnn-ker-cell.pos { color: #c8a24a; }
+.mm-cnn-ker-cell.neg { color: #7f9aa8; }
+.mm-cnn-flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
+.mm-cnn-stage { min-width: 0; padding: 6px; border: 1px solid #2c2116; background: #14100d; }
+.mm-cnn-stage-head {
+  display: flex; justify-content: space-between; gap: 6px; margin-bottom: 5px;
+  color: #8a7a5c; font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 10px; letter-spacing: .5px;
+}
+.mm-cnn-stage-head b { color: #cbb892; font-weight: 400; }
+.mm-cnn-grid { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; background: #241c14; }
+.mm-cnn-cell { min-width: 0; aspect-ratio: 1 / 1; background: #14100d; }
+.mm-cnn-grid[data-stage="conv"] .mm-cnn-cell,
+.mm-cnn-grid[data-stage="relu"] .mm-cnn-cell { cursor: crosshair; }
+.mm-cnn-cell.win { box-shadow: inset 0 0 0 1px rgba(234,224,200,.85); }
+.mm-cnn-cell.is-focus { box-shadow: inset 0 0 0 2px #eae0c8; }
+.mm-cnn-inspect {
+  margin-top: 10px; padding: 9px 11px;
+  border: 1px dashed #3a2f22; background: #181310;
+}
+.mm-cnn-inspect-title {
+  margin-bottom: 7px; color: #8a7a5c;
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 10.5px; letter-spacing: 1px;
+}
+.mm-cnn-window { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mm-cnn-mini {
+  display: grid; grid-template-columns: repeat(3, 26px); gap: 1px;
+  padding: 1px; background: #2c2116;
+}
+.mm-cnn-mini-cell {
+  display: flex; align-items: center; justify-content: center;
+  height: 24px; background: #14100d; color: #cbb892;
+  font-family: Consolas, monospace; font-size: 9.5px;
+}
+.mm-cnn-mini-cell.pos { color: #c8a24a; }
+.mm-cnn-mini-cell.neg { color: #7f9aa8; }
+.mm-cnn-eq { color: #8a7a5c; font-size: 12px; }
+.mm-cnn-sum { color: #c8a24a; font-family: Consolas, monospace; font-size: 13px; }
+.mm-cnn-products {
+  margin: 7px 0 0; color: #9a8a6f;
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 10.5px; line-height: 1.75; overflow-wrap: anywhere;
+}
+.mm-attn-heads { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.mm-attn-head {
+  padding: 6px 11px; border: 1px solid #4a3a24; background: #211a13;
+  color: #a8977a; font-size: 12px; cursor: pointer;
+}
+.mm-attn-head:hover { border-color: #c8a24a; color: #c8a24a; }
+.mm-attn-head[aria-pressed="true"] { background: #c8a24a; border-color: #c8a24a; color: #14100d; }
+.mm-attn-caption { margin-bottom: 8px; color: #c8a24a; font-size: 12.5px; line-height: 1.7; overflow-wrap: anywhere; }
+.mm-attn-matrix-wrap {
+  max-width: 480px; margin: 0 auto; padding: 4px;
+  border: 1px solid #3a2f22; background: #181310;
+}
+.mm-attn-matrix { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; }
+.mm-attn-cell { min-width: 0; aspect-ratio: 1 / 1; cursor: pointer; }
+.mm-attn-cell.row-on { box-shadow: inset 0 0 0 1px rgba(234,224,200,.7); }
+.mm-attn-cell.col-on { box-shadow: inset 0 0 0 1px rgba(200,162,74,.8); }
+.mm-attn-legend {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+  margin-top: 6px; color: #8a7a5c; font-size: 10.5px;
+}
+.mm-attn-readout { min-height: 17px; margin-top: 6px; color: #9a8a6f; font-size: 11.5px; line-height: 1.6; overflow-wrap: anywhere; }
 @media (max-width: 520px) {
   .mm-demo-overlay { padding: 8px; align-items: flex-start; }
   .mm-demo-panel { max-height: calc(100vh - 16px); padding: 16px 14px 14px; }
@@ -602,6 +698,36 @@ function buildChineseRoom(root) {
 // ---------- 3. 注意力示意 ----------
 function buildAttention(root) {
   const DEFAULT_SENTENCE = '机忆书库收藏着机器的记忆';
+  const HEADS = [
+    {
+      id: 'near',
+      name: '邻近头',
+      formula: '1 / (1 + 距离)',
+      raw(i, j) {
+        return 1 / (1 + Math.abs(i - j));
+      },
+    },
+    {
+      id: 'repeat',
+      name: '重复字头',
+      formula: '0.15 + 共享字数',
+      raw(i, j, list) {
+        const own = new Set(Array.from(list[i]));
+        let shared = 0;
+        Array.from(list[j]).forEach((ch) => { if (own.has(ch)) shared += 1; });
+        return 0.15 + shared;
+      },
+    },
+    {
+      id: 'far',
+      name: '远距离头',
+      formula: '0.15 + 距离 / (N - 1)',
+      raw(i, j, list) {
+        if (list.length < 2) return 1;
+        return 0.15 + Math.abs(i - j) / (list.length - 1);
+      },
+    },
+  ];
 
   root.innerHTML = `
     <label class="mm-demo-label" for="mm-att-input">输入一句中文（6–20 字）：</label>
@@ -611,11 +737,21 @@ function buildAttention(root) {
     </div>
     <div class="mm-demo-status" style="margin-top:10px"></div>
     <div class="mm-demo-attn" hidden>
+      <div class="mm-attn-heads"></div>
+      <div class="mm-attn-caption"></div>
+      <div class="mm-attn-matrix-wrap">
+        <div class="mm-attn-matrix"></div>
+      </div>
+      <div class="mm-attn-legend">
+        <span>行 = 查询词 · 列 = 被注意的词</span>
+        <span>对角线为自身</span>
+      </div>
+      <div class="mm-attn-readout"></div>
       <div class="mm-demo-tokens-title">二元组切分结果 · 点任意词查看权重</div>
       <div class="mm-demo-tokenline"></div>
       <div class="mm-demo-bars-title"></div>
       <div class="mm-demo-bars"></div>
-      <p class="mm-demo-note">示意：真实注意力由模型学得，这里是可解释的简化。权重 = 位置距离 + 字面共享次数，只用于演示。</p>
+      <p class="mm-demo-note">示意：三个头用不同的启发式权重，每行做 softmax 归一化，使一个词分出去的注意力合计为 100%。真实注意力由模型学得。</p>
     </div>
   `;
 
@@ -623,46 +759,96 @@ function buildAttention(root) {
   const runButton = root.querySelector('.mm-demo-primary');
   const status = root.querySelector('.mm-demo-status');
   const panel = root.querySelector('.mm-demo-attn');
+  const headsBox = root.querySelector('.mm-attn-heads');
+  const caption = root.querySelector('.mm-attn-caption');
+  const matrixBox = root.querySelector('.mm-attn-matrix');
+  const readout = root.querySelector('.mm-attn-readout');
   const tokenBox = root.querySelector('.mm-demo-tokenline');
   const barsTitle = root.querySelector('.mm-demo-bars-title');
   const bars = root.querySelector('.mm-demo-bars');
   let tokens = [];
+  let matrix = [];
+  let headIndex = 0;
   let selected = 0;
+
+  headsBox.innerHTML = HEADS.map((head, index) => `
+    <button type="button" class="mm-attn-head" data-head="${index}" title="${escHtml(head.formula)}" aria-pressed="${index === 0}">${escHtml(head.name)}</button>
+  `).join('');
 
   function effectiveChars(raw) {
     return Array.from(String(raw ?? '').replace(/[\s\u3000]/g, ''))
       .filter((ch) => /[\u4e00-\u9fa5A-Za-z0-9]/.test(ch));
   }
 
-  function weightsFor(index) {
-    const raw = tokens.map((token, j) => {
-      if (j === index) return 0;
-      const distance = Math.abs(j - index);
-      const position = 1 / (1 + distance * 0.9);
-      const own = new Set(Array.from(tokens[index]));
-      let shared = 0;
-      Array.from(token).forEach((ch) => { if (own.has(ch)) shared += 1; });
-      return position + shared * 0.55;
+  function buildMatrix() {
+    const head = HEADS[headIndex];
+    const n = tokens.length;
+    matrix = [];
+    for (let i = 0; i < n; i += 1) {
+      const rawRow = [];
+      for (let j = 0; j < n; j += 1) rawRow.push(head.raw(i, j, tokens));
+      const max = Math.max(...rawRow);
+      const exps = rawRow.map((value) => Math.exp(value - max));
+      const sum = exps.reduce((acc, value) => acc + value, 0) || 1;
+      matrix.push(exps.map((value) => value / sum));
+    }
+  }
+
+  function heatColor(weight, diag, maxWeight) {
+    const t = Math.sqrt(Math.max(0, Math.min(1, weight / maxWeight)));
+    const from = [26, 20, 14];
+    const to = diag ? [170, 102, 58] : [200, 162, 74];
+    const rgb = from.map((value, index) => Math.round(value + (to[index] - value) * t));
+    return `rgb(${rgb.join(',')})`;
+  }
+
+  function markSelection() {
+    Array.from(matrixBox.children).forEach((cell) => {
+      const i = Number(cell.dataset.i);
+      const j = Number(cell.dataset.j);
+      cell.classList.toggle('row-on', i === selected);
+      cell.classList.toggle('col-on', j === selected);
     });
-    const sum = raw.reduce((acc, value) => acc + value, 0) || 1;
-    return raw.map((value) => value / sum);
+  }
+
+  function syncState() {
+    window.__mmAttentionState = {
+      tokens: tokens.slice(),
+      head: HEADS[headIndex].id,
+      matrix: matrix.map((row) => row.slice()),
+      selected,
+    };
+  }
+
+  function renderMatrix() {
+    const maxWeight = Math.max(1e-9, ...matrix.map((row) => Math.max(...row)));
+    matrixBox.style.setProperty('--n', String(tokens.length));
+    matrixBox.innerHTML = matrix.map((row, i) => row.map((weight, j) => {
+      const tip = `第 ${i + 1} 个词「${tokens[i]}」→ 第 ${j + 1} 个词「${tokens[j]}」：${(weight * 100).toFixed(1)}%`;
+      return `<span class="mm-attn-cell${i === j ? ' diag' : ''}" data-i="${i}" data-j="${j}" title="${escHtml(tip)}" style="background:${heatColor(weight, i === j, maxWeight)}"></span>`;
+    }).join('')).join('');
+    markSelection();
   }
 
   function renderBars(index) {
-    const weights = weightsFor(index);
+    const weights = matrix[index] || [];
     const max = Math.max(...weights) || 1;
-    barsTitle.textContent = `「${tokens[index]}」对其他词的注意力分配`;
+    barsTitle.textContent = `「${tokens[index]}」的注意力分配（含自身）`;
     bars.innerHTML = tokens.map((token, j) => {
-      if (j === index) return '';
-      const pct = (weights[j] * 100).toFixed(1);
-      const width = Math.max(2, Math.round((weights[j] / max) * 100));
+      const pct = ((weights[j] || 0) * 100).toFixed(1);
+      const width = Math.max(2, Math.round(((weights[j] || 0) / max) * 100));
       return `
         <div class="mm-demo-bar-row">
-          <span class="mm-demo-bar-label" title="${escHtml(token)}">${escHtml(token)}</span>
+          <span class="mm-demo-bar-label" title="${escHtml(token)}${j === index ? '（自身）' : ''}">${escHtml(token)}</span>
           <span class="mm-demo-bar-track"><span class="mm-demo-bar-fill" style="width:${width}%"></span></span>
           <span class="mm-demo-bar-pct">${pct}%</span>
         </div>`;
     }).join('');
+  }
+
+  function resetReadout() {
+    const head = HEADS[headIndex];
+    readout.textContent = `当前头：${head.name} · 权重公式 ${head.formula}，每行 softmax 归一化。`;
   }
 
   function select(index) {
@@ -672,18 +858,28 @@ function buildAttention(root) {
       child.classList.toggle('active', on);
       child.setAttribute('aria-pressed', String(on));
     });
+    markSelection();
     renderBars(index);
+    caption.textContent = `第 ${index + 1} 个词「${tokens[index]}」把多少注意力给了谁（${HEADS[headIndex].name}）`;
+    resetReadout();
+    syncState();
   }
 
   function run() {
     const chars = effectiveChars(input.value);
     if (chars.length < 6) {
       panel.hidden = true;
+      tokens = [];
+      matrix = [];
+      window.__mmAttentionState = { tokens: [], head: HEADS[headIndex].id, matrix: [], selected: 0 };
       status.textContent = `只有 ${chars.length} 个有效字符，至少需要 6 个。`;
       return;
     }
     if (chars.length > 20) {
       panel.hidden = true;
+      tokens = [];
+      matrix = [];
+      window.__mmAttentionState = { tokens: [], head: HEADS[headIndex].id, matrix: [], selected: 0 };
       status.textContent = `有 ${chars.length} 个有效字符，最多支持 20 个。`;
       return;
     }
@@ -697,9 +893,41 @@ function buildAttention(root) {
     Array.from(tokenBox.children).forEach((child) => {
       child.addEventListener('click', () => select(Number(child.dataset.index)));
     });
+    buildMatrix();
+    renderMatrix();
     select(0);
-    status.textContent = `已切出 ${tokens.length} 个二元组。点击任意词，查看它的权重分配。`;
+    status.textContent = `已切出 ${tokens.length} 个二元组，注意力矩阵为 ${tokens.length}×${tokens.length}。点击任意行或词，查看权重分配。`;
   }
+
+  headsBox.addEventListener('click', (event) => {
+    const button = event.target.closest('.mm-attn-head');
+    if (!button) return;
+    const index = Number(button.dataset.head);
+    if (index === headIndex || !tokens.length) return;
+    headIndex = index;
+    Array.from(headsBox.children).forEach((child, i) => {
+      child.setAttribute('aria-pressed', String(i === index));
+    });
+    buildMatrix();
+    renderMatrix();
+    select(Math.min(selected, tokens.length - 1));
+  });
+
+  matrixBox.addEventListener('click', (event) => {
+    const cell = event.target.closest('.mm-attn-cell');
+    if (!cell) return;
+    select(Number(cell.dataset.i));
+  });
+
+  matrixBox.addEventListener('mouseover', (event) => {
+    const cell = event.target.closest('.mm-attn-cell');
+    if (!cell) return;
+    const i = Number(cell.dataset.i);
+    const j = Number(cell.dataset.j);
+    readout.textContent = `第 ${i + 1} 个词「${tokens[i]}」→ 第 ${j + 1} 个词「${tokens[j]}」：${(matrix[i][j] * 100).toFixed(1)}%`;
+  });
+
+  matrixBox.addEventListener('mouseleave', resetReadout);
 
   runButton.addEventListener('click', run);
   input.addEventListener('keydown', (event) => {
@@ -1205,6 +1433,386 @@ function buildScaling(root) {
   update();
 }
 
+// ---------- 7. 卷积网络 ----------
+const CNN_KERNELS = [
+  {
+    id: 'vertical',
+    name: '竖边缘',
+    label: '竖线条',
+    weights: [[1, 0, -1], [1, 0, -1], [1, 0, -1]],
+  },
+  {
+    id: 'horizontal',
+    name: '横边缘',
+    label: '横线条',
+    weights: [[1, 1, 1], [0, 0, 0], [-1, -1, -1]],
+  },
+  {
+    id: 'diagonal',
+    name: '对角边缘',
+    label: '对角线条',
+    weights: [[0, 1, 1], [-1, 0, 1], [-1, -1, 0]],
+  },
+];
+
+function buildCnn(root) {
+  const SIZE = 14;
+  const OUT = SIZE - 2;
+  const POOL = OUT / 2;
+
+  // 14×14 像素输入：程序画出的猫脸，取值 0–1
+  const pixels = new Float32Array(SIZE * SIZE);
+  for (let y = 0; y < SIZE; y += 1) {
+    for (let x = 0; x < SIZE; x += 1) {
+      let value = 0.07;
+      const dx = (x - 6.5) / 5.3;
+      const dy = (y - 7.4) / 4.7;
+      if (dx * dx + dy * dy <= 1) value = 0.54;
+      if (y >= 1 && y <= 4) {
+        const leftEar = x >= 4 - (y - 1) && x <= 4;
+        const rightEar = x >= 9 && x <= 9 + (y - 1);
+        if (leftEar || rightEar) value = 0.7;
+      }
+      if ((x === 4 || x === 5) && (y === 6 || y === 7)) value = 0.04;
+      if ((x === 8 || x === 9) && (y === 6 || y === 7)) value = 0.04;
+      if ((x === 6 || x === 7) && y === 8) value = 0.14;
+      if ((x === 6 || x === 7) && y === 9) value = 0.2;
+      if (y === 9 && (x === 1 || x === 2 || x === 11 || x === 12)) value = 0.86;
+      if (y === 10 && (x <= 3 || x >= 10)) value = 0.92;
+      pixels[y * SIZE + x] = value;
+    }
+  }
+
+  function convolve(weights) {
+    const map = [];
+    for (let r = 0; r < OUT; r += 1) {
+      const row = [];
+      for (let c = 0; c < OUT; c += 1) {
+        let sum = 0;
+        for (let i = 0; i < 3; i += 1) {
+          for (let j = 0; j < 3; j += 1) {
+            sum += pixels[(r + i) * SIZE + (c + j)] * weights[i][j];
+          }
+        }
+        row.push(sum);
+      }
+      map.push(row);
+    }
+    return map;
+  }
+
+  const maps = CNN_KERNELS.map((kernel) => convolve(kernel.weights));
+  const reluMaps = maps.map((map) => map.map((row) => row.map((value) => (value > 0 ? value : 0))));
+  const poolMaps = reluMaps.map((map) => {
+    const pooled = [];
+    for (let r = 0; r < POOL; r += 1) {
+      const row = [];
+      for (let c = 0; c < POOL; c += 1) {
+        row.push(Math.max(
+          map[r * 2][c * 2],
+          map[r * 2][c * 2 + 1],
+          map[r * 2 + 1][c * 2],
+          map[r * 2 + 1][c * 2 + 1],
+        ));
+      }
+      pooled.push(row);
+    }
+    return pooled;
+  });
+
+  // 分类分数：取每个核 ReLU 特征图里最强的一小撮响应（前 12%）做均值。
+  // 只看整图平均会把方向差异抹平，top-k 更接近"画面里哪里出现了这种边缘"
+  const rawScores = reluMaps.map((map) => {
+    const values = [];
+    map.forEach((row) => { row.forEach((value) => { values.push(value); }); });
+    values.sort((a, b) => b - a);
+    const k = Math.max(1, Math.round(values.length * 0.12));
+    let sum = 0;
+    for (let i = 0; i < k; i += 1) sum += values[i];
+    return sum / k;
+  });
+  const rawTotal = rawScores.reduce((acc, value) => acc + value, 0);
+  const scores = rawScores.map((value) => Number(
+    (rawTotal > 0 ? (value / rawTotal) * 100 : 100 / rawScores.length).toFixed(1),
+  ));
+
+  root.setAttribute('data-demo', 'cnn');
+  root.innerHTML = `
+    <p class="mm-demo-hint">先看这张程序画出的 <b>14×14</b> 像素图。卷积核从左上角逐格滑过，得到 12×12 的特征图（灰蓝为负、金色为正），再经 ReLU 与 2×2 最大池化。</p>
+    <div class="mm-cnn-top">
+      <div class="mm-cnn-kernels"></div>
+      <div class="mm-cnn-kernel-view">
+        <div class="mm-cnn-kernel-label"></div>
+        <div class="mm-cnn-ker"></div>
+      </div>
+    </div>
+    <div class="mm-cnn-flow">
+      <div class="mm-cnn-stage">
+        <div class="mm-cnn-stage-head"><b>输入</b><span>14×14</span></div>
+        <div class="mm-cnn-grid" data-stage="input" style="--n:14"></div>
+      </div>
+      <div class="mm-cnn-stage">
+        <div class="mm-cnn-stage-head"><b>卷积</b><span>12×12</span></div>
+        <div class="mm-cnn-grid" data-stage="conv" style="--n:12"></div>
+      </div>
+      <div class="mm-cnn-stage">
+        <div class="mm-cnn-stage-head"><b>ReLU</b><span>12×12</span></div>
+        <div class="mm-cnn-grid" data-stage="relu" style="--n:12"></div>
+      </div>
+      <div class="mm-cnn-stage">
+        <div class="mm-cnn-stage-head"><b>最大池化</b><span>6×6</span></div>
+        <div class="mm-cnn-grid" data-stage="pool" style="--n:6"></div>
+      </div>
+    </div>
+    <div class="mm-demo-actions">
+      <button type="button" class="mm-demo-primary mm-cnn-play">播放</button>
+      <button type="button" class="mm-demo-secondary mm-cnn-step">单步</button>
+      <span class="mm-demo-status mm-cnn-status"></span>
+    </div>
+    <div class="mm-cnn-inspect">
+      <div class="mm-cnn-inspect-title">悬停特征图任意一格，查看对应的 3×3 窗口与点积计算</div>
+      <div class="mm-cnn-inspect-body"></div>
+    </div>
+    <div class="mm-demo-bars-title" style="margin-top:12px">分类分数 · 三类线条的匹配程度</div>
+    <div class="mm-demo-bars mm-cnn-scores"></div>
+    <p class="mm-demo-note">示意：真实 CNN 的卷积核由训练学得，这里用固定核演示运算过程。分类分数取各核特征图 ReLU 后最强 12% 响应的均值，再归一化成百分比。</p>
+  `;
+
+  const kernelsBox = root.querySelector('.mm-cnn-kernels');
+  const kernelLabel = root.querySelector('.mm-cnn-kernel-label');
+  const kernelGrid = root.querySelector('.mm-cnn-ker');
+  const statusEl = root.querySelector('.mm-cnn-status');
+  const inspectBody = root.querySelector('.mm-cnn-inspect-body');
+  const scoreBox = root.querySelector('.mm-cnn-scores');
+  const playButton = root.querySelector('.mm-cnn-play');
+  const stepButton = root.querySelector('.mm-cnn-step');
+  const grids = {
+    input: root.querySelector('.mm-cnn-grid[data-stage="input"]'),
+    conv: root.querySelector('.mm-cnn-grid[data-stage="conv"]'),
+    relu: root.querySelector('.mm-cnn-grid[data-stage="relu"]'),
+    pool: root.querySelector('.mm-cnn-grid[data-stage="pool"]'),
+  };
+
+  const INPUT_DARK = [16, 12, 9];
+  const INPUT_LIGHT = [234, 224, 200];
+  const MAP_DARK = [28, 22, 16];
+  const MAP_GOLD = [200, 162, 74];
+  const MAP_COOL = [96, 128, 140];
+
+  let kernelIndex = 0;
+  let row = 0;
+  let col = 0;
+  let timer = null;
+
+  kernelsBox.innerHTML = CNN_KERNELS.map((kernel, index) => `
+    <button type="button" class="mm-cnn-kernel-btn" data-index="${index}" aria-pressed="${index === 0}">${escHtml(kernel.name)}</button>
+  `).join('');
+
+  scoreBox.innerHTML = CNN_KERNELS.map((kernel, index) => `
+    <div class="mm-demo-bar-row">
+      <span class="mm-demo-bar-label">${escHtml(kernel.label)}</span>
+      <span class="mm-demo-bar-track"><span class="mm-demo-bar-fill" style="width:${scores[index]}%"></span></span>
+      <span class="mm-demo-bar-pct">${scores[index].toFixed(1)}%</span>
+    </div>`).join('');
+
+  function buildCells(container, count) {
+    container.innerHTML = Array.from({ length: count * count }, (_, index) => {
+      const r = Math.floor(index / count);
+      const c = index % count;
+      return `<span class="mm-cnn-cell" data-r="${r}" data-c="${c}"></span>`;
+    }).join('');
+    return Array.from(container.children);
+  }
+
+  const cells = {
+    input: buildCells(grids.input, SIZE),
+    conv: buildCells(grids.conv, OUT),
+    relu: buildCells(grids.relu, OUT),
+    pool: buildCells(grids.pool, POOL),
+  };
+
+  function lerpColor(from, to, t) {
+    const f = Math.max(0, Math.min(1, t));
+    const rgb = from.map((value, index) => Math.round(value + (to[index] - value) * f));
+    return `rgb(${rgb.join(',')})`;
+  }
+
+  function paintInput() {
+    for (let r = 0; r < SIZE; r += 1) {
+      for (let c = 0; c < SIZE; c += 1) {
+        cells.input[r * SIZE + c].style.background = lerpColor(INPUT_DARK, INPUT_LIGHT, pixels[r * SIZE + c]);
+      }
+    }
+  }
+
+  function paintMaps() {
+    const map = maps[kernelIndex];
+    const relu = reluMaps[kernelIndex];
+    const pooled = poolMaps[kernelIndex];
+    let maxAbs = 0;
+    let maxRelu = 0;
+    let maxPool = 0;
+    map.forEach((line) => line.forEach((value) => { maxAbs = Math.max(maxAbs, Math.abs(value)); }));
+    relu.forEach((line) => line.forEach((value) => { maxRelu = Math.max(maxRelu, value); }));
+    pooled.forEach((line) => line.forEach((value) => { maxPool = Math.max(maxPool, value); }));
+
+    map.forEach((line, r) => line.forEach((value, c) => {
+      const cell = cells.conv[r * OUT + c];
+      if (value >= 0) {
+        cell.style.background = lerpColor(MAP_DARK, MAP_GOLD, maxAbs ? Math.sqrt(value / maxAbs) : 0);
+      } else {
+        cell.style.background = lerpColor(MAP_DARK, MAP_COOL, maxAbs ? Math.sqrt(-value / maxAbs) : 0);
+      }
+    }));
+    relu.forEach((line, r) => line.forEach((value, c) => {
+      cells.relu[r * OUT + c].style.background = lerpColor(MAP_DARK, MAP_GOLD, maxRelu ? Math.sqrt(value / maxRelu) : 0);
+    }));
+    pooled.forEach((line, r) => line.forEach((value, c) => {
+      cells.pool[r * POOL + c].style.background = lerpColor(MAP_DARK, MAP_GOLD, maxPool ? Math.sqrt(value / maxPool) : 0);
+    }));
+  }
+
+  function paintKernel() {
+    const kernel = CNN_KERNELS[kernelIndex];
+    kernelLabel.textContent = `当前卷积核 · ${kernel.name} 3×3`;
+    kernelGrid.innerHTML = kernel.weights.map((line) => line.map((value) => (
+      `<span class="mm-cnn-ker-cell ${value > 0 ? 'pos' : value < 0 ? 'neg' : ''}">${value}</span>`
+    )).join('')).join('');
+    Array.from(kernelsBox.children).forEach((button, index) => {
+      button.setAttribute('aria-pressed', String(index === kernelIndex));
+    });
+  }
+
+  function clearMarks() {
+    cells.input.forEach((cell) => cell.classList.remove('win'));
+    cells.conv.forEach((cell) => cell.classList.remove('is-focus'));
+    cells.relu.forEach((cell) => cell.classList.remove('is-focus'));
+    cells.pool.forEach((cell) => cell.classList.remove('is-focus'));
+  }
+
+  function syncState() {
+    window.__mmCnnState = {
+      kernel: CNN_KERNELS[kernelIndex].id,
+      row,
+      col,
+      out: Number(maps[kernelIndex][row][col].toFixed(4)),
+      pooled: Number(poolMaps[kernelIndex][Math.floor(row / 2)][Math.floor(col / 2)].toFixed(4)),
+      scores: scores.slice(),
+    };
+  }
+
+  function renderInspect() {
+    const weights = CNN_KERNELS[kernelIndex].weights;
+    let sum = 0;
+    let windowHtml = '';
+    let kernelHtml = '';
+    const terms = [];
+    for (let i = 0; i < 3; i += 1) {
+      for (let j = 0; j < 3; j += 1) {
+        const value = pixels[(row + i) * SIZE + (col + j)];
+        const weight = weights[i][j];
+        sum += value * weight;
+        windowHtml += `<span class="mm-cnn-mini-cell">${value.toFixed(2)}</span>`;
+        kernelHtml += `<span class="mm-cnn-mini-cell${weight > 0 ? ' pos' : weight < 0 ? ' neg' : ''}">${weight}</span>`;
+        if (weight !== 0) terms.push(`${value.toFixed(2)}×${weight < 0 ? `(${weight})` : weight}`);
+      }
+    }
+    inspectBody.innerHTML = `
+      <div class="mm-cnn-window">
+        <div class="mm-cnn-mini">${windowHtml}</div>
+        <span class="mm-cnn-eq">×</span>
+        <div class="mm-cnn-mini">${kernelHtml}</div>
+        <span class="mm-cnn-eq">=</span>
+        <span class="mm-cnn-sum">${sum.toFixed(2)}</span>
+      </div>
+      <p class="mm-cnn-products">点积：${terms.join(' + ')} = ${sum.toFixed(2)}</p>
+    `;
+  }
+
+  function setPosition(r, c) {
+    row = Math.max(0, Math.min(OUT - 1, r));
+    col = Math.max(0, Math.min(OUT - 1, c));
+    clearMarks();
+    for (let i = 0; i < 3; i += 1) {
+      for (let j = 0; j < 3; j += 1) {
+        cells.input[(row + i) * SIZE + (col + j)].classList.add('win');
+      }
+    }
+    cells.conv[row * OUT + col].classList.add('is-focus');
+    cells.relu[row * OUT + col].classList.add('is-focus');
+    cells.pool[Math.floor(row / 2) * POOL + Math.floor(col / 2)].classList.add('is-focus');
+
+    const raw = maps[kernelIndex][row][col];
+    const clamped = Math.max(0, raw);
+    const kernel = CNN_KERNELS[kernelIndex];
+    statusEl.textContent = `「${kernel.name}」停在第 ${row + 1} 行第 ${col + 1} 列：点积 ${raw.toFixed(2)}，ReLU 后 ${clamped.toFixed(2)}。`;
+    renderInspect();
+    syncState();
+  }
+
+  function advance() {
+    const next = row * OUT + col + 1;
+    if (next >= OUT * OUT) setPosition(0, 0);
+    else setPosition(Math.floor(next / OUT), next % OUT);
+  }
+
+  function stopPlay() {
+    if (timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+    playButton.textContent = '播放';
+  }
+
+  playButton.addEventListener('click', () => {
+    if (timer !== null) {
+      stopPlay();
+      return;
+    }
+    playButton.textContent = '暂停';
+    timer = setInterval(() => {
+      if (!document.contains(root)) {
+        stopPlay();
+        return;
+      }
+      advance();
+    }, 120);
+  });
+
+  stepButton.addEventListener('click', () => {
+    stopPlay();
+    advance();
+  });
+
+  function hoverCell(event) {
+    const cell = event.target.closest('.mm-cnn-cell');
+    if (!cell) return;
+    const r = Number(cell.dataset.r);
+    const c = Number(cell.dataset.c);
+    if (r === row && c === col) return;
+    setPosition(r, c);
+  }
+
+  grids.conv.addEventListener('mouseover', hoverCell);
+  grids.relu.addEventListener('mouseover', hoverCell);
+
+  kernelsBox.addEventListener('click', (event) => {
+    const button = event.target.closest('.mm-cnn-kernel-btn');
+    if (!button) return;
+    const index = Number(button.dataset.index);
+    if (index === kernelIndex) return;
+    kernelIndex = index;
+    paintKernel();
+    paintMaps();
+    setPosition(row, col);
+  });
+
+  paintInput();
+  paintKernel();
+  paintMaps();
+  setPosition(0, 0);
+}
+
 const BUILDERS = {
   turing: buildTuring,
   'chinese-room': buildChineseRoom,
@@ -1212,6 +1820,7 @@ const BUILDERS = {
   rules: buildRules,
   diffusion: buildDiffusion,
   scaling: buildScaling,
+  cnn: buildCnn,
 };
 
 export function openDemo(kind) {

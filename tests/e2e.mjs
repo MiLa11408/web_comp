@@ -170,6 +170,11 @@ const stolenPlan = await page.evaluate(() => window.mm3d.getStolenPlan().length)
 stolenPlan === 9 ? ok('3D 失窃展柜 9 件', String(stolenPlan)) : bad('3D 失窃展柜数量', String(stolenPlan));
 const stolenFocus = await page.evaluate(() => window.mm3d.focusStolen('dartmouth-proposal'));
 stolenFocus ? ok('3D 展柜镜头定位') : bad('3D 展柜镜头定位');
+await page.waitForTimeout(150);
+const caseSpot = await page.evaluate(() => window.mm3d.getCaseSpot());
+(caseSpot.intensity > 0.5)
+  ? ok('展柜聚光灯打亮展品', `强度 ${caseSpot.intensity} / 目标 ${caseSpot.target}`)
+  : bad('展柜聚光灯', JSON.stringify(caseSpot));
 const lensState = await page.evaluate(() => {
   window.mm3d.toggleLens(true);
   const shown = document.querySelector('.mm-lens') && document.querySelector('.mm-lens').style.display;
@@ -183,7 +188,14 @@ const drawInfo = await page.evaluate(() => ({
   calls: window.mm3d.renderer.info.render.calls,
   tris: window.mm3d.renderer.info.render.triangles,
 }));
-(drawInfo.calls > 0 && drawInfo.calls <= 650) ? ok('3D draw call 预算', `${drawInfo.calls} 次 / ${drawInfo.tris} 三角形`) : bad('3D draw call 预算', JSON.stringify(drawInfo));
+(drawInfo.calls > 0 && drawInfo.calls <= 700) ? ok('3D draw call 预算', `${drawInfo.calls} 次（含后处理）/ ${drawInfo.tris} 三角形`) : bad('3D draw call 预算', JSON.stringify(drawInfo));
+const postInfo = await page.evaluate(() => {
+  const p = window.mm3d.getTechProfile();
+  return { bloom: p.bloom, strength: p.bloomStrength, shadowMap: p.shadowMap };
+});
+(postInfo.bloom && postInfo.strength > 0.2)
+  ? ok('3D 泛光后处理已启用', `强度 ${postInfo.strength} · 阴影 ${postInfo.shadowMap}`)
+  : bad('3D 泛光后处理', JSON.stringify(postInfo));
 const envInfo = await page.evaluate(() => {
   const p = window.mm3d.getTechProfile();
   return { env: p.env, envIntensity: p.envIntensity, windowLights: p.windowLights };
@@ -319,6 +331,50 @@ if (await page.locator('button:has-text("可玩演示")').count()) {
   await page.waitForTimeout(300);
   (await page.locator('.mm-demo-overlay').count()) === 0 ? ok('可玩演示弹层与关闭') : bad('可玩演示弹层', 'Esc 未关闭');
 } else bad('可玩演示入口', '当前章节没有演示按钮');
+
+// CNN 卷积演示：滑窗 / 特征图 / 池化 / 三类分数
+const cnnState = await page.evaluate(async () => {
+  window.mmOpenDemo('cnn');
+  await new Promise((r) => setTimeout(r, 1000));
+  const root = document.querySelector('[data-demo="cnn"]');
+  const s = window.__mmCnnState || {};
+  return {
+    hasRoot: !!root,
+    cells: root ? root.querySelectorAll('.mm-cnn-cell').length : 0,
+    scores: s.scores || [],
+    kernel: s.kernel,
+  };
+});
+(cnnState.hasRoot && cnnState.cells >= 400 && cnnState.scores.length === 3 && cnnState.scores.every((v) => v > 0))
+  ? ok('CNN 卷积演示', `${cnnState.cells} 格 · 三类 ${cnnState.scores.join('/')} · 核 ${cnnState.kernel}`)
+  : bad('CNN 卷积演示', JSON.stringify(cnnState));
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+
+// 注意力矩阵：N×N、每行 softmax 和为 1、三个头可切换
+const attnState = await page.evaluate(async () => {
+  window.mmOpenDemo('attention');
+  await new Promise((r) => setTimeout(r, 1000));
+  const s = window.__mmAttentionState;
+  const sum = (s.matrix[0] || []).reduce((a, b) => a + b, 0);
+  const before = JSON.stringify(s.matrix);
+  const heads = document.querySelectorAll('.mm-attn-head');
+  if (heads[2]) heads[2].click();
+  await new Promise((r) => setTimeout(r, 160));
+  return {
+    rows: s.matrix.length,
+    cols: (s.matrix[0] || []).length,
+    sum: Number(sum.toFixed(3)),
+    headCount: heads.length,
+    changed: before !== JSON.stringify(window.__mmAttentionState.matrix),
+    head: window.__mmAttentionState.head,
+  };
+});
+(attnState.rows >= 6 && attnState.rows === attnState.cols && Math.abs(attnState.sum - 1) < 0.01 && attnState.headCount === 3 && attnState.changed)
+  ? ok('注意力矩阵热图', `${attnState.rows}×${attnState.cols} · 行和 ${attnState.sum} · 头 ${attnState.head}`)
+  : bad('注意力矩阵热图', JSON.stringify(attnState));
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
 
 // 残页：切到 b1-c3（藏着 R-01），纸片掉落 → 主动捡起 → 残缺内容 + 馆员旁白
 await page.evaluate(() => window.showChapter('b1-c3'));
