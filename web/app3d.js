@@ -699,8 +699,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const BASE_DPR = Math.min(2, window.devicePixelRatio || 1);
   const LOW_SPEC = window.innerWidth < 760
     || (typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(LOW_SPEC ? Math.min(1.5, BASE_DPR) : BASE_DPR);
+  const renderer = new THREE.WebGLRenderer({ antialias: !LOW_SPEC });
+  renderer.setPixelRatio(LOW_SPEC ? Math.min(1.25, BASE_DPR) : BASE_DPR);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = !LOW_SPEC;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -714,7 +714,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   scene.background = new THREE.Color(0x171009);
   scene.fog = new THREE.Fog(0x171009, 12, 48);
 
-  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 95);
+  // 竖屏手机用更大的 FOV，避免一进门只看见两排书脊
+  const camera = new THREE.PerspectiveCamera(LOW_SPEC ? 66 : 55, window.innerWidth / window.innerHeight, 0.1, 95);
   camera.rotation.order = 'YXZ';
   // 第一人称：WASD 移动 + 鼠标拖拽转视角
   const player = {
@@ -795,6 +796,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   if (LOW_SPEC) {
     if (shelfLights[1]) shelfLights[1].visible = false;
     for (let i = SCONCE_POS.length; i < wallLights.length; i++) wallLights[i].visible = false;
+    // 再关掉一半壁灯，手机端少 2 个实时点光
+    for (let i = 0; i < SCONCE_POS.length; i += 2) wallLights[i].visible = false;
   }
 
   // ---------- 房间 ----------
@@ -2525,9 +2528,14 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }
   }
   // 首帧渲染之后再下载 4.3MB 的 Rapier，让门厅与 3D 场景先出现
-  const kickPhysics = () => { setupPhysics(); };
-  if ('requestIdleCallback' in window) requestIdleCallback(kickPhysics, { timeout: 2500 });
-  else setTimeout(kickPhysics, 900);
+  // 手机/低配跳过物理：书只会被抽起/翻开/放桌，不需要刚体模拟，省 1.8MB 流量
+  if (LOW_SPEC) {
+    console.info('[3D] 低配/移动端跳过 Rapier');
+  } else {
+    const kickPhysics = () => { setupPhysics(); };
+    if ('requestIdleCallback' in window) requestIdleCallback(kickPhysics, { timeout: 2500 });
+    else setTimeout(kickPhysics, 900);
+  }
 
   // ---------- UI：提示 / 提示条 / 遮罩 / 电梯面板 ----------
   const hint = document.createElement('div');

@@ -2426,7 +2426,14 @@ function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
 function enterOverview() { fadeSwap(() => showOverview()); }
 function enter3D() {
   // 手机上 3D 是延迟启动的；第一次点进来时先把它建好
+  if (window.innerWidth < 760) {
+    const nav = document.getElementById('navShell');
+    if (nav) nav.classList.add('nav-collapsed'); // 手机 3D 全屏：先把导航收起来
+  }
   if (!window.mm3d && window.mmBoot3D) {
+    if (window.innerWidth < 760 && window.mmTip) {
+      window.mmTip('3d-mobile', '3D 阅览室', '单指拖拽转视角；左下摇杆移动；点书抽出，再点书翻开；右下角「黄铜电梯」选层。');
+    }
     fadeSwap(async () => {
       try { await window.mmBoot3D(); backToRoom(); } catch (e) { /* boot 已回退书架 */ }
     });
