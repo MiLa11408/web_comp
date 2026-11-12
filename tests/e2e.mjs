@@ -688,7 +688,14 @@ const dustGpu = await page.evaluate(() => {
 });
 dustGpu ? ok('尘埃 GPU 着色器') : bad('尘埃 GPU 着色器', '未找到 ShaderMaterial');
 
-// 7. 性能：接口耗时与并发
+// 7. 性能：静态资源缓存 + 接口耗时与并发
+const appAsset = await page.request.get(BASE + 'app3d.js');
+const vendorAsset = await page.request.get(BASE + 'vendor/rapier.mjs');
+const appCC = appAsset.headers()['cache-control'] || '';
+const vendorCC = vendorAsset.headers()['cache-control'] || '';
+(appCC.includes('no-cache') && vendorCC.includes('immutable') && !!appAsset.headers()['etag'])
+  ? ok('静态资源缓存头', `${appCC} / ${vendorCC}`)
+  : bad('静态资源缓存头', `${appCC} / ${vendorCC} / etag=${appAsset.headers()['etag']}`);
 const cat = await api.get(BASE + 'api/catalog');
 const catMs = cat.headers()['x-response-time'] || null;
 const tCat = Date.now();

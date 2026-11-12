@@ -1,7 +1,6 @@
 // app3d.js · 阶段 2：3D 主阅览室（three.js + Rapier）
 // 书架程序化生成、书脊 Canvas 排版、取书翻开动画、黄铜电梯选层、尘埃与星图台。
 import * as THREE from './vendor/three.module.js';
-import RAPIER from './vendor/rapier.mjs';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -684,6 +683,7 @@ function makeDecorTexture(kind) {
 }
 
 export async function init3D({ container, books, floors, shelfConfig = {}, onOpenBook, onOpenStolen }) {
+  const __t0 = performance.now();
   injectCss();
 
   const root = document.createElement('div');
@@ -2416,6 +2416,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // ---------- 静态合批：同一材质 + 同一阴影标记的静态网格合成一个 draw call ----------
   // 只合场景里不动的陈设；书、交互道具、动画材质、透明件全部保持独立。
+  const __tBuild = performance.now();
   const MERGE_SKIP = new Set([
     elevator, starTable, lampGroup, zoomGroup, stolenGroup, hiddenBook,
     secretDoor, secretVeil, clueGroup,
@@ -2476,40 +2477,57 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     mergeAdded += r.added;
   }
   console.info(`[3D] 静态合批：${mergeRemoved} 个网格 → ${mergeAdded} 个`);
+  const __tMerge = performance.now();
+  console.info(`[3D] 构建 ${Math.round(__tBuild - __t0)}ms · 合批 ${Math.round(__tMerge - __tBuild)}ms`);
 
   // 每帧只推进 uniform，不再碰顶点数组
   function updateDust(layer, dt) {
     layer.mat.uniforms.uTime.value += dt;
   }
 
-  // ---------- 物理（Rapier） ----------
+  // ---------- 物理（Rapier）：空闲时再加载，不阻塞首屏 ----------
   let world = null;
-  try {
-    await RAPIER.init();
-    world = new RAPIER.World({ x: 0, y: -4.2, z: 0 });
-    world.timestep = 1 / 60;
-    const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 1.2));
-    world.createCollider(RAPIER.ColliderDesc.cuboid(14.25, 0.5, 10.5).setFriction(0.9), ground);
-    for (const u of SHELF_UNITS) {
-      for (const by of BOARD_Y) {
-        const rb = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(u.x, by, u.z));
-        world.createCollider(RAPIER.ColliderDesc.cuboid(1.55, 0.03, 0.23).setFriction(0.95), rb);
+  let physicsLoading = false;
+  async function setupPhysics() {
+    if (world || physicsLoading) return;
+    physicsLoading = true;
+    try {
+      const RAPIER = (await import('./vendor/rapier.mjs')).default;
+      await RAPIER.init();
+      world = new RAPIER.World({ x: 0, y: -4.2, z: 0 });
+      world.timestep = 1 / 60;
+      const ground = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.5, 1.2));
+      world.createCollider(RAPIER.ColliderDesc.cuboid(14.25, 0.5, 10.5).setFriction(0.9), ground);
+      for (const u of SHELF_UNITS) {
+        for (const by of BOARD_Y) {
+          const rb = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(u.x, by, u.z));
+          world.createCollider(RAPIER.ColliderDesc.cuboid(1.55, 0.03, 0.23).setFriction(0.95), rb);
+        }
       }
+      for (const item of bookItems) {
+        // 加载物理时已经在手里/桌上/动画中的书不再补物理体，避免抢动画
+        if (item === heldBook || item.stacked || item.animating) continue;
+        const rb = world.createRigidBody(
+          RAPIER.RigidBodyDesc.dynamic()
+            .setTranslation(item.basePos.x, item.basePos.y, item.basePos.z)
+            .setRotation({ x: item.baseQuat.x, y: item.baseQuat.y, z: item.baseQuat.z, w: item.baseQuat.w })
+            .setLinearDamping(0.4)
+            .setAngularDamping(0.7)
+        );
+        world.createCollider(RAPIER.ColliderDesc.cuboid(item.w / 2, item.h / 2, 0.20).setFriction(0.98).setRestitution(0.02), rb);
+        item.body = rb;
+      }
+      console.info(`[3D] Rapier 就绪（${bookItems.filter((x) => x.body).length} 本书有物理体）`);
+    } catch (e) {
+      console.warn('[3D] Rapier 初始化失败，退化为静态摆放', e);
+    } finally {
+      physicsLoading = false;
     }
-    for (const item of bookItems) {
-      const rb = world.createRigidBody(
-        RAPIER.RigidBodyDesc.dynamic()
-          .setTranslation(item.basePos.x, item.basePos.y, item.basePos.z)
-          .setRotation({ x: item.baseQuat.x, y: item.baseQuat.y, z: item.baseQuat.z, w: item.baseQuat.w })
-          .setLinearDamping(0.4)
-          .setAngularDamping(0.7)
-      );
-      world.createCollider(RAPIER.ColliderDesc.cuboid(item.w / 2, item.h / 2, 0.20).setFriction(0.98).setRestitution(0.02), rb);
-      item.body = rb;
-    }
-  } catch (e) {
-    console.warn('[3D] Rapier 初始化失败，退化为静态摆放', e);
   }
+  // 首帧渲染之后再下载 4.3MB 的 Rapier，让门厅与 3D 场景先出现
+  const kickPhysics = () => { setupPhysics(); };
+  if ('requestIdleCallback' in window) requestIdleCallback(kickPhysics, { timeout: 2500 });
+  else setTimeout(kickPhysics, 900);
 
   // ---------- UI：提示 / 提示条 / 遮罩 / 电梯面板 ----------
   const hint = document.createElement('div');
@@ -3540,6 +3558,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     return cs.display !== 'none' && cs.visibility !== 'hidden';
   }
 
+  let __firstFrame = true;
   function tick(now) {
     requestAnimationFrame(tick);
     const nowMs = now || performance.now();
@@ -3644,7 +3663,12 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       heldBook.mesh.scale.setScalar(0.5 + Math.sin(elapsed * 2.4) * 0.006);
       heldBook.mesh.visible = true;
     }
+    const __r0 = performance.now();
     renderer.render(scene, camera);
+    if (__firstFrame) {
+      __firstFrame = false;
+      console.info(`[3D] 首帧渲染 ${Math.round(performance.now() - __r0)}ms · 距 init3D 开始 ${Math.round(performance.now() - __t0)}ms`);
+    }
     drawLens();
   }
   requestAnimationFrame(tick);
@@ -3722,6 +3746,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     }));
   }
 
+  console.info(`[3D] init3D 完成 ${Math.round(performance.now() - __t0)}ms`);
   return {
     reset, setFloor, scene, camera, renderer, bookItems, elevator, player, propGroups, shelfUnits: SHELF_UNITS,
     secretDoor,

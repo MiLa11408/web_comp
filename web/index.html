@@ -797,8 +797,12 @@
           enterShelf('all');
           mmToast('移动端已切到书架视图；想看 3D，点顶部「3D 阅览室」。');
         } catch (e) { /* 移动端降级失败不影响入馆 */ }
-      } else if (window.mmTip) {
-        window.mmTip('3d', '3D 阅览室', 'WASD 移动、拖拽转视角；点书抽到手里，E 翻开；右下角「黄铜电梯」选层。');
+      } else {
+        // 门已经关上再建 3D：门厅动画不会被同步建场景卡住
+        if (window.mmBoot3D) window.mmBoot3D().catch(() => {});
+        if (window.mmTip) {
+          window.mmTip('3d', '3D 阅览室', 'WASD 移动、拖拽转视角；点书抽到手里，E 翻开；右下角「黄铜电梯」选层。');
+        }
       }
     }, 1150);
   }
@@ -2420,7 +2424,16 @@ function fadeSwap(fn, ms) {
 }
 function enterShelf(floor) { fadeSwap(() => showShelves(floor)); }
 function enterOverview() { fadeSwap(() => showOverview()); }
-function enter3D() { fadeSwap(() => backToRoom()); }
+function enter3D() {
+  // 手机上 3D 是延迟启动的；第一次点进来时先把它建好
+  if (!window.mm3d && window.mmBoot3D) {
+    fadeSwap(async () => {
+      try { await window.mmBoot3D(); backToRoom(); } catch (e) { /* boot 已回退书架 */ }
+    });
+    return;
+  }
+  fadeSwap(() => backToRoom());
+}
 // 首页 = 回到全馆大厅（不保留楼层），任何视图都能一鍵回
 function mmHome() {
   enter3D();
@@ -4051,30 +4064,51 @@ fetch('api/health').then((r) => r.json()).then((h) => {
 }).catch(() => {});
 </script>
 <script type="module">
-import { init3D } from './app3d.js';
-(async () => {
-  try {
-    // 走统一缓存：3D 启动时加载过的目录/楼层，后面书轨、书架视图不再重复下载
-    const [catalog, floors] = await Promise.all([window.ensureCatalog(), window.ensureFloors()]);
-    const shelves = await window.ensureShelfConfig();
-    window.mmAdoptBooks(catalog);
-    window.mm3d = await init3D({
-      container: document.getElementById('scene3d'),
-      books: catalog,
-      floors,
-      shelfConfig: shelves,
-      onOpenBook: (id) => window.showChapter(id),
-      onOpenStolen: (id) => window.mmOpenStolen(id),
-    });
-    if (window.mmSyncCollect3D) window.mmSyncCollect3D();
-    if (window.loadCollectData) window.loadCollectData();
-    if (window.mmCheckHiddenBook) window.mmCheckHiddenBook();
-    document.body.classList.remove('grid', 'reading');
-  } catch (e) {
-    console.error('[3D] 初始化失败，回退书架视图', e);
-    showShelves();
+// 3D 资源在后台预取，但构建推迟到门厅关闭（或用户主动进 3D）之后，
+// 这样门厅动画不会被同步建场景卡住。手机不预取，等点「3D 阅览室」时再下载。
+let mm3dAssetsPromise = null;
+function mm3dAssets() {
+  if (!mm3dAssetsPromise) {
+    mm3dAssetsPromise = Promise.all([
+      import('./app3d.js'),
+      window.ensureCatalog(),
+      window.ensureFloors(),
+    ]);
   }
-})();
+  return mm3dAssetsPromise;
+}
+if (window.innerWidth >= 760) mm3dAssets();
+let mm3dBoot = null;
+window.mmBoot3D = function mmBoot3D() {
+  if (window.mm3d) return Promise.resolve(window.mm3d);
+  if (mm3dBoot) return mm3dBoot;
+  mm3dBoot = (async () => {
+    try {
+      const [{ init3D }, catalog, floors] = await mm3dAssets();
+      const shelves = await window.ensureShelfConfig();
+      window.mmAdoptBooks(catalog);
+      window.mm3d = await init3D({
+        container: document.getElementById('scene3d'),
+        books: catalog,
+        floors,
+        shelfConfig: shelves,
+        onOpenBook: (id) => window.showChapter(id),
+        onOpenStolen: (id) => window.mmOpenStolen(id),
+      });
+      if (window.mmSyncCollect3D) window.mmSyncCollect3D();
+      if (window.loadCollectData) window.loadCollectData();
+      if (window.mmCheckHiddenBook) window.mmCheckHiddenBook();
+      document.body.classList.remove('grid', 'reading');
+      return window.mm3d;
+    } catch (e) {
+      console.error('[3D] 初始化失败，回退书架视图', e);
+      showShelves();
+      throw e;
+    }
+  })();
+  return mm3dBoot;
+};
+if (!document.getElementById('gate')) window.mmBoot3D().catch(() => {});
 
 // 空闲时预取书轨数据（8.9KB），让第一次点「书轨」无需等待网络
 (function prefetchRail() {

@@ -1,6 +1,6 @@
 // index.js · Fastify 应用入口（阶段 1：注册/登录/内容/检索/印章/批注/进度）
 import Fastify from 'fastify';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db, nowIso } from './db.js';
@@ -73,48 +73,43 @@ app.addHook('onSend', async (request, reply, payload) => {
 
 // ---------- 样章预览页（阶段 2 换 3D 界面） ----------
 const WEB_INDEX = path.join(ROOT, 'web', 'index.html');
+
+// 静态 JS 缓存：app 脚本每次 revalidate（304 很小），vendor 允许浏览器缓存 7 天
+function sendScript(request, reply, file, immutable = false) {
+  if (!existsSync(file)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: '脚本缺失' } });
+  const st = statSync(file);
+  const etag = `"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
+  reply.header('etag', etag);
+  reply.header('last-modified', st.mtime.toUTCString());
+  reply.header('cache-control', immutable ? 'public, max-age=604800, immutable' : 'no-cache');
+  const inm = request.headers['if-none-match'];
+  // nginx 对 gzip 响应会把 ETag 改写成弱校验（W/"..."），这里统一去掉前缀再比
+  const weak = (v) => String(v || '').replace(/^W\//, '').replace(/"/g, '').trim();
+  if (inm && inm.split(',').some((x) => weak(x) === weak(etag))) return reply.code(304).send();
+  return reply.type('text/javascript; charset=utf-8').send(readFileSync(file));
+}
+
 app.get('/', async (request, reply) => {
   if (!existsSync(WEB_INDEX)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: '预览页未生成' } });
+  reply.header('cache-control', 'no-cache');
   return reply.type('text/html; charset=utf-8').send(readFileSync(WEB_INDEX, 'utf8'));
 });
 
 // 3D 前端模块与 vendor（three.js / Rapier）
-app.get('/app3d.js', async (request, reply) => {
-  const p = path.join(ROOT, 'web', 'app3d.js');
-  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'app3d.js 缺失' } });
-  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
-});
+app.get('/app3d.js', async (request, reply) => sendScript(request, reply, path.join(ROOT, 'web', 'app3d.js')));
 
-app.get('/demos.js', async (request, reply) => {
-  const p = path.join(ROOT, 'web', 'demos.js');
-  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'demos.js 缺失' } });
-  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
-});
+app.get('/demos.js', async (request, reply) => sendScript(request, reply, path.join(ROOT, 'web', 'demos.js')));
 
-app.get('/star.js', async (request, reply) => {
-  const p = path.join(ROOT, 'web', 'star.js');
-  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'star.js 缺失' } });
-  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
-});
+app.get('/star.js', async (request, reply) => sendScript(request, reply, path.join(ROOT, 'web', 'star.js')));
 
-app.get('/audio.js', async (request, reply) => {
-  const p = path.join(ROOT, 'web', 'audio.js');
-  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'audio.js 缺失' } });
-  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
-});
+app.get('/audio.js', async (request, reply) => sendScript(request, reply, path.join(ROOT, 'web', 'audio.js')));
 
-app.get('/whatif.js', async (request, reply) => {
-  const p = path.join(ROOT, 'web', 'whatif.js');
-  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'whatif.js 缺失' } });
-  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
-});
+app.get('/whatif.js', async (request, reply) => sendScript(request, reply, path.join(ROOT, 'web', 'whatif.js')));
 
 app.get('/vendor/*', async (request, reply) => {
   const rel = String(request.params['*'] || '');
   if (!rel || rel.includes('..')) return reply.code(400).send({ error: { code: 'BAD_REQUEST', message: '非法路径' } });
-  const p = path.join(ROOT, 'web', 'vendor', rel);
-  if (!existsSync(p)) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'vendor 文件缺失' } });
-  return reply.type('text/javascript; charset=utf-8').send(readFileSync(p));
+  return sendScript(request, reply, path.join(ROOT, 'web', 'vendor', rel), true);
 });
 
 // ---------- 鉴权装饰 ----------
