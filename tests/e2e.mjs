@@ -154,6 +154,11 @@ const lensState = await page.evaluate(() => {
 lensState === 'block' ? ok('3D 放大镜举起/放下') : bad('3D 放大镜举起/放下', String(lensState));
 await page.evaluate(() => { window.mm3d.setFloor('all', true); window.mm3d.reset(); });
 await page.waitForTimeout(700);
+const drawInfo = await page.evaluate(() => ({
+  calls: window.mm3d.renderer.info.render.calls,
+  tris: window.mm3d.renderer.info.render.triangles,
+}));
+(drawInfo.calls > 0 && drawInfo.calls <= 650) ? ok('3D draw call 预算', `${drawInfo.calls} 次 / ${drawInfo.tris} 三角形`) : bad('3D draw call 预算', JSON.stringify(drawInfo));
 
 // 物理书架：抽出到手里 → 叠到 L1 长桌 → 再抽一本翻开
 await page.evaluate(async () => {

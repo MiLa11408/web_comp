@@ -2,6 +2,7 @@
 // 书架程序化生成、书脊 Canvas 排版、取书翻开动画、黄铜电梯选层、尘埃与星图台。
 import * as THREE from './vendor/three.module.js';
 import RAPIER from './vendor/rapier.mjs';
+import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const DECAY = ['完好', '轻残', '中残', '高残'];
@@ -1165,21 +1166,18 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const dentil = new THREE.Mesh(shelfDentilGeo, shelfDentilMat);
     dentil.position.set(0, 3.4, 0.324);
     g.add(dentil);
-    // 红线：书架层板上的细红丝（关系网氛围）
+    // 红线：书架层板上的细红丝（关系网氛围）——合成一条 LineSegments，9 组书架各 1 次绘制
+    const redPts = [];
     for (const by of BOARD_Y) {
-      const lg = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(-1.52, by + 0.065, 0.245),
-        new THREE.Vector3(1.52, by + 0.065, 0.245),
-      ]);
-      g.add(new THREE.Line(lg, shelfRedMat));
+      redPts.push(new THREE.Vector3(-1.52, by + 0.065, 0.245), new THREE.Vector3(1.52, by + 0.065, 0.245));
     }
     for (let i = 0; i < BOARD_Y.length - 1; i++) {
-      const lg = new THREE.BufferGeometry().setFromPoints([
+      redPts.push(
         new THREE.Vector3(-1.46, BOARD_Y[i] + 0.065, 0.245),
-        new THREE.Vector3(1.46, BOARD_Y[i + 1] + 0.065, 0.245),
-      ]);
-      g.add(new THREE.Line(lg, shelfRedMat));
+        new THREE.Vector3(1.46, BOARD_Y[i + 1] + 0.065, 0.245)
+      );
     }
+    g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(redPts), shelfRedMat));
     g.position.set(unit.x, 0, unit.z);
     scene.add(g);
     return g;
@@ -2415,6 +2413,69 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
   const dustNear = buildDust(LOW_SPEC ? 300 : 650, 0.042, 0.06, 0.34, 0xffe0b0);
   const dustFar = buildDust(LOW_SPEC ? 700 : 1500, 0.015, 0.16, 0.18, 0xd9c8a8);
+
+  // ---------- 静态合批：同一材质 + 同一阴影标记的静态网格合成一个 draw call ----------
+  // 只合场景里不动的陈设；书、交互道具、动画材质、透明件全部保持独立。
+  const MERGE_SKIP = new Set([
+    elevator, starTable, lampGroup, zoomGroup, stolenGroup, hiddenBook,
+    secretDoor, secretVeil, clueGroup,
+    ...fragPapers, ...cabinetDrawers,
+    ...volumeCones.map((v) => v.mesh), ...beacons.map((b) => b.mesh),
+    ...bookItems.map((it) => it.mesh),
+  ]);
+  const mergeBasis = new THREE.Matrix4();
+  function mergeStaticMeshes(root) {
+    if (!root || !root.isGroup) return { removed: 0, added: 0 };
+    root.updateMatrixWorld(true);
+    const invRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+    const buckets = new Map();
+    root.traverse((o) => {
+      if (!o.isMesh || o.isInstancedMesh) return;
+      for (let p = o; p && p !== root; p = p.parent) if (MERGE_SKIP.has(p)) return;
+      if (MERGE_SKIP.has(o)) return;
+      const mat = Array.isArray(o.material) ? null : o.material;
+      if (!mat || mat.transparent || mat.depthWrite === false || o.renderOrder) return;
+      const geo = o.geometry;
+      if (!geo || !geo.attributes || !geo.attributes.position || !geo.attributes.normal) return;
+      const attrs = Object.keys(geo.attributes).sort().join(',');
+      const key = `${mat.uuid}|${o.castShadow ? 1 : 0}|${o.receiveShadow ? 1 : 0}|${geo.index ? 1 : 0}|${attrs}`;
+      let b = buckets.get(key);
+      if (!b) { b = { mat, cast: o.castShadow, receive: o.receiveShadow, meshes: [] }; buckets.set(key, b); }
+      b.meshes.push(o);
+    });
+    let removed = 0;
+    let added = 0;
+    for (const b of buckets.values()) {
+      if (b.meshes.length < 2) continue;
+      const geos = [];
+      for (const m of b.meshes) {
+        const g = m.geometry.clone();
+        mergeBasis.multiplyMatrices(invRoot, m.matrixWorld);
+        g.applyMatrix4(mergeBasis);
+        geos.push(g);
+      }
+      let merged = null;
+      try { merged = mergeGeometries(geos, false); } catch (e) { merged = null; }
+      for (const g of geos) g.dispose();
+      if (!merged) continue;
+      for (const m of b.meshes) { if (m.parent) m.parent.remove(m); removed += 1; }
+      const mesh = new THREE.Mesh(merged, b.mat);
+      mesh.castShadow = b.cast;
+      mesh.receiveShadow = b.receive;
+      root.add(mesh);
+      added += 1;
+    }
+    return { removed, added };
+  }
+  let mergeRemoved = 0;
+  let mergeAdded = 0;
+  for (const child of [...scene.children]) {
+    if (MERGE_SKIP.has(child)) continue;
+    const r = mergeStaticMeshes(child);
+    mergeRemoved += r.removed;
+    mergeAdded += r.added;
+  }
+  console.info(`[3D] 静态合批：${mergeRemoved} 个网格 → ${mergeAdded} 个`);
 
   // 每帧只推进 uniform，不再碰顶点数组
   function updateDust(layer, dt) {
