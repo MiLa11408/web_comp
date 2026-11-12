@@ -3087,7 +3087,8 @@ async function ensureRail() {
 }
 
 // 书轨 = 一张连贯的线路图：主线/支线/换乘线画在同一个坐标系里，点站开书，发车动画
-const RG_W = 1320, RG_LEFT = 118, RG_RIGHT = 46, RG_TOP = 116, RG_GAP = 172;
+const RG_W_BASE = 1320, RG_LEFT = 118, RG_RIGHT = 46, RG_TOP = 116, RG_GAP = 172;
+let RG_W = RG_W_BASE;
 let railLanes = [];
 let railAnim = 0;
 
@@ -3141,19 +3142,15 @@ async function showRail() {
     s = String(s == null ? '' : s);
     return s.length > n ? s.slice(0, n - 1) + '…' : s;
   };
+  // 估算文字宽度：中文按字号全宽，拉丁/数字按 0.58 倍；用于给站点标签留出真正够用的间距
+  const textW = (s, size) => [...String(s == null ? '' : s)]
+    .reduce((w, ch) => w + (/[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? size : size * 0.58), 0);
+  const branchStopW = (s) => textW(`${s.year} · ${cut(s.label, 12)}${(positions[s.book] || []).length > 1 ? ' ⇄' : ''}`, 10.5) + 14;
+  RG_W = RG_W_BASE;
   const yearOf = (s) => {
     const m = String(s && s.year != null ? s.year : '').match(/\d{4}/);
     return m ? Number(m[0]) : null;
   };
-
-  const allYears = [];
-  rail.lines.forEach((l) => {
-    l.stops.forEach((s) => { const y = yearOf(s); if (y) allYears.push(y); });
-    (l.branches || []).forEach((br) => br.stops.forEach((s) => { const y = yearOf(s); if (y) allYears.push(y); }));
-  });
-  const minYear = Math.min(...allYears);
-  const maxYear = Math.max(...allYears);
-  const xOfYear = (yr) => RG_LEFT + ((yr - minYear) / Math.max(1, maxYear - minYear)) * (RG_W - RG_LEFT - RG_RIGHT);
 
   // 所有站点在同一个坐标系里的位置：用于画换乘曲线
   const positions = {};
@@ -3161,23 +3158,13 @@ async function showRail() {
     (positions[book] || (positions[book] = [])).push({ x, y, laneIdx });
   };
 
-  // 主线：按年份定位；同一条线上过近的站点右推，最后整体压缩进画布
+  // 主线：每条线在自己的年份区间内均分站点；年份只作为标签，不再决定横向距离
   const laneXs = [];
   rail.lines.forEach((l) => {
-    let prev = -1e9;
-    let xs = l.stops.map((s) => {
-      const yr = yearOf(s);
-      let x = yr ? xOfYear(yr) : RG_LEFT;
-      if (x < prev + 112) x = prev + 112;
-      prev = x;
-      return x;
-    });
+    const n = l.stops.length;
+    const left = RG_LEFT;
     const right = RG_W - RG_RIGHT;
-    if (xs.length && xs[xs.length - 1] > right) {
-      const span = xs[xs.length - 1] - xs[0] || 1;
-      const target = right - RG_LEFT;
-      xs = xs.map((x) => RG_LEFT + ((x - xs[0]) / span) * target);
-    }
+    const xs = l.stops.map((s, i) => (n <= 1 ? (left + right) / 2 : left + (i / (n - 1)) * (right - left)));
     laneXs.push(xs);
   });
 
@@ -3191,20 +3178,38 @@ async function showRail() {
   rail.lines.forEach((l, li) => {
     const y = RG_TOP + li * RG_GAP;
     (l.branches || []).forEach((br, bi) => {
-      const by = y + 58 + bi * 48;
+      const by = y + 66 + bi * 46;
       const fromMatch = String(br.from || '').match(/\d{4}/);
-      const originX = fromMatch ? xOfYear(Number(fromMatch[0])) : laneXs[li][0];
-      const startX = Math.min(Math.max(originX + 26, RG_LEFT), RG_W - RG_RIGHT - 80);
-      let bxs = br.stops.map((s, i) => Math.min(RG_W - RG_RIGHT, startX + i * 148));
-      if (bxs.length && bxs[bxs.length - 1] > RG_W - RG_RIGHT) {
-        const span = bxs[bxs.length - 1] - bxs[0] || 1;
-        const target = Math.max(80, (RG_W - RG_RIGHT) - bxs[0]);
-        bxs = bxs.map((x) => bxs[0] + ((x - bxs[0]) / span) * target);
+      // 支线从最近的主线站点接出，主线均分后不会错位
+      let originX = laneXs[li][0];
+      if (fromMatch) {
+        const targetYear = Number(fromMatch[0]);
+        let best = 0;
+        let bestD = Infinity;
+        l.stops.forEach((s, j) => {
+          const yr = yearOf(s);
+          if (!yr) return;
+          const d = Math.abs(yr - targetYear);
+          if (d < bestD) { bestD = d; best = j; }
+        });
+        originX = laneXs[li][best];
       }
+      const bw = br.stops.map((s) => branchStopW(s));
+      const totalB = bw.reduce((a, b) => a + b, 0) + Math.max(0, bw.length - 1) * 12;
+      let bx = Math.min(originX + 26, RG_W - RG_RIGHT - totalB);
+      bx = Math.max(RG_LEFT, bx);
+      const bxs = [];
+      br.stops.forEach((s, i) => {
+        if (i > 0) bx += bw[i - 1] + 12;
+        bxs.push(bx);
+      });
       br.stops.forEach((s, i) => addPos(s.book, bxs[i], by, li));
       branchRows.push({ br, y: by, originX, xs: bxs, color: br.color || l.color });
     });
   });
+  // 标签需要更多横向空间时扩宽画布（.rg-scroll 已支持横向滚动），不再把文字挤在一起
+  const maxStopX = Math.max(RG_LEFT, ...laneXs.flat(), ...branchRows.flatMap((r) => r.xs));
+  RG_W = Math.max(RG_W_BASE, Math.ceil(maxStopX + RG_RIGHT));
 
   const laneY = (li) => RG_TOP + li * RG_GAP;
   const multiBook = (book) => (positions[book] || []).length > 1;
@@ -3233,8 +3238,8 @@ async function showRail() {
       <circle class="rg-halo" r="13" fill="${color}" opacity=".14"></circle>
       <circle class="rg-dot" r="5" fill="${color}"></circle>
       <text class="rg-year" y="-12" text-anchor="${anchor}">${esc(String(s.year))}</text>
-      <text class="rg-label" y="21" text-anchor="${anchor}">${esc(cut(s.label, 10))}</text>
-      <text class="rg-book" y="35" text-anchor="${anchor}">${esc(b.call || '')}${b.title ? ' · ' + esc(cut(b.title, 8)) : ''}</text>
+      <text class="rg-label" y="21" text-anchor="${anchor}">${esc(cut(s.label, 9))}</text>
+      <text class="rg-book" y="35" text-anchor="${anchor}">${esc(b.call || '')}${b.title ? ' · ' + esc(cut(b.title, 7)) : ''}</text>
       ${multi ? `<text class="rg-xfermark" x="${markX}" y="-12">⇄</text>` : ''}
     </g>`;
   };
@@ -3247,7 +3252,7 @@ async function showRail() {
     return `<g class="rg-stop" data-book="${esc(s.book)}" style="--d:${Number(delay) || 0}ms" transform="translate(${x},${y})">
       <title>${esc(title)}</title>
       <circle class="rg-dot" r="4" fill="${color}"></circle>
-      <text x="${tx}" y="4" text-anchor="${anchor}" fill="#a8977a" font-size="10.5">${esc(String(s.year))} · ${esc(cut(s.label, 15))}${multi ? ' ⇄' : ''}</text>
+      <text x="${tx}" y="4" text-anchor="${anchor}" fill="#a8977a" font-size="10.5">${esc(String(s.year))} · ${esc(cut(s.label, 12))}${multi ? ' ⇄' : ''}</text>
     </g>`;
   };
 
