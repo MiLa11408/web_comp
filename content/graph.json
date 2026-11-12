@@ -575,6 +575,102 @@
         "治理",
         "未来"
       ]
+    },
+    {
+      "id": "b49",
+      "title": "八个现场",
+      "floor": "L1",
+      "tags": [
+        "AI 史",
+        "关键现场",
+        "转折点",
+        "人物",
+        "事件"
+      ]
+    },
+    {
+      "id": "b50",
+      "title": "八个概念",
+      "floor": "L1",
+      "tags": [
+        "概念入门",
+        "AI 基础",
+        "科普",
+        "术语",
+        "通用"
+      ]
+    },
+    {
+      "id": "b51",
+      "title": "转折",
+      "floor": "L1",
+      "tags": [
+        "大模型",
+        "GPT",
+        "开源",
+        "DeepSeek",
+        "转折点"
+      ]
+    },
+    {
+      "id": "b52",
+      "title": "在路上",
+      "floor": "L1",
+      "tags": [
+        "自动驾驶",
+        "交通",
+        "Robotaxi",
+        "车路协同",
+        "监管"
+      ]
+    },
+    {
+      "id": "b53",
+      "title": "算法生意",
+      "floor": "L1",
+      "tags": [
+        "商业模式",
+        "推荐系统",
+        "广告",
+        "AI 产品",
+        "泡沫"
+      ]
+    },
+    {
+      "id": "b54",
+      "title": "入冬",
+      "floor": "L2",
+      "tags": [
+        "失败",
+        "寒冬",
+        "事故",
+        "泡沫",
+        "教训"
+      ]
+    },
+    {
+      "id": "b55",
+      "title": "算力与国界",
+      "floor": "L2",
+      "tags": [
+        "算力",
+        "芯片",
+        "出口管制",
+        "数据中心",
+        "地缘政治"
+      ]
+    },
+    {
+      "id": "b56",
+      "title": "日常算法",
+      "floor": "L1",
+      "tags": [
+        "日常",
+        "算法",
+        "产品",
+        "隐私",
+        "体验"
+      ]
     }
   ],
   "edges": [
@@ -757,6 +853,126 @@
       "target": "b11",
       "weight": 2,
       "reason": "超级智能的存在风险，是 AI 安全议题被推到极限后的版本。"
+    },
+    {
+      "source": "b49",
+      "target": "b1",
+      "weight": 2,
+      "reason": "关键现场是正册历史线的入门叙事版。"
+    },
+    {
+      "source": "b49",
+      "target": "b3",
+      "weight": 2,
+      "reason": "从感知机、XOR 到 AlexNet，现场册把神经网络正册串成故事。"
+    },
+    {
+      "source": "b49",
+      "target": "b7",
+      "weight": 1,
+      "reason": "AlphaGo 现场与行动线互为表里。"
+    },
+    {
+      "source": "b50",
+      "target": "b3",
+      "weight": 2,
+      "reason": "八个概念中的模型与训练，直接对应神经网络正册。"
+    },
+    {
+      "source": "b50",
+      "target": "b4",
+      "weight": 2,
+      "reason": "泛化与统计学习的概念入口。"
+    },
+    {
+      "source": "b50",
+      "target": "b11",
+      "weight": 1,
+      "reason": "对齐概念连接 AI 安全正册。"
+    },
+    {
+      "source": "b51",
+      "target": "b5",
+      "weight": 2,
+      "reason": "转折册从注意力与 Transformer 讲起。"
+    },
+    {
+      "source": "b51",
+      "target": "b13",
+      "weight": 2,
+      "reason": "GPT 世系与转折册共用同一条产品线。"
+    },
+    {
+      "source": "b51",
+      "target": "b22",
+      "weight": 2,
+      "reason": "Llama 与 DeepSeek 的开源转折。"
+    },
+    {
+      "source": "b52",
+      "target": "b29",
+      "weight": 2,
+      "reason": "交通行业册是正册自动驾驶章的叙事版。"
+    },
+    {
+      "source": "b52",
+      "target": "b10",
+      "weight": 1,
+      "reason": "交通落地也是产业经济的一部分。"
+    },
+    {
+      "source": "b53",
+      "target": "b33",
+      "weight": 2,
+      "reason": "产品史与算法生意互为表里。"
+    },
+    {
+      "source": "b53",
+      "target": "b32",
+      "weight": 2,
+      "reason": "单位经济与资本周期连接公司与资本正册。"
+    },
+    {
+      "source": "b54",
+      "target": "b2",
+      "weight": 2,
+      "reason": "入冬册把两次寒冬与专家系统泡沫展开。"
+    },
+    {
+      "source": "b54",
+      "target": "b33",
+      "weight": 1,
+      "reason": "产品失败学与失败档案同源。"
+    },
+    {
+      "source": "b55",
+      "target": "b16",
+      "weight": 2,
+      "reason": "算力与国界册是算力地基正册的入门版。"
+    },
+    {
+      "source": "b55",
+      "target": "b43",
+      "weight": 2,
+      "reason": "芯片与出口管制连接半导体正册。"
+    },
+    {
+      "source": "b56",
+      "target": "b33",
+      "weight": 2,
+      "reason": "日常算法是产品史的一天版。"
+    },
+    {
+      "source": "b56",
+      "target": "b23",
+      "weight": 1,
+      "reason": "相册、体检等日常场景连接视觉应用正册。"
+    },
+    {
+      "source": "b56",
+      "target": "b36",
+      "weight": 1,
+      "reason": "日常算法最终落在人与 AI 的长期关系。"
     }
   ]
 }

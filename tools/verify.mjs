@@ -20,7 +20,9 @@ const STYLES = new Set(['history', 'tech', 'industry', 'frontier']);
 
 // ---------- books.json ----------
 const books = JSON.parse(readFileSync(path.join(CONTENT, 'books.json'), 'utf8'));
-if (!Array.isArray(books) || books.length !== 48) F('books.json 需恰好 48 本书（12 原有 + 24 专题册 + 12 补充册）');
+const mainBooks = Array.isArray(books) ? books.filter((b) => !b.supplement) : [];
+const suppBooks = Array.isArray(books) ? books.filter((b) => b.supplement) : [];
+if (!Array.isArray(books) || mainBooks.length !== 48 || suppBooks.length !== 8) F('books.json 需 48 本正册 + 8 本增补册（supplement: true）');
 const calls = new Set();
 const bookIds = new Set();
 for (const b of books) {
@@ -91,6 +93,30 @@ if (!existsSync(chaptersDir)) {
       }
     }
   }
+}
+
+// ---------- concepts.json（概念手册） ----------
+const conceptsFile = path.join(CONTENT, 'concepts.json');
+if (existsSync(conceptsFile)) {
+  let conceptList = [];
+  try { conceptList = JSON.parse(readFileSync(conceptsFile, 'utf8')).concepts || []; }
+  catch (e) { F(`concepts.json 解析失败: ${e.message}`); }
+  const cIds = new Set(conceptList.map((c) => c.id));
+  const lenses = new Set(['历史', '技术', '产业', '前沿']);
+  if (conceptList.length !== 16) F(`concepts.json 应为 16 个概念，实际 ${conceptList.length}`);
+  for (const c of conceptList) {
+    if (!c.id || !c.name || !c.one_line) F(`概念缺 id/name/one_line: ${JSON.stringify(c.id)}`);
+    if (!c.accurate || c.accurate.length < 40) F(`${c.id} accurate 过短`);
+    if (!Array.isArray(c.misconceptions) || c.misconceptions.length < 2) F(`${c.id} 常见误解少于 2 条`);
+    if (c.start?.chapter && !chapters.has(c.start.chapter)) F(`${c.id} start 章节不存在: ${c.start.chapter}`);
+    for (const p of c.paths || []) {
+      if (!lenses.has(p.lens)) F(`${c.id} 路径 lens 非法: ${p.lens}`);
+      if (!Array.isArray(p.steps) || p.steps.length < 2) F(`${c.id} 路径「${p.lens}」少于 2 站`);
+      for (const s of p.steps || []) if (!chapters.has(s.chapter)) F(`${c.id} 路径章节不存在: ${s.chapter}`);
+    }
+    for (const r of c.related || []) if (!cIds.has(r)) F(`${c.id} related 不存在: ${r}`);
+  }
+  if (!fails.some((f) => f.includes('concepts'))) ok(`concepts ${conceptList.length} 条`);
 }
 
 // ---------- 关系双向 + 目标存在 ----------

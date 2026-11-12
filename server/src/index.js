@@ -9,6 +9,7 @@ import {
   allowLoginAttempt, allowRegisterAttempt,
 } from './auth.js';
 import { initSearch, search, suggest, fallbackFor } from './search.js';
+import { loadConcepts, matchConcepts, conceptsForChapter } from './concepts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', '..');
@@ -31,6 +32,7 @@ function loadEnvFile() {
 loadEnvFile();
 
 const ctx = initSearch(CONTENT_DIR);
+const CONCEPTS = loadConcepts(CONTENT_DIR);
 
 // 残页目录（阅读上报时自动收编）
 const FRAGMENTS_FILE = path.join(CONTENT_DIR, 'fragments.json');
@@ -353,6 +355,9 @@ app.post('/api/oracle', async (request, reply) => {
 
 app.get('/api/forks', async (request, reply) => jsonContent(reply, 'forks.json'));
 
+// 概念手册：16 个核心概念，前端一次取回
+app.get('/api/concepts', async () => ({ version: 1, updated: '2026-11-12', concepts: CONCEPTS.list }));
+
 // 前沿观察：arXiv 论文 + 每周热点（hot 由 tools/fetch-hot.mjs 入库），这里只读
 app.get('/api/frontier', async (request, reply) => {
   try {
@@ -472,21 +477,29 @@ app.get('/api/stats', async (request) => {
 app.get('/api/chapters/:id', async (request, reply) => {
   const entry = ctx.chapters.get(request.params.id);
   if (!entry) return fail(reply, 404, 'NOT_FOUND', '没有这一章');
-  return { meta: entry.meta, content: entry.body };
+  return { meta: entry.meta, content: entry.body, concepts: conceptsForChapter(CONCEPTS, request.params.id) };
 });
 
 app.get('/api/search', async (request, reply) => {
   const q = (request.query.q || '').toString().trim();
-  if (!q) return { results: [] };
+  if (!q) return { results: [], concepts: [] };
   const limit = Math.min(50, Math.max(1, Number(request.query.limit) || 10));
   const results = search(ctx, q, limit);
-  if (results.length) return { results };
-  return { results, fallback: fallbackFor(ctx, q) };
+  const concepts = matchConcepts(CONCEPTS, q);
+  if (results.length) return { results, concepts };
+  return { results, concepts, fallback: fallbackFor(ctx, q) };
 });
 
 app.get('/api/suggest', async (request) => {
   const q = (request.query.q || '').toString().trim();
-  return { items: suggest(ctx, q) };
+  const items = suggest(ctx, q);
+  if (q) {
+    const extra = CONCEPTS.list
+      .filter((c) => c.name.includes(q) || (c.aliases || []).some((a) => String(a).toLowerCase().includes(q.toLowerCase())))
+      .map((c) => ({ text: c.name, type: '概念' }));
+    for (const e of extra.reverse()) if (!items.some((x) => x.text === e.text)) items.unshift(e);
+  }
+  return { items: items.slice(0, 10) };
 });
 
 app.get('/api/graph', async (request, reply) => {

@@ -27,7 +27,9 @@ function layoutShelves(totalBooks, capacity, maxPerRow = 6) {
   const out = [];
   for (let r = 0; r < rows; r++) {
     const count = base + (r < extra ? 1 : 0);
-    const startX = -((count - 1) * spacing) / 2;
+    // 奇数组的行整体错开半个间距，保证 x=0 始终是通道，不会正对入口摆一组书架
+    const shift = count % 2 === 1 ? (r % 2 === 0 ? -1 : 1) * (spacing / 2) : 0;
+    const startX = -((count - 1) * spacing) / 2 + shift;
     const z = -5.4 + r * 2.9;
     for (let i = 0; i < count; i++) out.push({ x: startX + i * spacing, z });
   }
@@ -2847,6 +2849,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const idx = floors.findIndex((f) => f.id === fid);
     if (fid === 'all') {
       player.pos.set(0, 1.68, 9.1);
+      // 复位时直接把视角掰回正前方，避免残留的 yaw 让 W 斜着撞上书架
+      player.yaw = 0;
+      player.pitch = -0.03;
       player.tYaw = 0;
       player.tPitch = -0.03;
     } else {

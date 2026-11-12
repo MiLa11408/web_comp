@@ -512,6 +512,57 @@
   .fr-actions a:hover, .fr-actions button:hover { border-color: var(--gold); color: var(--gold); }
   .fr-empty { border: 1px dashed #4a3a24; padding: 26px; text-align: center; color: #8a7a5c; font-size: 13px; line-height: 1.9; }
 
+  /* ---------- 概念手册 / 概念卡 ---------- */
+  .concept-view { max-width: 1180px; margin: 0 auto; }
+  .concept-head { border-bottom: 1px solid var(--line); padding: 4px 0 14px; margin-bottom: 16px; }
+  .concept-head h2 { margin: 0 0 6px; color: var(--gold); font-family: var(--font-serif); font-size: 24px; letter-spacing: 3px; font-weight: 500; }
+  .concept-head p { margin: 0; color: #b09a72; font-size: 12.5px; line-height: 1.85; }
+  .concept-group { margin: 18px 0 22px; }
+  .concept-group-head { display: flex; align-items: baseline; gap: 10px; color: #c8a24a; font-size: 13px; letter-spacing: 3px; border-bottom: 1px dashed #3a2f22; padding-bottom: 6px; margin-bottom: 10px; }
+  .concept-group-head small { color: #7d6e55; font-size: 10.5px; letter-spacing: .5px; }
+  .concept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+  .concept-card { background: linear-gradient(160deg, #211a13, #191310); border: 1px solid #4a3a24; border-left: 3px solid #6b5a3a; min-width: 0; }
+  .concept-card[open] { border-left-color: var(--gold); background: #221a13; }
+  .concept-card > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 9px; }
+  .concept-card > summary::-webkit-details-marker { display: none; }
+  .concept-card > summary::after { content: '展开'; margin-left: auto; color: #8a7a5c; font-size: 10.5px; letter-spacing: 1px; }
+  .concept-card[open] > summary::after { content: '收起'; color: var(--gold); }
+  .cc-name { color: #f0d68a; font-family: var(--font-serif); font-size: 17px; letter-spacing: 1px; }
+  .cc-en { color: #8a7a5c; font-family: var(--font-mono); font-size: 10.5px; }
+  .cc-one { flex: 1 1 100%; color: #cbb892; font-size: 12.5px; line-height: 1.8; }
+  .cc-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .cc-analogy, .cc-accurate { color: #cbb892; font-size: 12.5px; line-height: 1.9; border-left: 2px solid #4a3a24; padding-left: 9px; }
+  .cc-analogy b, .cc-accurate b, .cc-mis b, .cc-path-title b { color: #c8a24a; font-weight: 500; letter-spacing: 1px; }
+  .cc-mis { color: #b09a72; font-size: 12px; line-height: 1.8; }
+  .cc-mis ul { margin: 4px 0 0; padding-left: 18px; }
+  .cc-mis li { margin-bottom: 3px; }
+  .cc-mis i { color: #9ec27a; font-style: normal; }
+  .cc-path { border-top: 1px dashed #3a2f22; padding-top: 8px; }
+  .cc-lens { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 5px; }
+  .cc-lens > b { color: #8a7a5c; font-size: 10.5px; letter-spacing: 1px; flex: 0 0 34px; }
+  .cc-step { background: #241c14; border: 1px solid #3a2f22; color: #cbb892; padding: 3px 8px; font-size: 10.5px; cursor: pointer; font-family: inherit; }
+  .cc-step:hover { border-color: var(--gold); color: var(--gold); }
+  .cc-actions, .cc-related { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .cc-actions button, .cc-related button { background: #2c241a; border: 1px solid #8a6320; color: #e2c06a; padding: 5px 11px; font-size: 11.5px; cursor: pointer; font-family: inherit; }
+  .cc-actions button:hover, .cc-related button:hover { border-color: var(--gold); color: var(--gold); }
+  .cc-related span { color: #7d6e55; font-size: 10.5px; letter-spacing: 1px; }
+  .concept-hit { background: linear-gradient(160deg, #2b1d12, #1a130d); border: 1px solid #c8a24a; border-left: 4px solid var(--gold); padding: 12px 15px; margin-bottom: 12px; }
+  .concept-hit .ch-kicker { color: #8a7a5c; font-size: 10.5px; letter-spacing: 2px; }
+  .concept-hit h3 { margin: 4px 0 5px; color: #f0d68a; font-size: 18px; font-family: var(--font-serif); letter-spacing: 1px; font-weight: 500; }
+  .concept-hit h3 small { color: #8a7a5c; font-family: var(--font-mono); font-size: 10.5px; margin-left: 8px; }
+  .concept-hit p { margin: 0 0 8px; color: #cbb892; font-size: 12.5px; line-height: 1.85; }
+  .concept-hit .ch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .concept-hit .ch-actions button { background: #2c241a; border: 1px solid #8a6320; color: #e2c06a; padding: 5px 11px; font-size: 11.5px; cursor: pointer; font-family: inherit; }
+  .concept-hit .ch-actions button:hover { border-color: var(--gold); color: var(--gold); }
+  .chapter-concepts { border: 1px solid #8a6320; background: rgba(200,162,74,.06); padding: 9px 11px 8px; margin: 0 0 14px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .chapter-concepts .chc-kicker { color: #8a7a5c; font-size: 10.5px; letter-spacing: 2px; margin-bottom: 5px; }
+  .chc-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 3px 0; }
+  .chc-row b { color: #c8a24a; font-size: 12.5px; font-weight: 500; }
+  .chc-row span { flex: 1 1 220px; color: #5a451f; font-size: 12px; line-height: 1.7; }
+  .chc-row button { background: transparent; border: 1px solid #8a6320; color: #6b4f1d; padding: 2px 7px; font-size: 10.5px; cursor: pointer; font-family: inherit; }
+  .chc-row button:hover { border-color: var(--gold); color: #8a6320; }
+  @media (max-width: 700px) { .concept-grid { grid-template-columns: 1fr; } .concept-head h2 { font-size: 20px; } }
+
   /* ---------- 阅读工具条 / 轻提示 / 统计 ---------- */
   .reader-tools { max-width: 780px; margin: 0 auto 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .reader-tools button { background: #241c14; color: var(--gold); border: 1px solid #6b5a3a; padding: 6px 12px; cursor: pointer; font-size: 12px; letter-spacing: 1px; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
@@ -888,6 +939,7 @@
     </div>
     <div class="nav-group"><span class="ng-label">查找</span>
       <button class="back" onclick="enterRail()">书轨</button>
+      <button class="back" onclick="enterConcepts()">概念手册</button>
       <button class="back" onclick="mmShowStar()">星图</button>
       <button class="back" onclick="enterTimeline()">时间轴</button>
       <button class="back" onclick="enterFrontier()">前沿观察</button>
@@ -1945,13 +1997,64 @@ async function showFrontier(keep) {
       <span class="fr-updated">${esc(d.source || 'arXiv')} · 编译 ${esc(updated)}</span>
     </div>
     ${list.length ? `<div class="fr-grid">${cards}</div>` : '<div class="fr-empty">这一栏还没有新纸。<br>库房每天凌晨会再去 arXiv 取一次；也可以先回书架读已编目的旧书。</div>'}
-    <div class="size-scale">前沿观察与馆藏分开：馆藏是已核验、已写成的 384 章；这里是新论文与近期热点的中文导读，由馆员编译，可能不完整。热榜每周复核，论文每天更新；「说人话」和「术语小抄」只帮助理解，不替代原文；数字、结论与原文冲突时，以原文为准。想追根，再去「卡片目录」找它的来路。</div>
+    <div class="size-scale">前沿观察与馆藏分开：馆藏是已核验、已写成的 448 章；这里是新论文与近期热点的中文导读，由馆员编译，可能不完整。热榜每周复核，论文每天更新；「说人话」和「术语小抄」只帮助理解，不替代原文；数字、结论与原文冲突时，以原文为准。想追根，再去「卡片目录」找它的来路。</div>
   </div>`;
 }
 window.showFrontier = showFrontier;
 
 function enterFrontier() { fadeSwap(() => showFrontier()); }
 window.enterFrontier = enterFrontier;
+
+// ---------- 概念手册 ----------
+function ccPathHtml(paths) {
+  return (paths || []).map((p) => `
+    <div class="cc-lens"><b>${esc(p.lens)}</b>${(p.steps || []).map((s) => `<button class="cc-step" onclick="showChapter('${esc(s.chapter)}')">${esc(s.note)}</button>`).join('')}</div>`).join('');
+}
+function conceptCardHtml(c, open, byId) {
+  const start = c.start || {};
+  const related = (c.related || []).map((r) => `<button onclick="mmShowConcept('${esc(r)}')">${esc((byId.get(r) || {}).name || r)}</button>`).join('');
+  return `<details class="concept-card" data-concept="${esc(c.id)}"${open ? ' open' : ''}>
+    <summary><span class="cc-name">${esc(c.name)}</span><span class="cc-en">${esc(c.en || '')}</span><span class="cc-one">${esc(c.one_line || '')}</span></summary>
+    <div class="cc-body">
+      <div class="cc-analogy"><b>生活类比</b> · ${esc(c.analogy || '')}</div>
+      <div class="cc-accurate"><b>准确一点</b> · ${esc(c.accurate || '')}</div>
+      <div class="cc-mis"><b>常见误解</b><ul>${(c.misconceptions || []).map((m) => `<li>${esc(m.claim)} <i>→ ${esc(m.fix)}</i></li>`).join('')}</ul></div>
+      <div class="cc-path"><div class="cc-path-title"><b>沿着这条线看</b> · 历史 / 技术 / 产业 / 前沿</div>${ccPathHtml(c.paths)}</div>
+      ${start.chapter ? `<div class="cc-actions"><button onclick="showChapter('${esc(start.chapter)}')">先读这篇 → ${esc(start.reason || '')}</button></div>` : ''}
+      ${related ? `<div class="cc-related"><span>相关概念</span>${related}</div>` : ''}
+    </div>
+  </details>`;
+}
+async function showConcepts(focusId) {
+  document.body.classList.add('grid');
+  mmTip('concepts', '概念手册', '先看一句话和生活类比；每条概念都给历史、技术、产业、前沿四条线，点站点直接开书。');
+  state.findMarks = []; state.global = []; state.chapterMain = '';
+  app.innerHTML = '<div class="empty">正在整理概念卡……</div>';
+  let list = [];
+  try {
+    const data = await (await fetch('api/concepts')).json();
+    list = data.concepts || (Array.isArray(data) ? data : []);
+  } catch (e) { /* 静默 */ }
+  if (!list.length) { app.innerHTML = '<div class="empty">概念手册暂时没有取到，稍后再试。</div>'; return; }
+  const groups = ['入门', '模型', '训练', '应用与治理'];
+  const byId = new Map(list.map((c) => [c.id, c]));
+  app.innerHTML = `<div class="concept-view">
+    <div class="concept-head"><h2>概念手册 · ${list.length} 个入口</h2>
+      <p>每个概念先给一句话和生活类比，再给准确解释与常见误解。四条线分别是历史、技术、产业、前沿——想深读，点任意一站直接开书。</p></div>
+    ${groups.map((g) => {
+      const items = list.filter((c) => c.group === g);
+      if (!items.length) return '';
+      return `<section class="concept-group"><div class="concept-group-head">${esc(g)}<small>${items.length} 条</small></div>
+        <div class="concept-grid">${items.map((c) => conceptCardHtml(c, c.id === focusId, byId)).join('')}</div></section>`;
+    }).join('')}
+  </div>`;
+  if (focusId) {
+    const el = document.querySelector(`[data-concept="${focusId}"]`);
+    if (el) setTimeout(() => { el.open = true; el.scrollIntoView({ block: 'center' }); }, 60);
+  }
+}
+window.enterConcepts = () => fadeSwap(() => showConcepts());
+window.mmShowConcept = (id) => fadeSwap(() => showConcepts(id));
 
 // ---------- 残页拼合板 ----------
 let fragMosaicCtx = null;
@@ -2143,7 +2246,7 @@ window.mmCheckHiddenBook = mmCheckHiddenBook;
 
 async function mmShowStar() {
   try {
-    mmTip('star', '星图', '48 本书按四层球壳排布；点星开书，按 L 打开文字版关系列表。');
+    mmTip('star', '星图', '56 本书按四层球壳排布；点星开书，按 L 打开文字版关系列表。');
     await ensureCatalog();
     const mod = await import('./star.js');
     mod.showStarMap();
@@ -2168,7 +2271,7 @@ async function showAbout(highlightTutorial = false) {
   document.body.classList.add('grid');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在取馆史……</div>';
-  let chapters = 384;
+  let chapters = 448;
   try {
     const h = await (await fetch('api/health')).json();
     chapters = h.chapters || chapters;
@@ -2180,9 +2283,9 @@ async function showAbout(highlightTutorial = false) {
     </div>
     <div class="about-hero">
       <h2>一座闭馆后的 AI 知识档案馆</h2>
-      <p class="about-lead">夜里十一点，书库只留前台一盏灯。这里不生产“AI 帮你总结”，也不替你判断一段历史值不值得读。它做的事更笨：把 AI 从 1943 年到现在拆成 <b>48 本书、${chapters} 章</b>，按四级密级收进四层书库；你可以像真正的读者那样找书、取书、翻页边注、在书页之间捡到一张没写完的残页。</p>
+      <p class="about-lead">夜里十一点，书库只留前台一盏灯。这里不生产“AI 帮你总结”，也不替你判断一段历史值不值得读。它做的事更笨：把 AI 从 1943 年到现在拆成 <b>56 本书、${chapters} 章</b>，按四级密级收进四层书库；你可以像真正的读者那样找书、取书、翻页边注、在书页之间捡到一张没写完的残页。</p>
       <div class="about-facts">
-        <span class="about-fact"><b>48</b>本书</span>
+        <span class="about-fact"><b>56</b>本书</span>
         <span class="about-fact"><b>${chapters}</b>章</span>
         <span class="about-fact"><b>12</b>张残页</span>
         <span class="about-fact"><b>9</b>件失窃页</span>
@@ -2199,13 +2302,13 @@ async function showAbout(highlightTutorial = false) {
       <details class="tut-manual">
         <summary>完整手册（11 步，可选）</summary>
         <div class="tut-grid">
-        <article class="tut-step"><span class="tut-num">01 / 进门</span><h4>访客还是借书证</h4><p>门厅有三个选择：<b>访客</b>可以读全部 384 章，但不能盖章、批注、记进度；<b>新办借书证</b>只要 3 字符以上的证号和 8 位口令，之后回来自动识别；<b>入馆</b>是已有证的人用的。</p></article>
+        <article class="tut-step"><span class="tut-num">01 / 进门</span><h4>访客还是借书证</h4><p>门厅有三个选择：<b>访客</b>可以读全部 448 章，但不能盖章、批注、记进度；<b>新办借书证</b>只要 3 字符以上的证号和 8 位口令，之后回来自动识别；<b>入馆</b>是已有证的人用的。</p></article>
         <article class="tut-step"><span class="tut-num">02 / 走动</span><h4>3D 阅览室怎么走</h4><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 前后左右，按住鼠标左键拖动转视角。从书架之间的空隙可以绕到后排；右下角「黄铜电梯」随时选层。</p></article>
-        <article class="tut-step"><span class="tut-num">03 / 取书</span><h4>把书抽到手里</h4><p>点书脊，书会飞到右手。<b>左键再点书 / <kbd>E</kbd></b> 翻开；<b>右键 / <kbd>Esc</kbd></b> 放回架上；<b><kbd>Q</kbd></b> 放到 L1 长桌，按书脊厚度叠成三摞，最多 12 本。</p></article>
+        <article class="tut-step"><span class="tut-num">03 / 取书</span><h4>把书抽到手里</h4><p>点书脊，书会飞到右手。<b>左键再点书 / <kbd>E</kbd></b> 翻开；<b>右键 / <kbd>Esc</kbd></b> 放回架上；<b><kbd>Q</kbd></b> 放到本层桌上，按书脊厚度叠成三摞，最多 12 本。</p></article>
         <article class="tut-step"><span class="tut-num">04 / 电梯</span><h4>楼层就是分级</h4><p>L1 公开、L2 内部、L3 机密、L4 绝密。越往上书越残、环境越冷，馆员语气也会变。电梯面板和目标楼层互通，3D 与 2D 会同步。</p></article>
         <article class="tut-step"><span class="tut-num">05 / 平面</span><h4>书架视图与总览</h4><p>不想走 3D 就用<b>书架视图</b>按层找书，一格一格看书脊；<b>书架总览</b>一次列出全部书目、索书号、年份、标签与章节进度。</p></article>
         <article class="tut-step"><span class="tut-num">06 / 查找</span><h4>卡片目录的四级排序</h4><p>检索先锁<b>大标题</b>，再锁 <b>tag</b>，再看正文提及次数，最后才是相关内容。<b>前沿观察</b>每天从 arXiv 选新论文，由馆员编译成中文科普，可按领域筛选并跳回馆内旧书。</p></article>
-        <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：5 条主线、55 站，同名书就是换乘站；<b>星图</b>看 48 本书的 30 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
+        <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：6 条主线、63 站，同名书就是换乘站；<b>星图</b>看 56 本书的 50 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
         <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完，盖章和读完都能再次点击撤销。</p></article>
         <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 的蜡封桌上多了一张盖着红 X 的备忘，记得读它——那不是装饰。</p></article>
         <article class="tut-step"><span class="tut-num">10 / 暗门</span><h4>一扇不在平面图上的门</h4><p>先看 L4 蜡封桌的备忘，再点右墙那幅没有拉直的<b>帷幕</b>把它滑开。后面是一扇没有编号的门；点门进去，十本「假如之书」会等你。选符号 / 神经 / 具身任意一条科技树，点「走假如」就能生成一篇长故事。书架尽头还有一本<b>未写之书</b>：写下「如果没有 X」的假设，它只生成与这个问题相关的小故事。</p></article>
@@ -2231,7 +2334,7 @@ async function showAbout(highlightTutorial = false) {
       </section>
       <section class="about-card">
         <h3>技术与验证</h3>
-        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>147 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索、未写之书与提问选项、盖章撤销、分区域提示与移动端。</p>
+        <p>Fastify 5 + node:sqlite 提供目录、检索与借阅记录；three.js + Rapier 做 3D 阅览室；内容全部是 Markdown/JSON 数据文件。内容自检 <b>npm run verify</b>，端到端测试 <b>151 项</b>，覆盖入馆、取书、检索、电梯、两套视图、暗门线索、未写之书与提问选项、盖章撤销、分区域提示与移动端。</p>
       </section>
       <section class="about-card">
         <h3>素材与声明</h3>
@@ -3012,7 +3115,7 @@ function tlFilter(btn) {
 
 async function showTimeline() {
   document.body.classList.add('grid');
-  mmTip('timeline', '时间轴', '按年代筛 384 章；页面底部还有失败博物馆与模型尺寸墙。');
+  mmTip('timeline', '时间轴', '按年代筛 448 章；页面底部还有失败博物馆与模型尺寸墙。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在按年份整理卡片……</div>';
   const [catalog, fail, models] = await Promise.all([
@@ -3149,7 +3252,7 @@ window.mmRailDepart = function () {
 
 async function showRail() {
   document.body.classList.add('grid');
-  mmTip('rail', '书轨', '5 条主线、55 站；同名书是换乘站。点站点开书，按「发车」看列车动画。');
+  mmTip('rail', '书轨', '6 条主线、63 站；同名书是换乘站。点站点开书，按「发车」看列车动画。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在铺设书轨……</div>';
   const [rail, catalog] = await Promise.all([ensureRail(), ensureCatalog()]);
@@ -3705,6 +3808,7 @@ async function showChapter(id) {
   // 章末导航需要目录里的标题；目录很轻（一次约 53KB，之后走缓存）
   if (!catalogCache.length) { try { await ensureCatalog(); } catch (e) { /* 目录失败时退化为只显示章号 */ } }
   const m = r.meta;
+  const chConcepts = r.concepts || [];
   window.__mmChapterMeta = m;
   readerActions.id = m.id;
   readerActions.stamped = false;
@@ -3776,6 +3880,10 @@ async function showChapter(id) {
           <div>接待结果：<b id="receptionResult">${receptionResultHtml(m)}</b></div>
           <div style="color:#8a6d33">馆员按语：<b>${esc(LIB_NOTE[bookFloors[m.book]] || '别把纸屑抖在地上。')}</b></div>
         </div>
+        ${chConcepts.length ? `<div class="chapter-concepts">
+          <div class="chc-kicker">本章概念 · 先看人话版</div>
+          ${chConcepts.map((c) => `<div class="chc-row"><b>${esc(c.name)}</b><span>${esc(c.one_line)}</span><button onclick="mmShowConcept('${esc(c.id)}')">概念卡 →</button></div>`).join('')}
+        </div>` : ''}
         <h1>${esc(m.title)}${enTitle ? ` <small style="color:#6b5a3a;font-size:15px">${esc(enTitle)}</small>` : ''}</h1>
         <div class="meta-line">${esc(bookNames[m.book] || m.book)} · ${esc(m.year)} · ${(m.tags || []).map(esc).join(' / ')}</div>
         <div class="meta-line">${(m.people || []).map((p) => esc(p.name + (p.org ? '（' + p.org + '）' : ''))).join('；')}</div>
@@ -3957,22 +4065,36 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------- 书架模式检索 ----------
+function conceptHitHtml(c) {
+  const start = c.start || {};
+  return `<div class="concept-hit">
+    <div class="ch-kicker">馆员导读卡 · 概念</div>
+    <h3>${esc(c.name)}<small>${esc(c.en || '')}</small></h3>
+    <p>${esc(c.one_line || '')}</p>
+    <div class="ch-actions">
+      <button onclick="mmShowConcept('${esc(c.id)}')">看完整概念 →</button>
+      ${start.chapter ? `<button onclick="showChapter('${esc(start.chapter)}')">先读这篇 → ${esc(start.reason || '')}</button>` : ''}
+    </div>
+  </div>`;
+}
 async function doSearch() {
   const q = $('#q').value.trim();
   if (!q) return;
   document.body.classList.add('grid');
   app.innerHTML = '<div class="empty">正在翻查卡片目录……</div>';
   const r = await (await fetch('api/search?q=' + encodeURIComponent(q))).json();
+  const conceptHtml = (r.concepts || []).map(conceptHitHtml).join('');
   if (!r.results.length) {
     const fb = r.fallback || { books: [], tags: [] };
     app.innerHTML = `<div class="search-fallback">
+      ${conceptHtml}
       <div class="empty">目录里没有直接查到「${esc(q)}」。沿着这些方向找找：</div>
       ${fb.tags.length ? `<div class="fb-title">相关标签</div><div class="fb-row">${fb.tags.map((t) => `<button class="fb-chip" onclick="mmSearchTag('${esc(t)}')">${esc(t)}</button>`).join('')}</div>` : ''}
       ${fb.books.length ? `<div class="fb-title">相关书目</div><div class="fb-row">${fb.books.map((b) => `<button class="fb-chip" onclick="showChapterOfBook('${esc(b.id)}')">${esc(b.call)} · ${esc(b.title)}</button>`).join('')}</div>` : ''}
     </div>`;
     return;
   }
-  app.innerHTML = '<div class="results">' + r.results.map((h) => `
+  app.innerHTML = `<div class="results">${conceptHtml}` + r.results.map((h) => `
     <div class="hit" onclick="showChapter('${h.id}')">
       <h4>${esc(h.title)} <small style="color:#9a8a6f">${esc(h.book_title)} · 命中 ${h.score}</small></h4>
       <p>${h.snippet}</p>

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// tests/e2e.mjs · 端到端 / 兼容性 / 性能冒烟
 // 运行：node tests/e2e.mjs   （需本机 Chrome 或 Edge，服务已在 3300 启动）
 // 可用 BASE=http://127.0.0.1:3300/ 覆盖地址。
 import { chromium } from 'playwright-core';
@@ -258,12 +258,12 @@ const lineCount = await page.locator('.rg-line-chip').count();
 const stopCount = await page.locator('#rgSvg .rg-stop').count();
 const branchCount = await page.locator('#rgSvg path[stroke-dasharray="4 4"]').count();
 const transferCount = await page.locator('#rgSvg .rg-xfer').count();
-lineCount === 5 ? ok('书轨 5 条主线', String(lineCount)) : bad('书轨主线数', String(lineCount));
+lineCount === 6 ? ok('书轨 6 条主线', String(lineCount)) : bad('书轨主线数', String(lineCount));
 stopCount >= 40 ? ok('书轨站点数', String(stopCount)) : bad('书轨站点数', String(stopCount));
 branchCount >= 5 ? ok('书轨支线数', String(branchCount)) : bad('书轨支线数', String(branchCount));
 transferCount >= 3 ? ok('书轨换乘线', String(transferCount)) : bad('书轨换乘线', String(transferCount));
 const trainCount = await page.locator('#rgSvg .rg-train').count();
-trainCount === 5 ? ok('书轨发车动画列车', String(trainCount)) : bad('书轨发车列车数', String(trainCount));
+trainCount === 6 ? ok('书轨发车动画列车', String(trainCount)) : bad('书轨发车列车数', String(trainCount));
 
 // 3. 点站点开书 → 阅读三栏
 await page.locator('#rgSvg .rg-stop').first().click();
@@ -431,6 +431,32 @@ const hits = await page.locator('.hit').count();
   ? ok('检索首条命中标题/tag', firstHit)
   : bad('检索首条命中', firstHit);
 hits >= 1 ? ok('检索返回结果数', String(hits)) : bad('检索返回结果数');
+
+// 5a2. 概念手册 / 搜索概念卡 / 阅读页本章概念
+const conceptApi = await (await fetch(BASE + 'api/concepts')).json();
+(conceptApi.concepts && conceptApi.concepts.length === 16 && conceptApi.concepts.some((c) => c.id === 'deep-learning'))
+  ? ok('概念手册接口 16 个概念') : bad('概念手册接口', JSON.stringify(conceptApi).slice(0, 160));
+await page.fill('#q', '深度学习');
+await page.press('#q', 'Enter');
+await page.waitForSelector('.concept-hit', { timeout: 8000 });
+const conceptHitText = await page.locator('.concept-hit').first().innerText();
+(conceptHitText.includes('深度学习') && conceptHitText.includes('先读这篇'))
+  ? ok('搜索深度学习出现概念卡') : bad('搜索概念卡', conceptHitText.slice(0, 80));
+await page.getByRole('button', { name: '概念手册' }).click();
+await page.waitForSelector('.concept-card', { timeout: 10000 });
+const conceptCards = await page.locator('.concept-card').count();
+await page.locator('.concept-card[data-concept="deep-learning"] summary').click();
+await page.waitForTimeout(300);
+const conceptLenses = await page.locator('.concept-card[data-concept="deep-learning"] .cc-lens').count();
+(conceptCards >= 16 && conceptLenses === 4)
+  ? ok('概念手册 16 卡 + 四镜路径', `${conceptCards} / ${conceptLenses}`) : bad('概念手册渲染', `${conceptCards} / ${conceptLenses}`);
+await page.evaluate(() => showChapter('b3-c7'));
+await page.waitForSelector('.chapter-concepts', { timeout: 10000 });
+const chapterConceptText = await page.locator('.chapter-concepts').innerText();
+chapterConceptText.includes('深度学习') ? ok('阅读页本章概念卡') : bad('阅读页本章概念卡', chapterConceptText.slice(0, 80));
+await page.evaluate(() => { document.body.classList.remove('reading'); enterShelf('all'); });
+await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 15000 });
+await page.waitForTimeout(500);
 
 // 5b. 借阅档案（阅读上报与残页收编）
 await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 10000 });

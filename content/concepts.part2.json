@@ -1,0 +1,247 @@
+[
+  {
+    "id": "cnn",
+    "name": "卷积网络",
+    "en": "Convolutional Neural Network",
+    "group": "模型",
+    "aliases": ["卷积网络", "CNN", "卷积神经网络", "ConvNet"],
+    "one_line": "让一小块「印章」在整张图上滑动找特征，再把结果一层层叠深的网络。",
+    "analogy": "识别一张图，不必让一个人盯着整张照片；派一排只负责一小格的检查员，每人拿同一把放大镜，逐格扫过去就行。",
+    "accurate": "卷积网络（Convolutional Neural Network）用卷积核在图上滑动：每个核只连一小块区域，叫局部感受野；同一套权重在全图共享，叫权值共享。LeNet-5 用六个 5×5 核把 32×32 灰度图变成六张 28×28 特征图，再用 2×2 平均池化把相邻格并成一格，七层共约六万个参数。这些核的权重由训练学出来，局部连接、权值共享加下采样让网络对平移不敏感，也把参数量压下来。",
+    "misconceptions": [
+      {
+        "claim": "卷积网络非得堆到很深很多层才算数。",
+        "fix": "LeNet-5 只有七个带权重的层、约六万个参数，1990 年代就装进了银行支票阅读系统。"
+      },
+      {
+        "claim": "卷积核是人手工设计好的边缘算子。",
+        "fix": "核的权重是训练学出来的；人只把「局部连接、权重共享」这条先验写进结构，不设计具体花纹。"
+      },
+      {
+        "claim": "注意力模型一来，卷积网络就彻底过时了。",
+        "fix": "ViT 与 Swin 在大规模通用特征上占优，但手机、边缘设备和小数据任务上卷积仍划算，因为它的先验就是免费的效率。"
+      }
+    ],
+    "start": {
+      "chapter": "b3-c5",
+      "reason": "LeNet 与卷积把结构、参数和真实产品一次讲全，是理解卷积网络最短的入口。"
+    },
+    "paths": [
+      {
+        "lens": "历史",
+        "steps": [
+          {"chapter": "b3-c5", "note": "1980 Neocognitron → 1989 LeNet 手写邮编"},
+          {"chapter": "b3-c7", "note": "2012 · AlexNet 五卷积加三全连接"},
+          {"chapter": "b3-c8", "note": "2015 · ResNet 152 层、3.57% top-5"}
+        ]
+      },
+      {
+        "lens": "技术",
+        "steps": [
+          {"chapter": "b3-c7", "note": "卷积怎么堆、ReLU 与重叠池化怎么配"},
+          {"chapter": "b20-c4", "note": "卷积特征撑起 R-CNN、Faster R-CNN、YOLO 三条检测路线"}
+        ]
+      },
+      {
+        "lens": "产业",
+        "steps": [
+          {"chapter": "b3-c5", "note": "NCR 支票识别，美国多家银行每月读数百万张"},
+          {"chapter": "b20-c4", "note": "YOLO 基础版 45 帧/秒、Fast 版 155 帧/秒"}
+        ]
+      },
+      {
+        "lens": "前沿",
+        "steps": [
+          {"chapter": "b20-c6", "note": "ViT 把图切成 16×16 块，证明纯注意力也能当视觉主干"},
+          {"chapter": "b5-c3", "note": "Transformer 的自注意力是 ViT 的直接来源"}
+        ]
+      }
+    ],
+    "related": ["deep-learning", "backpropagation", "training", "overfitting"],
+    "tags": ["卷积", "CNN", "计算机视觉", "LeNet"]
+  },
+  {
+    "id": "training",
+    "name": "训练",
+    "en": "Training",
+    "group": "训练",
+    "aliases": ["训练", "模型训练", "training"],
+    "one_line": "拿数据反复试错，按误差一点点调参数，直到模型在没见过的题上也答得不错。",
+    "analogy": "像学做菜：尝一口咸淡，按差多少回锅调味，尝的次数够多，手就稳了。",
+    "accurate": "训练（training）先给模型定一个损失函数，用反向传播算出每个参数该往哪边改，再用优化器挪一小步，如此反复。小批量随机梯度下降每次抽 32 到 256 个样本估一次梯度，方向不精确但单步便宜，按总时间算反而更快。学习率决定步长，Adam 再用梯度的一阶、二阶矩给每个参数单独定步长，默认取 0.001。训练的目标是压低未见数据上的误差，而不是训练集上的分数。",
+    "misconceptions": [
+      {
+        "claim": "训练就是让模型把训练集答案背下来。",
+        "fix": "训练的目标是降低未见数据上的误差；只背训练集正是过拟合，dropout 与数据增强就是为拦住它。"
+      },
+      {
+        "claim": "梯度下降每一步都朝最优点走，所以步数越多越准。",
+        "fix": "随机梯度带噪声，学习率调大可能让参数在最优点附近抖动甚至发散，实践中要让学习率随训练衰减。"
+      },
+      {
+        "claim": "训练时间越长，模型一定越好。",
+        "fix": "训练久了训练误差会降，测试误差可能先降后升；early stopping 正是为此存在的正则化手段。"
+      }
+    ],
+    "start": {
+      "chapter": "b42-c1",
+      "reason": "SGD 与小批量把「训练到底在算什么账」讲得最直白，公式背后是一笔时间预算。"
+    },
+    "paths": [
+      {
+        "lens": "历史",
+        "steps": [
+          {"chapter": "b42-c1", "note": "2010 · SGD 与大数据的时间账"},
+          {"chapter": "b3-c7", "note": "2012 · AlexNet 用 GPU 跑小批量"},
+          {"chapter": "b42-c3", "note": "2011–2015 · AdaGrad 到 Adam"}
+        ]
+      },
+      {
+        "lens": "技术",
+        "steps": [
+          {"chapter": "b42-c1", "note": "无偏梯度估计与 32–256 的小批量"},
+          {"chapter": "b42-c3", "note": "一阶动量、二阶矩与偏差修正"},
+          {"chapter": "b3-c8", "note": "BN 把达到同等精度的训练步数减到 1/14"}
+        ]
+      },
+      {
+        "lens": "产业",
+        "steps": [
+          {"chapter": "b42-c1", "note": "点击日志、推荐流、风控数据边来边更新"},
+          {"chapter": "b3-c7", "note": "GPU 从游戏显卡升格为 AI 训练主力"}
+        ]
+      },
+      {
+        "lens": "前沿",
+        "steps": [
+          {"chapter": "b5-c3", "note": "Transformer 用 8 块 P100 训 12 小时"},
+          {"chapter": "b20-c6", "note": "ViT 在 1400 万到 3 亿张图上预训练"}
+        ]
+      }
+    ],
+    "related": ["backpropagation", "neural-network", "overfitting", "cnn"],
+    "tags": ["SGD", "小批量", "优化器", "梯度下降"]
+  },
+  {
+    "id": "overfitting",
+    "name": "过拟合",
+    "en": "Overfitting",
+    "group": "训练",
+    "aliases": ["过拟合", "过度拟合", "overfitting"],
+    "one_line": "模型把训练题的答案连同出题习惯一起背了，换一批新题就露馅。",
+    "analogy": "像学生把练习册答案背得滚瓜烂熟，考试题一换数字就傻眼——记住的是原题，不是解法。",
+    "accurate": "过拟合（overfitting）指模型在训练集上误差很低、在未见数据上误差明显变高：它把采样噪声也当成规律记了下来，参数越多、数据越少越容易发生。判断不能只看训练误差，要看留出集或测试集。AlexNet 有约 6000 万参数、训练图约 120 万张，靠两个全连接层上 0.5 的 dropout，以及随机裁剪、水平翻转等数据增强压住过拟合。",
+    "misconceptions": [
+      {
+        "claim": "训练误差低就说明模型学得好。",
+        "fix": "训练集零误差只说明拟合了这批样本；容量大而样本少时，模型能记住任何有限训练集，却对未见数据一无所知。"
+      },
+      {
+        "claim": "网络越深、训练误差反而升高，就是过拟合。",
+        "fix": "ResNet 论文里的退化是训练误差也变高，连训练集都没拟合好，那是优化问题，不是过拟合。"
+      },
+      {
+        "claim": "参数越多一定越容易过拟合。",
+        "fix": "VC 维说容量大要更多样本兜底，但现代过参数化网络的 VC 维接近参数量甚至无穷大，仍能泛化得好。"
+      }
+    ],
+    "start": {
+      "chapter": "b42-c2",
+      "reason": "dropout 把「怎么拦住模型死记硬背」拆成掩码、缩放与实验数字，最贴近过拟合的日常含义。"
+    },
+    "paths": [
+      {
+        "lens": "历史",
+        "steps": [
+          {"chapter": "b4-c1", "note": "1971 · VC 维把「能背」与「能泛化」分开"},
+          {"chapter": "b42-c2", "note": "2012 · dropout 从技巧写成方法"}
+        ]
+      },
+      {
+        "lens": "技术",
+        "steps": [
+          {"chapter": "b42-c2", "note": "训练时乘伯努利掩码，测试时按 p 缩放权重"},
+          {"chapter": "b3-c7", "note": "AlexNet 的 dropout 与十块裁剪平均"},
+          {"chapter": "b4-c1", "note": "泛化界：真实风险 ≤ 经验风险 + 置信项"}
+        ]
+      },
+      {
+        "lens": "产业",
+        "steps": [
+          {"chapter": "b3-c7", "note": "6000 万参数对 120 万张图，标注稀缺是常态"},
+          {"chapter": "b8-c2", "note": "ImageNet 用 1419 万张图把「数据本位」变成共识"}
+        ]
+      },
+      {
+        "lens": "前沿",
+        "steps": [
+          {"chapter": "b20-c6", "note": "ViT 小数据打不过 ResNet，大规模训练才翻盘"},
+          {"chapter": "b42-c3", "note": "Adam 收敛快，但测试误差未必赢过精调的 SGD 加动量"}
+        ]
+      }
+    ],
+    "related": ["training", "cnn", "deep-learning"],
+    "tags": ["过拟合", "正则化", "dropout", "泛化"]
+  },
+  {
+    "id": "attention",
+    "name": "注意力",
+    "en": "Attention",
+    "group": "模型",
+    "aliases": ["注意力", "注意力机制", "attention"],
+    "one_line": "每写一个词，都回头扫一遍输入，按相关程度给各位置打分再取信息。",
+    "analogy": "像同声传译每翻一个词都瞟一眼讲者的整句话，心里标出这个词是从哪几个词来的。",
+    "accurate": "注意力（attention）让每个输出位置回头给所有输入位置打一个相关分数，经 softmax 变成权重，再对各自的 value 向量加权求和。Bahdanau 等 2015 年用一个小前馈网络算分数，解码器每生成一个词就重算源句权重；Transformer 改用缩放点积，query 与 key 点积后除以根号 d_k，再用 8 个头并行捕捉不同关系。这套权重连续可微，能跟着翻译目标一起端到端训练。",
+    "misconceptions": [
+      {
+        "claim": "注意力权重高，就说明模型真的依赖那个词。",
+        "fix": "权重只是这一步分配的比例；注意力图好看不等于因果解释，高权重不保证那部分真在起作用。"
+      },
+      {
+        "claim": "注意力是 Transformer 发明的。",
+        "fix": "2015 年 Bahdanau 等已把加性注意力装进循环网络做翻译；Transformer 的贡献是把它从插件扶成唯一主干。"
+      },
+      {
+        "claim": "注意力只能用来处理文字。",
+        "fix": "ViT 把图切成 16×16 的块当 token，Swin 用窗口化注意力做视觉主干，图像、语音都能用同一套机制。"
+      }
+    ],
+    "start": {
+      "chapter": "b5-c2",
+      "reason": "Bahdanau 等的加性注意力动机清楚——固定向量装不下整句，于是每步回头查原文。"
+    },
+    "paths": [
+      {
+        "lens": "历史",
+        "steps": [
+          {"chapter": "b5-c2", "note": "2015 · 加性注意力解开固定向量瓶颈"},
+          {"chapter": "b5-c3", "note": "2017 · Transformer 把注意力扶成主干"}
+        ]
+      },
+      {
+        "lens": "技术",
+        "steps": [
+          {"chapter": "b5-c2", "note": "打分、softmax、加权求和三步"},
+          {"chapter": "b5-c3", "note": "缩放点积、八头并行、正弦位置编码"},
+          {"chapter": "b20-c6", "note": "ViT 把图切块当词，Swin 用滑动窗口"}
+        ]
+      },
+      {
+        "lens": "产业",
+        "steps": [
+          {"chapter": "b5-c3", "note": "8 块 P100 训 12 小时，翻译刷新纪录"},
+          {"chapter": "b20-c6", "note": "ViT 成为大模型与多模态的默认视觉编码器"}
+        ]
+      },
+      {
+        "lens": "前沿",
+        "steps": [
+          {"chapter": "b20-c6", "note": "2020 · ViT 把 224×224 图切成 196 个 16×16 块"},
+          {"chapter": "b20-c6", "note": "2021 · Swin 用滑动窗口把复杂度压成线性"}
+        ]
+      }
+    ],
+    "related": ["transformer", "llm", "cnn"],
+    "tags": ["注意力", "自注意力", "Transformer", "机器翻译"]
+  }
+]
