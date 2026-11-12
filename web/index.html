@@ -91,7 +91,7 @@
   .rail-hit span { color: #d0b488; font-size: 11.5px; line-height: 1.5; }
   .rail-hit mark { background: #c8a24a; color: #2b1d12; padding: 0 1px; }
 
-  .paper { position: relative; max-width: 780px; margin: 0 auto; background: var(--paper-history); color: #2c2318; padding: 40px 52px 56px; box-shadow: 0 24px 80px rgba(0,0,0,.55); border-radius: var(--radius); font-family: var(--font-serif); font-size: 16px; line-height: 1.95; }
+  .paper { position: relative; max-width: 780px; margin: 0 auto; background: var(--paper-history); color: #2c2318; padding: 40px 52px 56px; box-shadow: 0 24px 80px rgba(0,0,0,.55); border-radius: var(--radius); font-family: var(--font-serif); font-size: 16px; line-height: 1.95; overflow-wrap: anywhere; }
   .paper.tech { background: #d3dde8; color: #18303e; font-family: var(--font-mono); }
   .paper.industry { background: #e2dccd; color: #33302a; }
   .paper.frontier { background: #dcc9a3; color: #3a2f1c; }
@@ -312,6 +312,19 @@
     .gate-card { padding: 24px 20px 20px; }
     .gate-title { font-size: 22px; letter-spacing: 4px; }
     .gate-btn { flex: 1 1 100%; }
+    /* 手机首屏收敛：隐藏次要计数，电梯改成一行楼层切换，阅读页收窄留白 */
+    header .note { display: none; }
+    .shelf-elevator { position: static; display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; }
+    .elev-title { display: none; }
+    .shelf-elevator .elev-btn { flex: 1 1 0; min-width: 0; width: auto; margin: 0; padding: 6px 3px; text-align: center; font-size: 11.5px; }
+    .shelf-elevator .elev-btn span { white-space: nowrap; }
+    .shelf-elevator .elev-btn i { display: none; }
+    .elev-welcome { flex: 1 1 100%; margin-top: 3px; padding-top: 5px; font-size: 11px; line-height: 1.6; }
+    .elev-links { flex: 1 1 100%; margin-top: 2px; font-size: 11.5px; }
+    body.reading #app { padding: 8px 10px 32px; }
+    .paper { padding: 26px 16px 36px; font-size: 15.5px; }
+    .paper h1 { font-size: 21px; }
+    .paper h2 { font-size: 17.5px; margin-top: 26px; }
   }
 
   @media (max-width: 1100px) {
@@ -519,7 +532,7 @@
   #mmTipCard .tip-actions button { background: #3a291a; border: 1px solid #c8a24a; color: #f0d68a; padding: 5px 12px; font-size: 11.5px; cursor: pointer; font-family: inherit; }
   #mmTipCard .tip-close { position: absolute; right: 8px; top: 6px; background: none; border: none; color: #8a7a5c; font-size: 15px; cursor: pointer; padding: 2px 6px; }
   #mmTipCard .tip-close:hover { color: #c8a24a; }
-  @media (max-width: 700px) { #mmTipCard { left: 12px; right: 12px; bottom: 132px; width: auto; } }
+  @media (max-width: 700px) { #mmTipCard { left: 12px; right: 12px; bottom: 132px; width: auto; } body.grid #mmTipCard { bottom: 16px; } }
   .stats-view { max-width: 1050px; }
   .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
   .stat-card { background: #1d1712; border: 1px solid var(--line); padding: 12px 14px; }
@@ -795,7 +808,6 @@
       if (window.innerWidth < 760) {
         try {
           enterShelf('all');
-          mmToast('移动端已切到书架视图；想看 3D，点顶部「3D 阅览室」。');
         } catch (e) { /* 移动端降级失败不影响入馆 */ }
       } else {
         // 门已经关上再建 3D：门厅动画不会被同步建场景卡住
@@ -2479,7 +2491,10 @@ function mmToggleNav(force) {
   try { localStorage.setItem('mm_nav_collapsed', collapsed ? '1' : '0'); } catch (e) { /* 忽略 */ }
 }
 window.mmToggleNav = mmToggleNav;
-try { if (localStorage.getItem('mm_nav_collapsed') === '1') mmToggleNav(true); } catch (e) { /* 忽略 */ }
+try {
+  const navSaved = localStorage.getItem('mm_nav_collapsed');
+  if (navSaved === '1' || (navSaved === null && window.innerWidth < 700)) mmToggleNav(true);
+} catch (e) { /* 忽略 */ }
 // 书轨用更短的转场：快速进入这张线路图
 function enterRail() { fadeSwap(() => showRail(), { hard: true, hide3d: true, out: 260 }); }
 function enterTimeline() { fadeSwap(() => showTimeline()); }
@@ -3367,7 +3382,7 @@ async function showRail() {
 async function showShelves(floor) {
   shelfFloor = floor || (window.mm3d && window.mm3d.getFloor ? window.mm3d.getFloor() : shelfFloor) || 'all';
   document.body.classList.add('grid');
-  mmTip('shelf', '书架视图', '按层找书，点一格看书脊；顶部电梯与 3D 楼层同步。');
+  mmTip('shelf', '书架视图', '按层找书，点书脊开读；电梯与 3D 楼层同步。想看 3D，展开顶部导航点「3D 阅览室」。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在取出书架……</div>';
   const [catalog, floors] = await Promise.all([ensureCatalog(), ensureFloors()]);

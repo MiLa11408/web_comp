@@ -735,12 +735,26 @@ await mob.evaluate(() => { if (window.gateGuest) window.gateGuest(); else docume
 await mob.waitForTimeout(1600);
 if (await mob.locator('#gate').count()) await mob.evaluate(() => document.getElementById('gate')?.remove());
 await mob.waitForTimeout(300);
+const mobNavCollapsed = await mob.locator('#navShell.nav-collapsed').count();
+mobNavCollapsed === 1 ? ok('移动端默认收起导航') : bad('移动端默认收起导航', String(mobNavCollapsed));
+if (mobNavCollapsed) { await mob.locator('#navToggle').click(); await mob.waitForTimeout(500); }
 await mob.waitForSelector('button:has-text("书轨")', { timeout: 20000 });
 await mob.waitForFunction(() => typeof window.enterRail === 'function', null, { timeout: 30000 });
 await mob.locator('button:has-text("书轨")').first().click();
 await mob.waitForSelector('#rgSvg .rg-stop', { timeout: 8000 });
 const mobRail = await mob.locator('#rgSvg .rg-stop').count();
 mobRail >= 40 ? ok('移动端书轨渲染', String(mobRail)) : bad('移动端书轨渲染', String(mobRail));
+await mob.locator('#rgSvg .rg-stop').first().click();
+await mob.waitForSelector('.paper', { timeout: 10000 });
+await mob.waitForTimeout(500);
+const mobRead = await mob.evaluate(() => ({
+  iw: window.innerWidth,
+  sw: document.documentElement.scrollWidth,
+  paperW: Math.round(document.querySelector('.paper').getBoundingClientRect().width),
+}));
+(mobRead.iw === 390 && mobRead.sw <= 391)
+  ? ok('移动端阅读页不撑宽视口', JSON.stringify(mobRead))
+  : bad('移动端阅读页被长链接撑宽', JSON.stringify(mobRead));
 if (mobErrors.length) bad('移动端 JS 报错', mobErrors.slice(0, 2).join(' | '));
 else ok('移动端无 JS 报错');
 await mob.close();
