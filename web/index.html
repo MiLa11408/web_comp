@@ -1218,8 +1218,12 @@
   function hideRoomBoot() {
     const veil = document.getElementById('roomBoot');
     if (!veil) return;
-    veil.classList.remove('on');
-    setTimeout(() => { veil.hidden = true; }, 560);
+    // 首帧特别快时也让过渡停留一小会，避免闪一下
+    const shownFor = performance.now() - (window.__mmBootVeilAt || 0);
+    setTimeout(() => {
+      veil.classList.remove('on');
+      setTimeout(() => { veil.hidden = true; }, 560);
+    }, Math.max(0, 700 - shownFor));
   }
   function waitRoomFirstFrame() {
     return new Promise((resolve) => {
@@ -1252,6 +1256,7 @@
       if (veil) {
         veil.hidden = false;
         window.__mmBootVeilShown = true;
+        window.__mmBootVeilAt = performance.now();
         requestAnimationFrame(() => veil.classList.add('on'));
       }
     }
