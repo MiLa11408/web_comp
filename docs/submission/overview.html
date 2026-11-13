@@ -24,8 +24,12 @@
   ul,ol{margin:0 0 8px 17px;padding:0;}
   li{margin:2px 0;}
   table{width:100%;border-collapse:collapse;font-size:9.3pt;margin:7px 0 12px;}
+  table.fixed{table-layout:fixed;}
+  table.dense{font-size:8.6pt;}
+  table.dense th,table.dense td{padding:3px 5px;line-height:1.5;}
   th{background:#f3ead8;text-align:left;font-weight:600;}
   th,td{border:1px solid var(--line);padding:4.5px 6px;vertical-align:top;}
+  table.fixed td{overflow-wrap:anywhere;}
   .caption{font-size:8.5pt;color:var(--muted);text-align:center;margin:3px 0 11px;}
   .shot{width:100%;display:block;border:1px solid var(--line);border-radius:2px;}
   .kpis{display:flex;gap:7px;margin:9px 0 13px;}
@@ -105,16 +109,24 @@
   <li><b>AI 作为内容管线</b>：前沿观察每日从 arXiv 与官方 RSS 取源，经大模型编译成中文科普新闻，再进入馆内检索。</li>
 </ul>
 
+<h3>1.4 作品一览</h3>
+<p>作品由“内容、技术、玩法”三条线组成，评委可以从下表快速建立整体认识：</p>
+<table>
+  <tr><th style="width:22mm">维度</th><th>内容</th></tr>
+  <tr><td>内容</td><td>56 本书、448 章 AI 通史；16 个核心概念；20 件失败案例；12 项模型尺寸；24 条前沿论文 + 12 条本周热点。</td></tr>
+  <tr><td>技术</td><td>three.js 3D 阅览室、Rapier 物理、原生前端、Fastify + SQLite、自建中文检索、WebAudio 程序音效。</td></tr>
+  <tr><td>玩法</td><td>残页拼合、失窃页追回、躁动书页收容、L4 暗门十本假如之书、未写之书 AI 生成、盖章/徽章/书榜。</td></tr>
+  <tr><td>更新</td><td>每日 arXiv 入库 + 中文科普编译，每周官方热点；前沿内容不是静态样例。</td></tr>
+</table>
+<p><b>两个容易被忽略的特色：</b>一是“未写之书”——读者写下一个“如果没有……会怎么样”的假设，书页会调用大模型生成一篇 500–900 字的短故事；二是“前沿观察”——每天自动抓取 arXiv 与官方 RSS，编译成中文科普新闻，并纳入馆内检索。</p>
+
 <div class="kpis">
   <div class="kpi"><b>56</b><span>本书（48 正册 + 8 增补册）</span></div>
   <div class="kpi"><b>448</b><span>章，每章 9 段结构</span></div>
   <div class="kpi"><b>16</b><span>概念，四镜路径</span></div>
   <div class="kpi"><b>7</b><span>可玩演示</span></div>
-  <div class="kpi"><b>169</b><span>项端到端测试全部通过</span></div>
+  <div class="kpi"><b>169</b><span>项端到端测试通过</span></div>
 </div>
-
-<img class="shot" src="assets/gate.jpg" alt="门厅">
-<div class="caption">图 1　入馆门厅：借书证 / 新办证 / 访客入馆，背景是程序化生成的图书馆剖面与星网</div>
 
 <h2>二、创意设计</h2>
 <h3>2.1 灵感来源</h3>
@@ -129,7 +141,7 @@
   <tr><td>星图</td><td>概念关系</td><td>56 个节点、50 条关系；悬停点亮关系线，点星开书</td></tr>
   <tr><td>卡片目录</td><td>检索</td><td>中文二元组 + 英文词倒排索引；书名 > 章节标题 > tag > 正文频次</td></tr>
   <tr><td>借阅证</td><td>身份</td><td>访客只读；注册后可盖章、批注、记录进度</td></tr>
-  <tr><td>残页 / 失窃页 / 躁动书页</td><td>馆藏异常</td><td>收集、追回、收容与归位；把“读完”变成可完成的动作</td></tr>
+  <tr><td>残页 / 失窃页 / 躁动书页 / 暗门</td><td>馆藏谜题与收集</td><td>用小故事、解密与收集串起探索动机：残页拼合、失窃页追回、躁动页收容、暗门十本假如之书</td></tr>
 </table>
 
 <h3>2.3 体验路径</h3>
@@ -144,7 +156,18 @@
   <div class="arrow">↓</div>
   <div class="layer"><div class="tag">05 探索</div><div class="body"><div class="node"><b>星图 / 书轨 / 时间轴</b>换一条路径理解同一批知识</div><div class="node"><b>馆藏玩法</b>残页、失窃页、躁动书页、暗门、未写之书</div><div class="node"><b>借阅档案</b>徽章、书榜、我的翻阅记录</div></div></div>
 </div>
-<div class="caption">图 2　从入馆到探索的五段体验路径</div>
+<div class="caption">图 1　从入馆到探索的五段体验路径</div>
+
+<h3>2.4 背景故事与文风</h3>
+<p>不同馆藏用不同的叙事语气，避免全书一个腔调：</p>
+<ul>
+  <li><b>楼层档案</b>：L1 旧纸、L2 蓝图、L3 账簿、L4 蜡封；同一段史实，在不同楼层由不同馆员用不同口吻讲述。</li>
+  <li><b>页边注</b>：馆长口吻的短评，只基于正文已核验的事实，不引入新事实；作用是给硬知识一个喘气的出口。</li>
+  <li><b>残页</b>：残缺叙事，关键结局处用“纸页被撕去 / 烧毁”或缺字符号，只给走向不给答案。</li>
+  <li><b>失窃页 / 躁动书页</b>：短篇悬疑 + 收容记录；读者先读到异常，再决定追回或归位。</li>
+  <li><b>假如之书</b>：三条科技树（符号 / 神经 / 具身），每本“序章 + 五幕 + 尾声”，走的是另一条历史线。</li>
+  <li><b>未写之书</b>：读者给出假设，AI 当场续写 500–900 字；文字以“空白页自己浮出字迹”的方式出现，不写成馆员代笔。</li>
+</ul>
 
 <h2>三、总体架构</h2>
 <h3>3.1 分层结构</h3>
@@ -186,7 +209,7 @@
     </div>
   </div>
 </div>
-<div class="caption">图 3　四层总体架构：表现层不依赖构建工具，接口层与数据层保持薄而清晰</div>
+<div class="caption">图 2　四层总体架构：表现层不依赖构建工具，接口层与数据层保持薄而清晰</div>
 
 <h3>3.2 技术栈选择</h3>
 <table>
@@ -212,32 +235,32 @@
 <h2>四、模块设计</h2>
 <h3>4.1 模块划分</h3>
 <div class="grid2">
-  <div class="card"><b>M1 门厅与身份</b><br>登录、注册、访客入馆、门开动画、门厅星网、开灯过渡。</div>
-  <div class="card"><b>M2 3D 阅览室</b><br>场景、书架、书、灯光材质、取书/手持/叠桌、电梯、道具互动。</div>
-  <div class="card"><b>M3 阅读器</b><br>三栏渲染、接待卡、页边注锚点、印章/批注/进度、章节条。</div>
-  <div class="card"><b>M4 检索</b><br>倒排索引、四级排序、命中理由、零结果兜底、联想补全。</div>
-  <div class="card"><b>M5 知识视图</b><br>星图、书轨、时间轴、楼层平面图、书架视图与总览。</div>
-  <div class="card"><b>M6 馆藏玩法</b><br>残页、失窃页、躁动书页、暗门假如之书、未写之书。</div>
-  <div class="card"><b>M7 概念与前沿</b><br>16 个概念、四镜路径、每日 arXiv 与热点编译。</div>
-  <div class="card"><b>M8 演示与音效</b><br>7 个可玩演示、总览入口、WebAudio 事件音与底噪。</div>
-  <div class="card"><b>M9 档案与统计</b><br>借阅档案、徽章、书榜、我的翻阅、章节总结卡。</div>
-  <div class="card"><b>M10 运维与测试</b><br>静态资源、缓存、备份、前沿定时任务、verify 与 E2E。</div>
+  <div class="card"><b>M1：门厅与身份</b><br>登录、注册、访客入馆、门开动画、门厅星网、开灯过渡。</div>
+  <div class="card"><b>M2：3D 阅览室</b><br>场景、书架、书、灯光材质、取书/手持/叠桌、电梯、道具互动。</div>
+  <div class="card"><b>M3：阅读器</b><br>三栏渲染、接待卡、页边注锚点、印章/批注/进度、章节条。</div>
+  <div class="card"><b>M4：检索</b><br>倒排索引、四级排序、命中理由、零结果兜底、联想补全。</div>
+  <div class="card"><b>M5：知识视图</b><br>星图、书轨、时间轴、楼层平面图、书架视图与总览。</div>
+  <div class="card"><b>M6：馆藏玩法</b><br>残页、失窃页、躁动书页、暗门假如之书、未写之书。</div>
+  <div class="card"><b>M7：概念与前沿</b><br>16 个概念、四镜路径、每日 arXiv 与热点编译。</div>
+  <div class="card"><b>M8：演示与音效</b><br>7 个可玩演示、总览入口、WebAudio 事件音与底噪。</div>
+  <div class="card"><b>M9：档案与统计</b><br>借阅档案、徽章、书榜、我的翻阅、章节总结卡。</div>
+  <div class="card"><b>M10：运维与测试</b><br>静态资源、缓存、备份、前沿定时任务、verify 与 E2E。</div>
 </div>
-<div class="caption">图 4　十个模块，前后端职责边界清晰</div>
+<div class="caption">图 3　十个模块，前后端职责边界清晰</div>
 
 <h3>4.2 模块职责与关键接口</h3>
-<table>
-  <tr><th style="width:30mm">模块</th><th style="width:60mm">核心职责</th><th>关键接口 / 入口</th></tr>
-  <tr><td>M1 门厅与身份</td><td>身份核验、访客只读、入场动画、门厅星网物理场</td><td><span class="mono">POST /api/register</span>、<span class="mono">/api/login</span>、<span class="mono">/api/me</span></td></tr>
-  <tr><td>M2 3D 阅览室</td><td>场景构建、取书与阅读、楼层切换、展柜与暗门</td><td><span class="mono">mm3d.setFloor / focusStolen / getTechProfile</span></td></tr>
-  <tr><td>M3 阅读器</td><td>章节渲染、三栏、锚点、盖章与进度</td><td><span class="mono">GET /api/chapters/:id</span>、<span class="mono">/api/stamps</span>、<span class="mono">/api/progress</span></td></tr>
-  <tr><td>M4 检索</td><td>索引构建、排序、理由、兜底、联想</td><td><span class="mono">GET /api/search?q=</span>、<span class="mono">/api/suggest?q=</span></td></tr>
-  <tr><td>M5 知识视图</td><td>星图、书轨、时间轴、平面图、书架</td><td><span class="mono">/api/graph</span>、<span class="mono">/api/rail</span>、<span class="mono">/api/floors</span>、<span class="mono">/api/catalog</span></td></tr>
-  <tr><td>M6 馆藏玩法</td><td>收集、追回、收容、假如故事、未写之书</td><td><span class="mono">/api/fragments</span>、<span class="mono">/api/stolen</span>、<span class="mono">/api/restless</span>、<span class="mono">/api/collectibles</span>、<span class="mono">/api/oracle</span></td></tr>
-  <tr><td>M7 概念与前沿</td><td>概念卡、四镜路径、每日论文与热点</td><td><span class="mono">/api/concepts</span>、<span class="mono">/api/frontier</span></td></tr>
-  <tr><td>M8 演示与音效</td><td>演示渲染、交互、音效开关</td><td><span class="mono">mmOpenDemo(id)</span>、<span class="mono">mmAudio*</span></td></tr>
-  <tr><td>M9 档案与统计</td><td>徽章、书榜、记录、总结卡导出</td><td><span class="mono">/api/stats</span>、Canvas 导出 PNG</td></tr>
-  <tr><td>M10 运维与测试</td><td>缓存、备份、内容校验、E2E</td><td><span class="mono">npm run verify</span>、<span class="mono">npm run test:e2e</span></td></tr>
+<table class="fixed dense">
+  <tr><th style="width:38mm">模块</th><th style="width:56mm">核心职责</th><th>关键接口 / 入口</th></tr>
+  <tr><td>M1：门厅与身份</td><td>身份核验、访客只读、入场动画、门厅星网物理场</td><td><span class="mono">POST /api/register</span>、<span class="mono">/api/login</span>、<span class="mono">/api/me</span></td></tr>
+  <tr><td>M2：3D 阅览室</td><td>场景构建、取书与阅读、楼层切换、展柜与暗门</td><td><span class="mono">mm3d.setFloor / focusStolen / getTechProfile</span></td></tr>
+  <tr><td>M3：阅读器</td><td>章节渲染、三栏、锚点、盖章与进度</td><td><span class="mono">GET /api/chapters/:id</span><br><span class="mono">/api/stamps、/api/progress</span></td></tr>
+  <tr><td>M4：检索</td><td>索引构建、排序、理由、兜底、联想</td><td><span class="mono">GET /api/search?q=</span>、<span class="mono">/api/suggest?q=</span></td></tr>
+  <tr><td>M5：知识视图</td><td>星图、书轨、时间轴、平面图、书架</td><td><span class="mono">/api/graph、/api/rail、/api/floors</span><br><span class="mono">/api/catalog</span></td></tr>
+  <tr><td>M6：馆藏玩法</td><td>收集、追回、收容、假如故事、未写之书</td><td><span class="mono">/api/fragments、/api/stolen、/api/restless</span><br><span class="mono">/api/collectibles、/api/oracle</span></td></tr>
+  <tr><td>M7：概念与前沿</td><td>概念卡、四镜路径、每日论文与热点</td><td><span class="mono">/api/concepts</span>、<span class="mono">/api/frontier</span></td></tr>
+  <tr><td>M8：演示与音效</td><td>演示渲染、交互、音效开关</td><td><span class="mono">mmOpenDemo(id)</span>、<span class="mono">mmAudio*</span></td></tr>
+  <tr><td>M9：档案与统计</td><td>徽章、书榜、记录、总结卡导出</td><td><span class="mono">/api/stats</span>、Canvas 导出 PNG</td></tr>
+  <tr><td>M10：运维与测试</td><td>缓存、备份、内容校验、E2E</td><td><span class="mono">npm run verify</span>、<span class="mono">npm run test:e2e</span></td></tr>
 </table>
 
 <h2>五、数据设计</h2>
@@ -257,8 +280,8 @@
 </table>
 
 <h3>5.2 业务数据（SQLite）</h3>
-<table>
-  <tr><th style="width:36mm">表</th><th style="width:52mm">关键字段</th><th>说明</th></tr>
+<table class="fixed">
+  <tr><th style="width:32mm">表</th><th style="width:62mm">关键字段</th><th>说明</th></tr>
   <tr><td><span class="mono">users</span></td><td>id, username, password_hash, email, created_at</td><td>借书证号唯一；scrypt 口令</td></tr>
   <tr><td><span class="mono">sessions</span></td><td>token, user_id, expires_at</td><td>HttpOnly Cookie 会话</td></tr>
   <tr><td><span class="mono">stamps</span></td><td>reader_id, chapter_id, created_at</td><td>盖章；可撤销</td></tr>
@@ -281,7 +304,7 @@
   <div class="arrow">↓</div>
   <div class="layer"><div class="tag">持久化</div><div class="body"><div class="node"><b>SQLite</b>写入状态</div><div class="node"><b>下次访问</b>恢复印章、进度、收藏</div></div></div>
 </div>
-<div class="caption">图 5　内容与业务数据的两条链路：内容只读、业务可写</div>
+<div class="caption">图 4　内容与业务数据的两条链路：内容只读、业务可写</div>
 
 <h2>六、关键设计决策</h2>
 <table>
@@ -319,9 +342,6 @@
   <tr><td>低配降级</td><td>&lt;760px 或 deviceMemory ≤4：DPR≤1.25、关阴影、尘埃/光锥减半、跳过 Rapier</td></tr>
 </table>
 
-<img class="shot" src="assets/hall.jpg" alt="3D 阅览室">
-<div class="caption">图 6　3D 主阅览室：暖木书架、黄铜吊灯、体积光柱与星图台</div>
-
 <h2>八、部署与运行</h2>
 <h3>8.1 线上拓扑</h3>
 <div class="diagram">
@@ -333,7 +353,7 @@
   <div class="arrow">↓</div>
   <div class="layer"><div class="tag">数据</div><div class="body"><div class="node"><b>SQLite</b>.data/machine-memory.db</div><div class="node"><b>内容</b>content/ 448 章</div><div class="node"><b>备份</b>/opt/mm-backups 保留 14 天</div></div></div>
 </div>
-<div class="caption">图 7　线上部署拓扑</div>
+<div class="caption">图 5　线上部署拓扑</div>
 
 <h3>8.2 运行方式</h3>
 <ol>
@@ -356,7 +376,6 @@
 
 <h3>9.2 可扩展方向</h3>
 <ul>
-  <li>在现有书架体系中增加新的专题书架，把一组同主题馆藏接入，无需改动底层结构。</li>
   <li>把概念手册扩展为可交互的知识图谱，支持从任意章节反向查看概念路径。</li>
   <li>为视障读者补充更完整的键盘导航与朗读标记；为低带宽环境提供纯 2D 轻量入口。</li>
   <li>将前沿编译管线开放为可配置主题，支持更多学科方向。</li>

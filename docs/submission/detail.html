@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -26,7 +26,6 @@
   th{background:#f3ead8;text-align:left;font-weight:600;}
   th,td{border:1px solid var(--line);padding:4px 6px;vertical-align:top;}
   .caption{font-size:8.4pt;color:var(--muted);text-align:center;margin:3px 0 10px;}
-  .shot{width:100%;display:block;border:1px solid var(--line);border-radius:2px;}
   .diagram{border:1px solid var(--line);background:#fcf8ef;padding:8px 10px;margin:6px 0 10px;}
   .row{display:flex;gap:6px;align-items:stretch;margin:4px 0;}
   .row .tag{width:24mm;flex:none;background:#f0e5d0;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:8.2pt;color:var(--brass);text-align:center;padding:2px;}
@@ -38,14 +37,11 @@
   code{font-family:"Cascadia Mono","Consolas",monospace;font-size:8.5pt;background:#f6efdf;padding:0 2px;}
   .mono{font-family:"Cascadia Mono","Consolas",monospace;font-size:8.5pt;}
   .note{border-left:3px solid var(--brass2);background:#faf4e6;padding:5px 9px;font-size:9pt;margin:6px 0 9px;}
-  .pb{break-before:page;}
   .toc{font-size:9.8pt;line-height:1.95;}
   .toc span{color:var(--muted);}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-  .mini{border:1px solid var(--line);padding:6px 8px;font-size:8.8pt;background:#fdfaf3;}
   h2,h3,h4{break-after:avoid;page-break-after:avoid;}
-  table,.diagram,.shot,pre{break-inside:avoid;page-break-inside:avoid;}
-  .shot{break-after:avoid;page-break-after:avoid;}
+  table,.diagram,pre{break-inside:avoid;page-break-inside:avoid;}
 </style>
 </head>
 <body>
@@ -55,7 +51,7 @@
   <div class="rule"></div>
   <h1>机忆书库 · 详细设计说明书</h1>
   <div class="en">THE MACHINE MEMORY · DETAILED DESIGN</div>
-  <p class="lead">本文描述作品的运行环境、启动时序、各功能模块的具体实现、数据流转过程、关键算法与部署方式，供评审与答辩查阅。</p>
+  <p class="lead">本文把概要设计中的每个模块拆到实现层：数据结构、关键算法、复杂度、请求生命周期、渲染管线、状态机与失败路径，用于回答“具体是怎么做到的”。</p>
   <dl class="meta">
     <dt>作品名称</dt><dd>机忆书库 · THE MACHINE MEMORY</dd>
     <dt>参赛组别</dt><dd>动态网页组</dd>
@@ -69,7 +65,7 @@
 
 <h1>目录</h1>
 <div class="toc">
-  1　范围与术语<br>
+  1　范围、分工与代码结构<br>
   2　运行环境与启动时序<br>
   3　身份与门厅模块<br>
   4　内容与数据层<br>
@@ -79,7 +75,7 @@
   8　星图模块<br>
   9　书轨 / 时间轴 / 平面图<br>
   10　馆藏玩法模块<br>
-  11　概念层与前沿观察（含可玩演示）<br>
+  11　概念层与前沿观察<br>
   12　音效模块<br>
   13　安全、性能与降级<br>
   14　测试与验收<br>
@@ -87,8 +83,17 @@
   16　已知限制与演进方向
 </div>
 
-<h2>1　范围与术语</h2>
-<p>本文覆盖前端（原生 HTML/CSS/JS + three.js）、后端（Fastify 5 + node:sqlite）、内容数据与部署脚本。读者对象为评审、答辩老师与后续维护者。</p>
+<h2>1　范围、分工与代码结构</h2>
+<h3>1.1 两份说明书的分工</h3>
+<p>比赛要求提交概要设计与详细设计两份文档。两份文档不重复：概要把作品说全，详细把关键实现说透。</p>
+<table>
+  <tr><th style="width:26mm">文档</th><th style="width:56mm">回答的问题</th><th>写法</th></tr>
+  <tr><td>概要设计</td><td>作品是什么、有哪些功能、整体怎么分层</td><td>覆盖全部功能与模块，偏介绍与结构，让评委建立整体认识</td></tr>
+  <tr><td>详细设计</td><td>每个模块具体怎么实现、数据怎么流、算法怎么算</td><td>聚焦底层：数据结构、公式、复杂度、状态机、异常与降级</td></tr>
+</table>
+<p>按比赛通知对详细设计说明书的要求，本文覆盖三件事：<b>各模块的实现方式</b>、<b>数据流转过程</b>、<b>关键技术的具体实现</b>。所有描述对应当前线上版本。</p>
+
+<h3>1.2 术语</h3>
 <table>
   <tr><th style="width:34mm">术语</th><th>含义</th></tr>
   <tr><td>书 / 章</td><td>书是主题单元（56 本），章是阅读单元（448 章，每本 8 章）。</td></tr>
@@ -96,20 +101,66 @@
   <tr><td>馆藏玩法</td><td>残页、失窃页、躁动书页、暗门假如之书、未写之书等可交互内容。</td></tr>
   <tr><td>低配模式</td><td>屏幕 &lt;760px 或 deviceMemory ≤4 时启用的降级路径。</td></tr>
   <tr><td>hold / stack</td><td>书被拿在手里 / 放到桌面书堆的状态。</td></tr>
+  <tr><td>倒排索引</td><td>词项 → 文档列表（含权重）的映射，用于检索打分。</td></tr>
 </table>
+
+<h3>1.3 代码结构与模块索引</h3>
+<p>项目不使用前端构建工具，浏览器直接加载 ES module；后端是单进程 Fastify。模块编号与概要设计一致，便于两份文档对照阅读。</p>
+<table>
+  <tr><th style="width:30mm">模块</th><th style="width:44mm">前端文件</th><th style="width:42mm">后端文件</th><th>关键函数 / 入口</th></tr>
+  <tr><td>M1：门厅与身份</td><td><span class="mono">web/index.html</span>（门厅、登录、星网）</td><td><span class="mono">auth.js</span>、<span class="mono">index.js</span></td><td><span class="mono">hashPassword / verifyPassword / createSession / authHook</span></td></tr>
+  <tr><td>M2：3D 阅览室</td><td><span class="mono">web/app3d.js</span></td><td>—</td><td><span class="mono">mm3d.setFloor / focusStolen / getTechProfile</span></td></tr>
+  <tr><td>M3：阅读器</td><td><span class="mono">web/index.html</span>（阅读视图）</td><td><span class="mono">index.js</span></td><td><span class="mono">showChapter / renderPaper / 盖章与进度接口</span></td></tr>
+  <tr><td>M4：检索</td><td><span class="mono">web/index.html</span>（卡片目录）</td><td><span class="mono">search.js</span>、<span class="mono">index.js</span></td><td><span class="mono">tokenize / initSearch / search / suggest / fallbackFor</span></td></tr>
+  <tr><td>M5：知识视图</td><td><span class="mono">web/star.js</span>、<span class="mono">web/index.html</span></td><td><span class="mono">index.js</span></td><td><span class="mono">/api/graph、/api/rail、/api/floors、/api/catalog</span></td></tr>
+  <tr><td>M6：馆藏玩法</td><td><span class="mono">web/index.html</span>、<span class="mono">web/whatif.js</span></td><td><span class="mono">index.js</span></td><td><span class="mono">resolveReader / 收藏写入 / /api/oracle</span></td></tr>
+  <tr><td>M7：概念与前沿</td><td><span class="mono">web/index.html</span></td><td><span class="mono">concepts.js</span>、<span class="mono">tools/*.mjs</span></td><td><span class="mono">loadConcepts / matchConcepts / conceptsForChapter</span></td></tr>
+  <tr><td>M8：演示与音效</td><td><span class="mono">web/demos.js</span>、<span class="mono">web/audio.js</span></td><td>—</td><td><span class="mono">mmOpenDemo / mmAudio*</span></td></tr>
+  <tr><td>M9：档案与统计</td><td><span class="mono">web/index.html</span></td><td><span class="mono">index.js</span></td><td><span class="mono">/api/stats、/api/reads</span></td></tr>
+  <tr><td>M10：运维与测试</td><td>—</td><td><span class="mono">tools/verify.mjs</span>、<span class="mono">tests/e2e.mjs</span></td><td><span class="mono">npm run verify / test:e2e</span></td></tr>
+</table>
+
+<h3>1.4 一次请求的完整生命周期</h3>
+<p>以“登录后标记读完”为例，一次写请求经过以下环节：</p>
+<div class="diagram">
+  <div class="row"><div class="tag">1 浏览器</div><div class="body"><div class="node"><b>fetch</b>POST /api/progress，自动携带 mm_token</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">2 nginx</div><div class="body"><div class="node"><b>反代</b>/ai/ 前缀转发到 127.0.0.1:3300</div><div class="node"><b>传输</b>gzip、CSP 与安全头、TLS 终止</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">3 Fastify</div><div class="body"><div class="node"><b>路由</b>匹配 POST /api/progress</div><div class="node"><b>onSend</b>统一补 nosniff / DENY / COOP 等响应头</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">4 鉴权</div><div class="body"><div class="node"><b>preHandler</b>手动解析 Cookie</div><div class="node"><b>会话</b>sessions JOIN users，过期即删</div><div class="node"><b>注入</b>request.user</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">5 业务</div><div class="body"><div class="node"><b>校验</b>chapter_id 必须存在；state ∈ {started, done}</div><div class="node"><b>写入</b>UPSERT progress</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">6 返回</div><div class="body"><div class="node"><b>JSON</b>{ chapter_id, state }</div><div class="node"><b>前端</b>按钮态更新，失败则回滚</div></div></div>
+</div>
+<div class="caption">图 1-1　写请求的六段生命周期；读请求省略第 5 段的写库</div>
+<p>静态资源走另一条路径：<span class="mono">sendScript</span> 用“文件大小 + 修改时间”生成 ETag，应用脚本返回 <span class="mono">no-cache</span> 让浏览器每次协商，vendor 返回 <span class="mono">max-age=604800, immutable</span>。协商时先去掉 nginx 改写出的 <span class="mono">W/</span> 前缀再比较，命中则返回 304，不重传脚本。</p>
 
 <h2>2　运行环境与启动时序</h2>
 <h3>2.1 运行环境</h3>
 <table>
   <tr><th style="width:36mm">项</th><th>要求</th></tr>
   <tr><td>浏览器</td><td>Chrome / Edge 等支持 ES module、WebGL2、WebAudio 的现代浏览器</td></tr>
-  <tr><td>Node.js</td><td>≥ 22.5（使用内置 <span class="mono">node:sqlite</span>）</td></tr>
+  <tr><td>Node.js</td><td>≥ 22.5（使用内置 <span class="mono">node:sqlite</span>，无需额外数据库驱动）</td></tr>
   <tr><td>服务端</td><td>Fastify 5、yaml；无数据库服务依赖，SQLite 单文件</td></tr>
   <tr><td>前端</td><td>无构建工具；three.js r187 与后处理模块以本地 vendor 形式加载</td></tr>
   <tr><td>部署</td><td>nginx 子路径 <span class="mono">/ai/</span> 反代到 127.0.0.1:3300；systemd 守护</td></tr>
 </table>
 
-<h3>2.2 启动时序</h3>
+<h3>2.2 服务端启动时序</h3>
+<ol>
+  <li>读取项目根目录 <span class="mono">.env</span>（不存在则跳过，损坏也不阻止启动）。</li>
+  <li><span class="mono">initSearch(content)</span>：读 <span class="mono">books.json</span>，遍历 <span class="mono">chapters/</span> 下 448 个 Markdown，解析 frontmatter 与正文，构建倒排索引与补全集合。</li>
+  <li><span class="mono">loadConcepts(content)</span>：载入 16 个概念及章节映射。</li>
+  <li>打开 SQLite（<span class="mono">.data/app.db</span>），执行 <span class="mono">PRAGMA journal_mode=WAL</span> 与 <span class="mono">foreign_keys=ON</span>，建表与索引（IF NOT EXISTS，可重复启动）。</li>
+  <li>注册静态资源路由、REST 路由与鉴权 preHandler。</li>
+  <li><span class="mono">app.listen(3300)</span>；失败即记录并退出，由 systemd 重启。</li>
+</ol>
+<p>内容在启动时一次性读入内存，之后章节读取不再触碰磁盘；因此单次章节请求的耗时主要是 JSON 序列化与网络，而不是 I/O。代价是修改内容后需要重启进程，这与“内容按版本发布”的节奏一致。</p>
+
+<h3>2.3 前端启动时序</h3>
 <div class="diagram">
   <div class="row"><div class="tag">1 页面</div><div class="body"><div class="node"><b>HTML + CSS</b>门厅骨架、导航、阅读器容器一次加载</div><div class="node"><b>模块图</b>预取 app3d / three / catalog；手机不预取</div></div></div>
   <div class="arrow">↓</div>
@@ -123,45 +174,86 @@
 </div>
 <div class="caption">图 2-1　从页面加载到 3D 可交互的启动时序</div>
 
-<pre>// 伪代码：首帧后补物理
+<pre>// 首帧后再补物理，避免 4.3MB 的 Rapier 阻塞首屏
 requestAnimationFrame(() => {
   markFirstFrame();
   setTimeout(() => import('./vendor/rapier.mjs').then(initPhysics), 2500);
 });</pre>
 
+<h3>2.4 加载策略与首屏预算</h3>
+<p>首屏只依赖 HTML、CSS 与门厅脚本；three.js、app3d、catalog 通过模块预取提前下载，但不执行。3D 构建完成前用开灯过渡遮住空窗，物理引擎再延后 2.5 秒加载。这样即使网络较慢，读者看到的也是“灯逐渐亮起”，而不是黑屏。低配设备直接跳过 3D 与物理，用书架视图与阅读器完成全部内容。</p>
+
 <h2>3　身份与门厅模块</h2>
-<h3>3.1 功能</h3>
-<ul>
-  <li>借书证登录、新办借书证、访客入馆三种入口；登录流程有“核验中”动画与失败重试。</li>
-  <li>访客只读：可读全部章节，盖章/批注/进度会提示办证。</li>
-  <li>门厅星网：54 个节点、57 条连线，鼠标只扰动附近、节点全图漫游且保持间距。</li>
-  <li>入门动画：两扇木门滑开 → 门厅淡出 → 开灯过渡 → 3D 首帧 → 过渡淡出。</li>
-</ul>
-
-<h3>3.2 口令与会话</h3>
-<p>口令使用 Node <span class="mono">crypto.scrypt</span>：N=16384、r=8、p=1、盐 16 字节、输出 64 字节，存储格式为 <span class="mono">scrypt:N:r:p:salt:hash</span>。校验使用 <span class="mono">timingSafeEqual</span>，避免时序侧信道。</p>
-<p>登录成功后服务端生成 32 字节随机 token，写入 <span class="mono">sessions</span> 表（14 天有效），并通过 <span class="mono">Set-Cookie: mm_token=...; HttpOnly; SameSite=Lax; Path=/</span> 下发；HTTPS 下自动加 <span class="mono">Secure</span>。前端不把 token 写入 localStorage，请求由浏览器自动携带 Cookie。</p>
+<h3>3.1 口令哈希：scrypt 逐项解释</h3>
+<p>口令不能明文存库，也不能只用一次 SHA-256。普通哈希算得太快，攻击者拿到库后可以每秒尝试上亿次。scrypt 是“内存硬”的密钥派生函数：它故意占用较多内存、做多轮混合，让批量猜测变得昂贵。作品使用的参数如下：</p>
 <table>
-  <tr><th style="width:44mm">接口</th><th>说明</th></tr>
-  <tr><td><span class="mono">POST /api/register</span></td><td>借书证号 + 口令；同一 IP 每小时最多 10 次</td></tr>
-  <tr><td><span class="mono">POST /api/login</span></td><td>同一 IP + 用户名 30 秒内最多 5 次</td></tr>
-  <tr><td><span class="mono">GET /api/me</span></td><td>返回当前用户；未登录返回空</td></tr>
-  <tr><td><span class="mono">POST /api/logout</span></td><td>删除会话并清 Cookie</td></tr>
+  <tr><th style="width:24mm">参数</th><th style="width:30mm">取值</th><th style="width:52mm">作用</th><th>如果取值不当</th></tr>
+  <tr><td>N</td><td>16384（2<sup>14</sup>）</td><td>CPU / 内存迭代规模，决定计算轮数</td><td>太小则单次太快，易被暴力枚举</td></tr>
+  <tr><td>r</td><td>8</td><td>每个块的宽度，与 N 一起决定内存</td><td>太小则内存硬性不足，GPU 更易并行</td></tr>
+  <tr><td>p</td><td>1</td><td>并行度；单核串行执行</td><td>调高会增加服务器 CPU 压力</td></tr>
+  <tr><td>salt</td><td>16 字节随机</td><td>每个口令独立盐值</td><td>无盐则相同口令得到相同哈希，可查彩虹表</td></tr>
+  <tr><td>输出</td><td>64 字节（512 位）</td><td>最终派生密钥长度</td><td>过短会增加碰撞与截断风险</td></tr>
 </table>
+<p>内存需求约为 <span class="mono">128 × N × r</span> 字节，即 <span class="mono">128 × 16384 × 8 = 16 MiB</span>，低于 Node 默认的 32 MiB 上限，因此当前参数可以正常执行。单次哈希在普通服务器上约几十毫秒，对登录频率来说可以接受，对批量爆破来说成本很高。</p>
 
-<h3>3.3 门厅星网物理</h3>
-<p>节点初始位置用 Bridson 泊松盘采样，避免开局重叠。每帧按以下顺序积分：</p>
-<ol>
-  <li><b>随机漫游</b>：每个节点有独立相位，缓慢改变期望方向与速度。</li>
-  <li><b>鼠标局部斥力</b>：只对光标 170px 内的节点生效，力随距离衰减。</li>
-  <li><b>两两近距斥力</b>：最小间距约 <span class="mono">max(34, min(W,H)*0.045)</span>。</li>
-  <li><b>关系线弹簧</b>：初始距离作为自然长度；拉长产生引力，过短产生斥力，下限 86px。</li>
-  <li><b>质心回中</b>：整片星图缓慢平移回画布中心，只平移不压缩；边缘回弹。</li>
-</ol>
-<p>速度上限 1.6px/帧，阻尼 0.965；窗口 resize 时按比例搬运节点。该实现保证“鼠标只影响附近”“点会漫游到全图”“不会缠在一起”三个目标同时成立。</p>
+<h3>3.2 存储格式与校验流程</h3>
+<p>数据库只存一行字符串，格式为 <span class="mono">scrypt:N:r:p:salt:hash</span>，其中盐与哈希用 Base64。参数写进字符串的好处是“自描述”：以后提高 N 或 r，旧口令仍能按旧参数校验，不需要一次性重置所有人的口令。</p>
+<pre>// 生成（注册 / 改密）
+salt = randomBytes(16)
+hash = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 })
+stored = `scrypt:16384:8:1:${b64(salt)}:${b64(hash)}`
+
+// 校验（登录）
+parts = stored.split(':')            // 必须 6 段，且首段为 scrypt
+N, r, p = Number(parts[1..3])
+salt = fromB64(parts[4]); expected = fromB64(parts[5])
+actual = scryptSync(password, salt, expected.length, { N, r, p })
+return timingSafeEqual(actual, expected)</pre>
+<p><span class="mono">timingSafeEqual</span> 按位比较两个等长 Buffer，不会在第一个不同字节处提前返回，因此比较耗时与“前几位是否相同”无关。这一步消除的是<b>哈希比较阶段</b>的时间差；数据库查询、限流、网络等环节仍有各自的时间特征，所以文档中表述为“降低比较阶段的时序泄露风险”，而不是“彻底避免时序侧信道”。</p>
+<div class="note">代码核对结论：参数、盐长度、输出长度、6 段格式解析与 <span class="mono">timingSafeEqual</span> 的等长前提均正确，未发现会导入口令校验错误的问题。若未来登录并发显著上升，可把 <span class="mono">scryptSync</span> 换成异步版本，避免哈希计算阻塞事件循环；当前访问规模下同步实现更简单，且单次耗时可控。</div>
+
+<h3>3.3 会话、Cookie 与过期</h3>
+<table>
+  <tr><th style="width:34mm">环节</th><th>实现</th></tr>
+  <tr><td>令牌生成</td><td>32 字节随机数 → Base64URL（43 字符），不可预测</td></tr>
+  <tr><td>存储</td><td><span class="mono">sessions(token PRIMARY KEY, user_id, expires_at)</span>，有效期 14 天</td></tr>
+  <tr><td>下发</td><td><span class="mono">Set-Cookie: mm_token=...; Path=/; HttpOnly; SameSite=Lax; Max-Age=1209600</span>；HTTPS 下追加 <span class="mono">Secure</span></td></tr>
+  <tr><td>读取</td><td>服务端手动解析 Cookie；测试客户端可用 <span class="mono">Authorization: Bearer</span></td></tr>
+  <tr><td>校验</td><td><span class="mono">sessions JOIN users</span>；过期记录当场删除并视为未登录</td></tr>
+  <tr><td>注销</td><td>删除会话行，并下发 <span class="mono">Max-Age=0</span> 清 Cookie</td></tr>
+</table>
+<p>前端不把令牌写入 localStorage，脚本读不到 HttpOnly Cookie，降低 XSS 直接窃取会话的风险。<span class="mono">SameSite=Lax</span> 阻止大多数跨站写请求携带 Cookie。访客则使用前端生成并保存在本地的 <span class="mono">reader_id</span>（8–40 位字母数字），服务端以 <span class="mono">v:</span> 前缀区分访客与注册用户（<span class="mono">u:</span> 前缀）。</p>
+
+<h3>3.4 限流的数据结构</h3>
+<p>登录、注册、未写之书都用“滑动窗口 + 时间戳数组”：</p>
+<pre>Map&lt;key, number[]&gt;
+allow(key):
+  now = Date.now()
+  arr = (map.get(key) || []).filter(t => now - t &lt; window)
+  if arr.length >= limit: map.set(key, arr); return false
+  arr.push(now); map.set(key, arr); return true</pre>
+<table>
+  <tr><th style="width:34mm">场景</th><th style="width:28mm">键</th><th style="width:26mm">窗口 / 上限</th><th>说明</th></tr>
+  <tr><td>登录</td><td><span class="mono">ip|username</span></td><td>30s / 5 次</td><td>防单账号暴力尝试</td></tr>
+  <tr><td>注册</td><td><span class="mono">ip</span></td><td>1h / 10 次</td><td>防批量建号</td></tr>
+  <tr><td>未写之书</td><td><span class="mono">ip|reader</span></td><td>10min / 8 次</td><td>控制模型调用成本</td></tr>
+</table>
+<p>单次判断只扫描该键的窗口内记录，复杂度 <span class="mono">O(k)</span>（k ≤ 上限）。未写之书在键数超过 1500 时清理整窗过期的键，避免长期运行后 Map 无限增长。</p>
+
+<h3>3.5 门厅星网的力场积分</h3>
+<p>门厅背景不是随机闪烁，而是一个可交互的二维粒子系统。初始位置用 Bridson 泊松盘采样，保证任意两点间距不小于设定半径，避免开局重叠。每帧按固定顺序累加五类力并积分：</p>
+<pre>for each node i:
+  v += wander(i)                       // 独立相位的缓慢漫游
+  v += repel(mouse, 170px)             // 仅光标附近，随距离衰减
+  v += Σ repel(node_j, minDist)        // 两两近距斥力
+  v += spring(edge_ij, restLength)     // 关系线：过长吸引、过短排斥
+  v += centering()                     // 整片回中，只平移不压缩
+  v = clamp(v, 1.6px/frame); v *= 0.965
+  p += v</pre>
+<p>节点数 54、连线 57，两两计算约 1431 次距离，单帧开销很小，因此直接用 <span class="mono">O(n²)</span> 遍历，不引入空间网格。窗口尺寸变化时按比例搬运坐标，保持构图不散。该设计同时满足三个体验目标：鼠标只影响附近、节点会漫游到全图、节点不会缠在一起。</p>
 
 <h2>4　内容与数据层</h2>
-<h3>4.1 章节文件结构</h3>
+<h3>4.1 章节文件与解析</h3>
 <pre>---
 id: b1-c1
 book: b1
@@ -182,43 +274,64 @@ checked: true
 ## 争议与局限
 ## 关系
 ## 档案</pre>
-<p>frontmatter 由 YAML 解析，正文按 <span class="mono">##</span> 二级标题切成九段；页边注使用固定语法，前端渲染为侧栏卡片并生成〔段落名〕锚点。来源条目必须带链接与核验标记。</p>
+<p>解析用一条正则切出 frontmatter 与正文：<span class="mono">^---\n([\s\S]*?)\n---\n([\s\S]*)$</span>，frontmatter 交给 YAML 解析，正文按 <span class="mono">##</span> 二级标题切成九段。页边注使用固定标记，解析后与所在段落绑定，前端渲染为右栏卡片并生成〔段落名〕锚点。来源条目必须带链接与核验标记，渲染时自动 linkify。</p>
 
-<h3>4.2 校验规则</h3>
+<h3>4.2 内容校验算法</h3>
 <table>
-  <tr><th style="width:46mm">规则</th><th>判定</th></tr>
+  <tr><th style="width:46mm">规则</th><th>判定与实现</th></tr>
   <tr><td>九段完整</td><td>缺少任一固定二级标题 → FAIL</td></tr>
   <tr><td>字数</td><td>1500–2500 汉字；&lt;1500 FAIL，&gt;2500 WARN</td></tr>
   <tr><td>来源</td><td>3–6 条，且 <span class="mono">checked: true</span></td></tr>
-  <tr><td>关系双向</td><td>A 引用 B，则 B 必须引用 A</td></tr>
-  <tr><td>索书号</td><td>全书唯一；书单数量与目录一致</td></tr>
+  <tr><td>关系双向</td><td>把每章的“关系”解析为有向边，建立邻接表；对每条 A→B 检查 B→A 是否存在，缺失即 FAIL</td></tr>
+  <tr><td>索书号</td><td>用 Set 检查全书唯一；书单数量与目录一致</td></tr>
 </table>
-<p>当前 <span class="mono">npm run verify</span>：448 章，FAIL=0，WARN=2（两章超过 2500 字，属历史遗留）。</p>
+<p>关系校验等价于在一张 56 节点的图上做一次对称性检查，复杂度 <span class="mono">O(V + E)</span>；其余规则都是逐章线性扫描，整体 <span class="mono">O(总字数)</span>。当前 <span class="mono">npm run verify</span>：448 章，FAIL=0，WARN=2（两章超过 2500 字，属历史遗留）。</p>
 
-<h3>4.3 数据库</h3>
-<pre>users(id, username, password_hash, email, created_at)
-sessions(token, user_id, expires_at)
-stamps(id, user_id, chapter_id, kind, created_at)
-annotations(id, user_id, chapter_id, quote, note, created_at)
-progress(user_id, chapter_id, state, read_at)
-reads(id, reader_id, book_id, chapter_id, created_at)
-fragment_picks(reader_id, fragment_id, chapter_id, created_at)
-collectibles(reader_id, kind, item_id, state, chapter_id, updated_at)</pre>
-<p>SQLite 开启 WAL 与外键；备份使用 <span class="mono">VACUUM INTO</span> 生成一致性快照，再与 <span class="mono">content/</span> 一起打包，保留 14 天。</p>
+<h3>4.3 SQLite 结构与约束</h3>
+<pre>users(id PK, username UNIQUE, password_hash, email, created_at)
+sessions(token PK, user_id → users.id ON DELETE CASCADE, expires_at)
+stamps(id PK, user_id → users.id, chapter_id, kind CHECK(...), created_at,
+       UNIQUE(user_id, chapter_id, kind))
+annotations(id PK, user_id → users.id, chapter_id, quote, note, created_at)
+progress(user_id, chapter_id, state CHECK(started|done), read_at,
+         PRIMARY KEY(user_id, chapter_id))
+reads(id PK, reader_id, book_id, chapter_id, created_at)  + idx(book_id), idx(reader_id)
+fragment_picks(reader_id, fragment_id, chapter_id, created_at,
+               PRIMARY KEY(reader_id, fragment_id))
+collectibles(reader_id, kind, item_id, state, chapter_id, updated_at,
+             PRIMARY KEY(reader_id, kind, item_id))</pre>
+<p>三类约束承担了业务幂等：<b>主键</b>保证同一用户同一章只有一条进度；<b>UNIQUE</b> 让重复盖章变成 <span class="mono">INSERT OR IGNORE</span>，不会产生重复行；<b>外键 + 级联删除</b>保证删用户时会话与印章一起清理。WAL 模式让读不阻塞写，适合“读多写少”的访问结构。备份用 <span class="mono">VACUUM INTO</span> 生成一致性快照，再与 <span class="mono">content/</span> 一起打包，保留 14 天。</p>
 
-<h3>4.4 数据流</h3>
+<h3>4.4 两条数据链路</h3>
 <div class="diagram">
   <div class="row"><div class="tag">读</div><div class="body"><div class="node"><b>内容文件</b>启动时载入内存</div><div class="node"><b>索引</b>tokenize 后建倒排表</div><div class="node"><b>API</b>按请求返回 JSON</div><div class="node"><b>渲染</b>3D / 2D / 阅读器</div></div></div>
   <div class="arrow">↓ 写</div>
-  <div class="row"><div class="tag">写</div><div class="body"><div class="node"><b>用户动作</b>盖章 / 批注 / 读完 / 拾页 / 追回</div><div class="node"><b>API 鉴权</b>Cookie → sessions</div><div class="node"><b>SQLite</b>INSERT / DELETE</div><div class="node"><b>回读</b>页面状态恢复</div></div></div>
+  <div class="row"><div class="tag">写</div><div class="body"><div class="node"><b>用户动作</b>盖章 / 批注 / 读完 / 拾页 / 追回</div><div class="node"><b>API 鉴权</b>Cookie → sessions</div><div class="node"><b>SQLite</b>INSERT / UPSERT / DELETE</div><div class="node"><b>回读</b>页面状态恢复</div></div></div>
 </div>
 <div class="caption">图 4-1　内容只读、业务可写两条链路</div>
 
 <h2>5　检索模块</h2>
 <h3>5.1 分词</h3>
 <p>中文按连续汉字串切二元组（单字串保留单字），含停用字的二元组丢弃；英文转小写按 <span class="mono">[a-z0-9][a-z0-9-]{1,}</span> 取词并去停用词。这样无需词典即可支持“神经网络”“反向传播”等术语的包含匹配。</p>
+<pre>“神经网络”→ 神经 / 经网 / 网络
+“反向传播算法”→ 反向 / 向传 / 传播 / 播算 / 算法</pre>
+<p>二元组会带来一定冗余，但换来零词典依赖与稳定的召回；停用字过滤把“的了是在”等高频组合挡在索引之外。单次分词复杂度与文本长度线性相关。</p>
 
-<h3>5.2 索引与排序</h3>
+<h3>5.2 倒排索引的数据结构</h3>
+<pre>index: Map&lt;term, Map&lt;docId, weight&gt;&gt;
+
+for each chapter:
+  add(书名, 14)        add(章节标题, 12)
+  add(tag / 别名, 8)   add(摘要, 4)
+  add(小标题 / 人物, 3) add(正文, 1)
+  // 同一文档同一词项多次出现时权重累加</pre>
+<p>外层键是词项，内层是“文档 → 权重”。查询时按词项取 posting，再把同一文档的权重相加。该结构只存“出现过”的关系，不存布尔矩阵，空间随“词项 × 命中文档数”增长，远小于“词项 × 全部文档”。448 章规模下索引常驻内存，启动后查询不再读盘。</p>
+
+<h3>5.3 打分公式</h3>
+<pre>score(doc) = Σ_term weight(term, doc)
+           + 60 × |{t ∈ tokens : t ∈ 书名}|
+           + 35 × |{t ∈ tokens : t ∈ 章节标题}|
+           + 12 × |{t ∈ tokens : t ∈ tag / 别名}|</pre>
 <table>
   <tr><th style="width:44mm">字段</th><th style="width:20mm">索引权重</th><th>查询加成</th></tr>
   <tr><td>书名（book.title）</td><td>14</td><td>+60 / 命中词</td></tr>
@@ -227,51 +340,66 @@ collectibles(reader_id, kind, item_id, state, chapter_id, updated_at)</pre>
   <tr><td>摘要 / 小标题 / 人物</td><td>4 / 3 / 3</td><td>—</td></tr>
   <tr><td>正文</td><td>1（逐次累计）</td><td>—</td></tr>
 </table>
-<p>最终得分为“倒排权重累加 + 层级加成”。排序后取前 N 条，返回书名、标题、标签、命中理由与正文片段。</p>
+<p>两层权重的目的不同：索引权重让“正文提到很多次”也能进入候选，查询加成确保“书名命中”永远排在“正文顺带一提”之前。这样搜索“Transformer”时，讲 Transformer 的书与章节会排在一篇只提了一句的旁证之前。</p>
 
-<h3>5.3 容错与兜底</h3>
-<ul>
-  <li><b>英文拼写容错</b>：仅在完全无命中时启用，对长度 ≥3 的英文 token 做编辑距离 ≤1 的替换，避免影响正常排序。</li>
-  <li><b>why</b>：按“书名/章节标题/标签/正文提及次数”生成最多 4 条命中理由。</li>
-  <li><b>fallback</b>：零结果时返回书目与标签建议，不让页面空着。</li>
-  <li><b>suggest</b>：书名、标签、别名、人物、概念名统一补全；书名优先、去重、每类最多 3 条。</li>
-</ul>
-
-<pre>// 查询主流程（简化）
-tokens = tokenize(q)
+<h3>5.4 查询流程与复杂度</h3>
+<pre>tokens = tokenize(q)
 scores = accumulate(index, tokens)
-if (scores.empty) scores = accumulate(index, fuzzy(tokens))
-for (doc of scores) score += bookTitleHit*60 + chapterTitleHit*35 + tagHit*12
-return topN(scores)</pre>
+if scores.empty: scores = accumulate(index, fuzzy(tokens))
+for doc in scores: score += 层级加成
+return topN(sort(scores))</pre>
+<p>设查询词项数为 m、候选文档数为 d：累加阶段与命中的 posting 总数成正比；排序为 <span class="mono">O(d log d)</span>；最后只对前 N 条生成命中理由与摘要片段。20 并发实测全部 200，单次 ≤6ms。正文片段不整段返回，只截取首个命中位置前后约 60/80 字，并转义 HTML 后用 <span class="mono">&lt;mark&gt;</span> 标出词项，避免把整章塞进响应。</p>
 
-<img class="shot" src="assets/shelf.jpg" alt="书架视图">
-<div class="caption">图 5-1　书架视图：左侧黄铜电梯选层，右侧按楼层过滤的 2D 书脊</div>
+<h3>5.5 英文拼写容错</h3>
+<p>只在“精确查询零命中”时启用，避免影响正常排序。对长度 ≥3 的英文 token，遍历索引词表，先按长度差 ≤1 剪枝，再用 Levenshtein 动态规划算编辑距离，距离 ≤1 的词项加入候选。</p>
+<pre>editDistance(a, b, max=1):
+  if |len(a) - len(b)| > max: return max + 1
+  dp[i] = i
+  for j in 1..len(b):
+    prev = dp[0]; dp[0] = j
+    for i in 1..len(a):
+      dp[i] = min(dp[i]+1, dp[i-1]+1, prev + (a[i-1]==b[j-1] ? 0 : 1))
+      prev = 旧 dp[i]
+  return dp[len(a)]</pre>
+<p>单次比较 <span class="mono">O(L²)</span>，最坏情况要对词表做一遍扫描；因为只在零结果时触发，正常查询不受影响，后续若词表扩大可改为“删除邻域”索引来降低开销。</p>
+
+<h3>5.6 命中理由、兜底与补全</h3>
+<ul>
+  <li><b>why</b>：按“书名 / 章节标题 / 标签 / 正文提及次数”生成最多 4 条理由；近似拼写时在最前面加“近似拼写”。</li>
+  <li><b>fallback</b>：零结果时先按书名、标签、别名做包含匹配挑书；挑不到就返回前 6 本，并汇总标签方向，保证页面不空。</li>
+  <li><b>suggest</b>：书名、章节标题、标签、别名、人物五类合并；拉丁字母走前缀匹配，中文走包含匹配；每类最多 3 条、总数受 limit 限制，用 <span class="mono">type:text</span> 键去重。</li>
+</ul>
 
 <h2>6　3D 阅览室模块</h2>
-<h3>6.1 场景构成</h3>
-<ul>
-  <li>房间 28.5 × 21 × 6.6；三面护墙板、壁柱、4 扇拱形高窗、天花藻井与木梁。</li>
-  <li>11 组书架单元；每组 3 层可放书，按 56 本容量动态布局，奇数行错开半格保证 x=0 通道。</li>
-  <li>四层主题：L1 旧纸暖木、L2 蓝灰钢、L3 深棕账房、L4 紫黑暗石；书架、墙面、地毯、灯光、尘埃随层切换。</li>
-  <li>可交互道具：台灯、放大镜、卡片柜 6 抽屉、星图台、失窃展柜、L4 暗门与帷幕。</li>
-</ul>
+<h3>6.1 渲染管线与帧循环</h3>
+<p>渲染器使用 WebGL2、ACESFilmic 色调映射与 PCF 软阴影。开启后处理时，每帧按固定顺序执行：</p>
+<pre>EffectComposer
+  → RenderPass（场景 + 相机）
+  → UnrealBloomPass（strength 0.34 / radius 0.68 / threshold 0.74）
+  → OutputPass（色调映射 + 色彩空间转换）
+renderer.render 不再直接上屏</pre>
+<p>帧循环的顺序是：物理步进（若已加载）→ 相机与手持书跟随 → 更新体积光 / 尘埃的 <span class="mono">uTime</span> → <span class="mono">composer.render()</span>。页面隐藏或切到 2D 视图时停止 step 与 render，避免后台空转。Bloom 只让高亮部分溢出，不整体提亮，因此金属高光与灯罩会“发光”，纸面仍保持可读。</p>
 
-<h3>6.2 书架布局算法</h3>
-<pre>units = ceil(totalBooks / capacity)
-rows = ceil(units / maxPerRow)
-base = floor(units / rows); extra = units % rows
-for r in rows:
-  count = base + (r < extra ? 1 : 0)
-  shift = count % 2 === 1 ? (r % 2 === 0 ? -1 : 1) * spacing/2 : 0
-  z = -5.4 + r * 2.9
-  x = startX + i * 4.4</pre>
-<p>书脊纹理使用 Canvas 程序化绘制：三种版式（竖排书名 + 金线框、横排金带、极简标签），确定性随机（FNV-1a 哈希 + LCG）保证刷新不变；厚度 0.16/0.21/0.26、高度 0.54–0.63；L4 隐去书名，只留罗马数字与“未编目”。</p>
+<h3>6.2 静态合批算法</h3>
+<p>场景里大量书脊、护墙板、书架构件材质相同但对象独立，draw call 偏高。构建完成后做一次静态合并：</p>
+<pre>signature = material.uuid
+          + castShadow + receiveShadow
+          + geometry.index 是否存在
+          + 属性名与 itemSize / normalized 组合
+          + morph / skin 标记
 
-<h3>6.3 材质与反射</h3>
+遍历场景：
+  可交互、动画中、手持、叠桌、需单独显隐的对象 → 跳过
+  其余按 signature 分桶
+  每桶：应用世界矩阵 → mergeGeometries → 生成合并 mesh
+  删除原 mesh，保留楼层显隐分组</pre>
+<p>签名必须包含“阴影标记”和“几何属性布局”，否则合并后法线、UV 或阴影行为会错。合并只减少 CPU 提交次数，不减少三角形数量；因此还要控制单桶的包围盒，避免合出一个横跨全场的巨物导致视锥裁剪失效。结果：mesh 1219 → 549，draw calls 774 → 约 615（含后处理），三角形约 2.08 万。</p>
+
+<h3>6.3 材质反射模型</h3>
 <p>所有标准材质在场景构建完成后统一计算环境反射强度：</p>
 <pre>envMapIntensity =
   glass ? 1.25
-        : 0.05 + metalness * 1.1 + max(0, 0.28 - roughness) * 0.7</pre>
+        : 0.05 + metalness × 1.1 + max(0, 0.28 − roughness) × 0.7</pre>
 <table>
   <tr><th style="width:34mm">材质类别</th><th style="width:30mm">metalness</th><th style="width:26mm">roughness</th><th>反射</th></tr>
   <tr><td>黄铜 / 铜 / 金</td><td>0.72–0.82</td><td>0.30–0.38</td><td>≈0.84–1.0，保留金属高光</td></tr>
@@ -280,8 +408,9 @@ for r in rows:
   <tr><td>纸张 / 书脊 / 蜡</td><td>0.01–0.04</td><td>0.88–0.96</td><td>≈0.08</td></tr>
   <tr><td>玻璃（展柜、窗）</td><td>—</td><td>—</td><td>1.25</td></tr>
 </table>
+<p>公式不是物理模型，而是艺术控制：基础 0.05 保证非金属仍有极弱环境色；金属项随 metalness 线性增强；只有 roughness 低于 0.28 的平滑表面才获得额外反射。这样黄铜电梯门有明确的环境倒影，木书架只保留柔和明暗，布料几乎不反光，避免“全场景塑料高光”。环境贴图经 PMREM 预滤波，粗糙度不同的材质采样不同模糊层级。</p>
 
-<h3>6.4 光照与后处理</h3>
+<h3>6.4 光照、阴影与体积光</h3>
 <table>
   <tr><th style="width:40mm">光源 / 效果</th><th>参数与位置</th></tr>
   <tr><td>环境光 / 半球光</td><td>1.35 / 0.95；半球天空 0x9a8a6a，地面 0x3a2f22</td></tr>
@@ -291,73 +420,87 @@ for r in rows:
   <tr><td>壁灯 / 落地灯</td><td>0.55 / 0.8；落地灯光源在灯罩内灯泡高度 1.6</td></tr>
   <tr><td>窗光</td><td>1.4，冷色，从两翼斜射入室</td></tr>
   <tr><td>展柜聚光</td><td>聚焦时 5.4，切层 / 复位熄灭</td></tr>
-  <tr><td>后处理</td><td>EffectComposer → RenderPass → UnrealBloom(0.34/0.68/0.74) → OutputPass</td></tr>
   <tr><td>色调映射</td><td>ACESFilmic，曝光 1.42–1.52</td></tr>
 </table>
-<p>体积光柱是自定义 ShaderMaterial：以法线与视线夹角做边缘柔化，顶端渐入，向下按 <span class="mono">pow(vH,1.2)</span> 衰减；锥体半径 2.6 与聚光灯半角对齐，竖直不倾斜。</p>
+<p>体积光柱是自定义 ShaderMaterial：用表面法线与视线的夹角做边缘柔化，顶端渐入，向下按 <span class="mono">pow(vH, 1.2)</span> 衰减；锥体半径 2.6 与聚光灯半角对齐，保持竖直。常见错误是把锥体挂在聚光灯的局部旋转上，灯一倾斜光柱就歪；这里让几何体独立竖直放置，只共享位置，因此从任何角度看都是一根直的光柱。</p>
 
-<h3>6.5 取书、手持与叠桌</h3>
-<div class="diagram">
-  <div class="row"><div class="tag">书架上</div><div class="body"><div class="node"><b>点击书</b>raycast 命中，排除展柜/门/道具</div></div></div>
-  <div class="arrow">↓</div>
-  <div class="row"><div class="tag">手持</div><div class="body"><div class="node"><b>跟随</b>相机前 0.95m / 右 0.42m / 下 0.22m，缩放 0.5</div><div class="node"><b>操作</b>E 或左键翻开；右键 / Esc 放回；Q 放桌</div></div></div>
-  <div class="arrow">↓</div>
-  <div class="row"><div class="tag">桌面</div><div class="body"><div class="node"><b>三摞</b>按厚度自然加高，最多 12 本</div><div class="node"><b>按层分组</b>每层自己的桌子，跨层不串</div><div class="node"><b>取回</b>点击桌上书可拿回</div></div></div>
-</div>
-<p>关键技术点：tick 中的物理同步必须跳过 <span class="mono">heldBook</span> 与 <span class="mono">stacked</span> 的书，否则旧坐标会写回 mesh；<span class="mono">setFloor</span> 的显隐也要豁免手持/叠桌书；<span class="mono">reset()</span> 先把叠桌书 <span class="mono">scene.attach</span> 回场景再统一回架。</p>
+<h3>6.5 书架布局算法</h3>
+<pre>units = ceil(totalBooks / capacity)
+rows  = ceil(units / maxPerRow)
+base  = floor(units / rows); extra = units % rows
+for r in 0..rows-1:
+  count = base + (r < extra ? 1 : 0)
+  shift = count 为奇数 ? (r 为偶数 ? -1 : 1) × spacing/2 : 0
+  z = -5.4 + r × 2.9
+  x = startX + i × 4.4 + shift</pre>
+<p>先按容量算书架单元数，再把单元尽量均匀分到各行；奇数行整体错开半格，让 x=0 的中央通道始终留空，读者可以从入口一直走到后排。复杂度 <span class="mono">O(units)</span>。每本书再按厚度 0.16 / 0.21 / 0.26、高度 0.54–0.63 做微差，避免书脊像复制粘贴。</p>
 
-<h3>6.6 性能与降级</h3>
+<h3>6.6 书脊的程序化纹理</h3>
+<p>书脊不是图片，而是 Canvas 2D 现画：三种版式（竖排书名 + 金线框、横排金带、极简标签），颜色与磨损由确定性随机决定。种子来自书 id 的 FNV-1a 哈希，再用 LCG 产出后续随机数，因此同一本书每次刷新纹理完全一致。L4 隐藏书名，只留罗马数字与“未编目”，把“绝密”做成视觉规则而不是临时文案。</p>
+
+<h3>6.7 取书、手持与叠桌的状态机</h3>
+<table>
+  <tr><th style="width:24mm">状态</th><th style="width:44mm">进入条件</th><th style="width:44mm">离开</th><th>约束</th></tr>
+  <tr><td>shelf</td><td>初始 / 归架完成</td><td>点击 → held</td><td>参与物理与楼层显隐</td></tr>
+  <tr><td>held</td><td>raycast 命中且不是展柜 / 门 / 道具</td><td>翻开 → 阅读；Q → stacked；右键 / Esc → shelf</td><td>跟随相机 0.95m / 右 0.42m / 下 0.22m，缩放 0.5；物理同步跳过</td></tr>
+  <tr><td>stacked</td><td>Q 放到本层桌子</td><td>点击 → held；reset → shelf</td><td>每层最多三摞、共 12 本；跨层不串；物理同步跳过</td></tr>
+  <tr><td>reading</td><td>E / 左键翻开</td><td>合书 → shelf 或 held</td><td>3D 暂停渲染，阅读器接管</td></tr>
+</table>
+<p>实现上有两个容易出错的点：物理 tick 必须跳过 <span class="mono">heldBook</span> 与 <span class="mono">stacked</span> 的书，否则刚体旧坐标会把 mesh 拉回书架；<span class="mono">setFloor</span> 的显隐也要豁免这两类书，否则切层时手里的书会突然消失。<span class="mono">reset()</span> 先把叠桌书 <span class="mono">scene.attach</span> 回场景，再统一归架，避免父节点变换导致坐标错乱。</p>
+
+<h3>6.8 性能与降级</h3>
 <ul>
-  <li>静态合批：按“材质 + 阴影标记 + 索引 + 属性签名”合并静态网格，保留楼层显隐边界；交互/动画对象全部跳过。</li>
-  <li>结果：mesh 1219 → 549，draw calls 774 → 约 615（含后处理），三角形约 2.08 万。</li>
-  <li>尘埃：GPU 顶点着色器，2150 颗，每帧只推 <span class="mono">uTime</span>。</li>
-  <li>页面隐藏或处于 2D 视图时停止 3D step/render。</li>
-  <li>低配：DPR ≤1.25、关阴影、FOV 66、尘埃/光锥/点光减半、完全跳过 Rapier。</li>
+  <li>静态合批：按材质、阴影标记、索引与属性签名合并，保留楼层显隐边界；交互 / 动画对象全部跳过。</li>
+  <li>尘埃：GPU 顶点着色器，2150 颗，每帧只推 <span class="mono">uTime</span>，不逐颗更新位置。</li>
+  <li>页面隐藏或处于 2D 视图时停止 3D step / render。</li>
+  <li>低配：DPR ≤1.25、关阴影、FOV 66、尘埃 / 光锥 / 点光减半、完全跳过 Rapier。</li>
+  <li>后处理创建失败时捕获异常，回退为直接渲染，阅读功能不受影响。</li>
 </ul>
 
 <h2>7　阅读器模块</h2>
 <h3>7.1 渲染流程</h3>
 <pre>showChapter(id)
-  → GET /api/chapters/:id
+  → 命中本地缓存？是则直接渲染
+  → 否则 GET /api/chapters/:id
   → 解析九段 / 页边注 / 来源
-  → 渲染左栏检索、中栏正文、右栏页边注与卡片
+  → 渲染左栏检索、中栏正文、右栏页边注与接待卡
   → 绑定锚点跳转、工具条、章节条
   → window.scrollTo(0, 0)</pre>
-<p>正文用统一排版：标题、英文副题、接待卡、段落、来源列表。来源中的 URL 自动 linkify；<span class="mono">.paper</span> 设置 <span class="mono">overflow-wrap:anywhere</span>，避免长链接把移动端布局撑宽。</p>
+<p>正文用统一排版：标题、英文副题、接待卡、段落、来源列表。来源 URL 自动 linkify；<span class="mono">.paper</span> 设置 <span class="mono">overflow-wrap:anywhere</span>，避免长链接把移动端布局撑宽。换章后强制回到页首，解决“点下一章停在文末”的阅读断点。</p>
 
-<h3>7.2 接待卡与页边注</h3>
-<p>接待卡由章节 meta 自动生成：宾客（登录用户名或“一位登记读者”）、资料状态（楼层/等级/残破度）、来访目的（一句话）、当值馆员（按楼层）、接待结果、馆员按语。页边注使用固定语法解析，右侧栏渲染为卡片，点击〔段落名〕锚点定位正文对应段并高亮 1.6 秒。</p>
+<h3>7.2 页边注解析与锚点</h3>
+<p>页边注在正文中以固定标记出现，解析时记录“注文 + 所属段落标题”，渲染为右栏卡片。点击〔段落名〕时按标题找到正文节点，<span class="mono">scrollIntoView({behavior:'smooth', block:'center'})</span>，并加高亮类 1.6 秒后移除。锚点只依赖段落标题，不依赖绝对行号，因此改稿后不会错位。</p>
 
-<h3>7.3 盖章、批注、进度</h3>
+<h3>7.3 写操作与撤销</h3>
 <table>
-  <tr><th style="width:32mm">动作</th><th style="width:52mm">接口</th><th>行为</th></tr>
-  <tr><td>盖章</td><td><span class="mono">POST/DELETE /api/stamps</span></td><td>二次确认 → 纸面落章动画 → 按钮变“已盖章 · 撤销”</td></tr>
-  <tr><td>批注</td><td><span class="mono">POST /api/annotations</span></td><td>引文 ≤2000 字；右栏“我的批注”折叠显示</td></tr>
-  <tr><td>标记读完</td><td><span class="mono">POST/DELETE /api/progress</span></td><td>二次确认；可撤销；驱动徽章与书榜</td></tr>
+  <tr><th style="width:30mm">动作</th><th style="width:52mm">接口与语义</th><th>一致性处理</th></tr>
+  <tr><td>盖章</td><td><span class="mono">POST /api/stamps</span>：INSERT OR IGNORE，唯一键去重</td><td>二次确认 → 落章动画 → 按钮变“已盖章 · 撤销”</td></tr>
+  <tr><td>撤销盖章</td><td><span class="mono">DELETE /api/stamps/:chapter_id</span>：只删本人的 chapter 章</td><td>不动 book / route 藏印</td></tr>
+  <tr><td>批注</td><td><span class="mono">POST /api/annotations</span>：引文 ≤2000、注文 ≤4000</td><td>成功后追加到右栏“我的批注”</td></tr>
+  <tr><td>标记读完</td><td><span class="mono">POST /api/progress</span>：ON CONFLICT 更新 state / read_at</td><td>可撤销；驱动徽章与书榜</td></tr>
 </table>
+<p>写操作采用“先本地反馈、失败回滚”的乐观更新：按钮立即变化，请求失败则恢复原状态并提示。这样网络慢时交互不粘手，同时不会出现“界面显示成功、数据库没写”的静默错误。</p>
 
 <h3>7.4 章节导航</h3>
-<p>底部常驻章节条：上一章 / 第 n / 8 章 + 章名 / 下一章；首章末章自动禁用，最后一章显示“本书读完 →”进书架总览。右上角固定“合上书”，文末也有合书入口。换章后强制回到页首。</p>
-
-<img class="shot" src="assets/reading.jpg" alt="阅读页">
-<div class="caption">图 7-1　阅读页三栏：左检索、中正文、右页边注；底部常驻章节条</div>
+<p>底部常驻章节条：上一章 / 第 n / 8 章 + 章名 / 下一章；首章末章自动禁用，最后一章显示“本书读完 →”进书架总览。右上角固定“合上书”，文末也有合书入口。章节条固定在视口底部，读到任何位置都能换章。</p>
 
 <h2>8　星图模块</h2>
 <h3>8.1 节点分布</h3>
 <p>56 本书按楼层分布在四个同心球壳（半径 6.2 / 8.2 / 10.2 / 12.2），每层用 Fibonacci 球面采样保证均匀；相机固定在球心，拖拽改变 yaw/pitch，滚轮调整 FOV，不自动旋转。</p>
 <pre>for i in 0..n-1:
-  y = 1 - (i / (n - 1)) * 2
-  r = sqrt(1 - y*y)
-  theta = i * goldenAngle
-  pos = (cos(theta)*r, y, sin(theta)*r) * shellRadius</pre>
+  y = 1 - (i / (n - 1)) × 2
+  r = sqrt(1 - y²)
+  theta = i × goldenAngle
+  pos = (cos(theta) × r, y, sin(theta) × r) × shellRadius</pre>
+<p>黄金角约 137.5°，能让连续点绕球面错开，避免极区堆积。相比随机采样，它不需要多次排斥迭代，生成即均匀，复杂度 <span class="mono">O(n)</span>。</p>
 
-<h3>8.2 关系线</h3>
+<h3>8.2 关系线的几何与透明度</h3>
 <p>50 条关系用二次贝塞尔弧线连接，管径 0.03–0.038。默认透明度 0；悬停或定位某颗星时，只点亮与它相连的线（目标 0.9），移开后回落。透明度不是瞬间赋值，而是每帧向目标推进：</p>
-<pre>k = 1 - exp(-7 * dt)
-opacity += (fadeTarget - opacity) * k</pre>
-<p>拖动视角时不清空当前焦点，因此线不会在按下鼠标的一刻消失；松手后指针移到别处才淡出。流星亮度乘当前透明度，与线一起收放。</p>
+<pre>k = 1 - exp(-7 × dt)
+opacity += (fadeTarget - opacity) × k</pre>
+<p>这个形式的好处是帧率无关：dt 越大，单帧推进越多，但相同真实时间内达到的比例一致，不会出现“高刷屏淡得快、低帧机器淡得慢”。拖动视角时不清空当前焦点，因此线不会在按下鼠标的一刻消失；松手后指针移到别处才淡出。流星亮度乘当前透明度，与线一起收放。</p>
 
-<h3>8.3 标签与交互</h3>
+<h3>8.3 标签与拾取</h3>
 <ul>
   <li>只显示正前方一定角度内的书名标签，避免 56 个标签互相压住。</li>
   <li>悬停显示书名、英文名、主题标签、相连书名；点击开书。</li>
@@ -365,75 +508,113 @@ opacity += (fadeTarget - opacity) * k</pre>
   <li>关系列表（L 键）提供文字版 50 条关系，兼顾低配与读屏。</li>
 </ul>
 
-<img class="shot" src="assets/star.jpg" alt="星图">
-<div class="caption">图 8-1　星图：四层球壳、星野与正前方标签；关系线按需点亮</div>
-
 <h2>9　书轨 / 时间轴 / 平面图</h2>
 <h3>9.1 书轨</h3>
-<p>书轨是一张 SVG 线路图：6 条主线、7 条支线、63 个站点、31 条换乘曲线。主线每条均分站点（年份只作为标签，严格年代看时间轴），按文字宽度布置间距；支线从最近主线站点接出，起点按标签总宽回推，避免越过右边缘。核心线用 <span class="mono">pathLength=1</span> + <span class="mono">stroke-dashoffset</span> 从左向右铺开；站点按线路/序号延迟浮现；“发车”逐站点亮并带三层拖尾。</p>
+<p>书轨是一张 SVG 线路图：6 条主线、7 条支线、63 个站点、31 条换乘曲线。主线每条均分站点（年份只作为标签，严格年代看时间轴），按文字宽度布置间距；支线从最近主线站点接出，起点按标签总宽回推，避免越过右边缘。核心线用 <span class="mono">pathLength=1</span> + <span class="mono">stroke-dashoffset</span> 从左向右铺开；站点按线路 / 序号延迟浮现；“发车”逐站点亮并带三层拖尾。</p>
+<pre>主线：stationX[i] = margin + i × (width - 2×margin) / (n - 1)
+支线：从最近主线站接出，起点 x = 站点 x - 标签总宽
+动画：dashoffset 1 → 0，站点 delay = 线路序 × 步长 + 站序 × 步长</pre>
 
 <h3>9.2 时间轴</h3>
-<p>时间轴从每章 frontmatter 的 <span class="mono">year</span> 自动聚合，按年代分为 9 组，共 448 张卡；点卡开章。页面底部嵌入失败博物馆 20 件与模型尺寸墙 12 项，尺寸墙把参数量换算到同一横向标尺。</p>
+<p>时间轴从每章 frontmatter 的 <span class="mono">year</span> 自动聚合，按年代分为 9 组，共 448 张卡；点卡开章。分组是一次线性扫描 + 桶排序，复杂度 <span class="mono">O(n)</span>。页面底部嵌入失败博物馆 20 件与模型尺寸墙 12 项，尺寸墙把参数量换算到同一横向标尺，避免“几十亿”和“几千亿”直接比长短造成误读。</p>
 
 <h3>9.3 楼层平面图</h3>
-<p>SVG 按 app3d 世界坐标映射（房间 1000×760）：书架 x/z、电梯、星图台、卡片柜、台灯、暗格。五档选层（全馆 / L1–L4），每层高亮本层有书的书架并标“N 本 + 索书号范围”；点书架进书架视图，底部一键进本层 3D。暗格不标文字，只画一块比地面深半度的圆角色块，点击按条件给线索。</p>
+<p>SVG 按 app3d 世界坐标映射（房间 1000×760）：书架 x/z、电梯、星图台、卡片柜、台灯、暗格。映射是线性变换：</p>
+<pre>svgX = (worldX - minX) / (maxX - minX) × 1000
+svgY = (worldZ - minZ) / (maxZ - minZ) × 760</pre>
+<p>五档选层（全馆 / L1–L4），每层高亮本层有书的书架并标“N 本 + 索书号范围”；点书架进书架视图，底部一键进本层 3D。暗格不标文字，只画一块比地面深半度的圆角色块，点击按条件给线索。</p>
 
 <h2>10　馆藏玩法模块</h2>
 <h3>10.1 残页</h3>
 <p>12 张残页（R-01–R-12），正文在关键结局处使用“纸页被撕去 / 烧毁”或 <span class="mono">█</span> 缺字，只给走向不给结局。阅读章节时低概率出现“书页之间”的纸片提示，点击“捡起来”才写入 <span class="mono">fragment_picks</span>；3D 展厅地板另有 2 张可点击残页。拼合板 12 格，错位抖动、正确锁定；6/9/12 三档奖励，集齐后追加“蜡封馆员 · 结局批注”。</p>
+<p>拾取是显式动作而不是自动收集：只有用户点击才落库，避免“翻过的章都算捡到”导致收集失去意义。拼合判定按残页的 <span class="mono">order</span> 字段比较，不依赖拖拽坐标，因此不同屏幕尺寸下结果一致。</p>
 
 <h3>10.2 失窃页</h3>
-<p>9 件（S-01–S-09），每件绑定一个已有章节。阅读页显示缺页卡；读到章末（<span class="mono">.paper-end</span> 进入视口）才允许追回，未读完时按钮是“去读这一章 →”。3D 每层设展柜（铜柱 + 斜台 + 玻璃罩 + 标签 + 暗红呼吸环），追回后换金封条，状态写入 <span class="mono">collectibles(kind='stolen')</span>。</p>
+<p>9 件（S-01–S-09），每件绑定一个已有章节。阅读页显示缺页卡；读到章末（<span class="mono">.paper-end</span> 进入视口）才允许追回，未读完时按钮是“去读这一章 →”。判定用 <span class="mono">IntersectionObserver</span>，比监听 scroll 更省性能，也不会因页面高度变化误判。3D 每层设展柜（铜柱 + 斜台 + 玻璃罩 + 标签 + 暗红呼吸环），追回后换金封条，状态写入 <span class="mono">collectibles(kind='stolen')</span>。</p>
 
 <h3>10.3 躁动书页</h3>
 <div class="diagram">
   <div class="row"><div class="tag">状态机</div><div class="body"><div class="node"><b>未发现</b>章节中出现提示</div><div class="node"><b>已收容</b>在同书其他章“按住它”</div><div class="node"><b>已归位</b>到正确章节“安抚并归位”，弹安抚章</div></div></div>
 </div>
-<p>12 件（F-01–F-12），对应失败博物馆条目；状态写入 <span class="mono">collectibles(kind='restless')</span>，收容编号与安抚章由前端渲染。</p>
+<table>
+  <tr><th style="width:24mm">当前状态</th><th style="width:40mm">触发</th><th style="width:32mm">下一状态</th><th>写入</th></tr>
+  <tr><td>未发现</td><td>打开对应章节</td><td>已发现</td><td>不置位，仅前端提示</td></tr>
+  <tr><td>已发现</td><td>同书其他章按住 1.2s</td><td>已收容</td><td><span class="mono">collectibles(state='held')</span></td></tr>
+  <tr><td>已收容</td><td>正确章节“安抚并归位”</td><td>已归位</td><td><span class="mono">collectibles(state='settled')</span></td></tr>
+</table>
+<p>12 件（F-01–F-12），对应失败博物馆条目；收容编号与安抚章由前端渲染。状态只能前进不能跳级，服务端按主键 UPSERT，重复操作不会产生多条记录。</p>
 
 <h3>10.4 L4 暗门与假如之书</h3>
-<p>L4 右墙有实体暗门，前面挂帷幕。点击帷幕滑开 2.3m 后露出门，再点门进入 2D 暗门书架：10 本“假如之书”（1956 达特茅斯、1969 感知机、1974 寒冬、1986 反向传播、1997 深蓝、2012 AlexNet、2017 Transformer、2020 GPT-3、2022 ChatGPT、2024 开源）。每本可选符号树 / 神经树 / 具身树，生成序章 + 五幕 + 尾声共 12 段故事；换树重新生成不同内容。</p>
+<p>L4 右墙有实体暗门，前面挂帷幕。点击帷幕滑开 2.3m 后露出门，再点门进入 2D 暗门书架：10 本“假如之书”（1956 达特茅斯、1969 感知机、1974 寒冬、1986 反向传播、1997 深蓝、2012 AlexNet、2017 Transformer、2020 GPT-3、2022 ChatGPT、2024 开源）。每本可选符号树 / 神经树 / 具身树，按“序章 + 五幕 + 尾声”共 12 段组合生成；换树重新组合，不调用模型。</p>
+<pre>story = [序章] + 五幕 × 3 条科技树 + [尾声]
+总组合 = 10 本 × 3 树 = 30 条不同叙事</pre>
 
-<h3>10.5 未写之书</h3>
-<p>暗门第十一本是一张空白书页。读者输入“如果没有……会怎么样 / 会怎样 / 会如何 / 会发生什么”的问题，服务端先做格式校验，不合格不调用模型；合格后调用 SiliconFlow 的 <span class="mono">deepseek-ai/DeepSeek-V3.2</span>，system prompt 约束只写 500–900 字、与假设直接相关。限流 8 次 / 10 分钟 / IP + reader，<span class="mono">max_tokens=1400</span>，45 秒超时。密钥只存在服务器 <span class="mono">.env</span>（600），不进压缩包。</p>
+<h3>10.5 未写之书：AI 现场编故事（特色）</h3>
+<p>暗门第十一本是一张空白书页。它不是聊天框，而是一本“只写假如”的书：读者必须给出一个“如果没有……会怎么样”的假设，书页才会浮出 500–900 字的故事。</p>
+<div class="diagram">
+  <div class="row"><div class="tag">1 输入</div><div class="body"><div class="node"><b>长度</b>6–160 字</div><div class="node"><b>格式</b>必须含“如果没有 X 会怎么样 / 会怎样 / 会如何 / 会发生什么”</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">2 校验</div><div class="body"><div class="node"><b>不合格</b>直接返回提示，不调用模型</div><div class="node"><b>限流</b>ip + reader，10 分钟 8 次</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">3 生成</div><div class="body"><div class="node"><b>模型</b>deepseek-ai/DeepSeek-V3.2</div><div class="node"><b>约束</b>只写故事、4–6 段、500–900 字、不解释不列点</div><div class="node"><b>参数</b>temperature 0.85，max_tokens 1400</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">4 呈现</div><div class="body"><div class="node"><b>浮字</b>空白页逐段浮出字迹，不写成馆员代笔</div><div class="node"><b>降级</b>45s 超时 / 上游失败 → 一句提示，不影响其余功能</div></div></div>
+</div>
+<div class="caption">图 10-1　未写之书的请求链路：先校验，再限流，最后才调用模型</div>
+<p>格式校验用一条正则：<span class="mono">/^如果没有[^。！？!?\n]{1,80}(会怎么样|会怎样|会如何|会发生什么)/</span>。它把“这本书能写什么”收窄到一个明确的文体，既降低模型跑题概率，也避免被当成通用问答接口滥用。密钥只存在服务器 <span class="mono">.env</span>（权限 600），不进压缩包、不入库；响应只回传正文与用量，不回传密钥或上游错误细节。</p>
+
+<h3>10.6 收集与档案</h3>
+<p>残页、失窃页、躁动页、暗门分岔共用 <span class="mono">collectibles</span> 表，按 <span class="mono">(reader_id, kind, item_id)</span> 唯一。借阅档案把四类状态汇总为徽章、书榜与“今日可做”：查询按 reader 聚合，读多写少，索引只需主键。章节总结卡由 Canvas 绘制并导出 PNG，不依赖后端渲染。</p>
 
 <h2>11　概念层与前沿观察</h2>
 <h3>11.1 概念手册</h3>
-<p>16 个概念：机器学习、深度学习、神经网络、反向传播、CNN、训练、过拟合、注意力、Transformer、LLM、生成模型、扩散、RL、RLHF、对齐、Agent。每个概念包含：一句话、生活类比、准确解释、≥2 条常见误解、历史/技术/产业/前沿四镜路径、先读章、相关概念。</p>
-<p>检索接口并列返回概念卡，不改变原有章节排序；阅读页显示“本章概念”；概念手册支持概念之间互跳，退出时按来处回到原章节或 3D。</p>
+<p>16 个概念：机器学习、深度学习、神经网络、反向传播、CNN、训练、过拟合、注意力、Transformer、LLM、生成模型、扩散、RL、RLHF、对齐、Agent。每个概念包含：一句话、生活类比、准确解释、≥2 条常见误解、历史 / 技术 / 产业 / 前沿四镜路径、先读章、相关概念。</p>
+<p>服务端把概念与章节做双向映射：章节可查“本章概念”，概念可查“先读哪章”。检索接口并列返回概念卡，不改变原有章节排序；概念手册支持概念之间互跳，退出时按来处回到原章节或 3D。</p>
 
-<h3>11.2 前沿观察</h3>
+<h3>11.2 前沿观察：每日更新的内容管线（特色）</h3>
+<p>馆藏不是静态样例。每天 04:17，定时任务依次执行四步：</p>
 <div class="diagram">
-  <div class="row"><div class="tag">管线</div><div class="body"><div class="node"><b>抓取</b>arXiv cs.AI/CL/CV/LG，近 30 篇</div><div class="node"><b>编译</b>DeepSeek 生成中文标题/导读/说人话/术语/难度</div><div class="node"><b>热点</b>官方 RSS 近 14 天，强关键词过滤</div><div class="node"><b>输出</b>frontier.json / frontier-hot.json</div></div></div>
+  <div class="row"><div class="tag">抓取</div><div class="body"><div class="node"><b>arXiv</b>cs.AI / cs.CL / cs.CV / cs.LG，近 30 篇</div><div class="node"><b>热点</b>官方 RSS 近 14 天，强关键词过滤</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">编译</div><div class="body"><div class="node"><b>论文</b>中文标题 / 导读 / 说人话 / 术语 / 难度</div><div class="node"><b>热点</b>中文摘要与馆员按语</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">入库</div><div class="body"><div class="node"><b>文件</b>frontier.json / frontier-hot.json</div><div class="node"><b>幂等</b>按条目 id 去重，重复运行不叠加</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">呈现</div><div class="body"><div class="node"><b>API</b>/api/frontier 合并论文与热点</div><div class="node"><b>缓存</b>public, max-age=900</div><div class="node"><b>检索</b>新条目进入馆内检索</div></div></div>
 </div>
-<p>定时任务每日 04:17 依次执行：<span class="mono">fetch-arxiv → fetch-hot → rewrite-frontier → rewrite-hot</span>。抓取失败保留旧文件，不清库。前端提供领域筛选、英文摘要折叠、arXiv 原文外链与“馆内找同方向的旧书”。</p>
+<div class="caption">图 11-1　前沿观察的每日管线；抓取失败时保留旧文件，不清库</div>
+<p>四步分别对应 <span class="mono">fetch-arxiv.mjs → fetch-hot.mjs → rewrite-frontier.mjs → rewrite-hot.mjs</span>。设计上把“抓取”和“编译”分开：抓取失败只影响当天的新增，编译失败则保留上一版已编译内容；两者都不会把已有数据清空。前端提供领域筛选、英文摘要折叠、arXiv 原文外链与“馆内找同方向的旧书”，让“新论文”与“旧馆藏”发生关系，而不是另开一个新闻列表。</p>
 
-<h3>11.3 可玩演示</h3>
-<h4>CNN 卷积</h4>
-<p>14×14 猫脸像素图，3 个固定核（竖/横/对角）。每个位置计算 3×3 窗口与核的点积，得到 12×12 特征图；ReLU 后做 2×2 最大池化得到 6×6。分类分数取每个核特征图 ReLU 后最强 12% 响应的均值，再归一化为百分比。</p>
-<pre>out[y][x] = ΣΣ input[y+i][x+j] * kernel[i][j]
-relu(v) = max(0, v)
-pool = max(2x2 block)
-score_k = mean(top 12% of relu(map_k))</pre>
-<h4>注意力矩阵</h4>
+<h3>11.3 CNN 卷积演示</h3>
+<p>14×14 猫脸像素图，3 个固定核（竖 / 横 / 对角）。每个位置计算 3×3 窗口与核的点积，得到 12×12 特征图；ReLU 后做 2×2 最大池化得到 6×6。分类分数取每个核特征图 ReLU 后最强 12% 响应的均值，再归一化为百分比。</p>
+<pre>out[y][x] = ΣΣ input[y+i][x+j] × kernel[i][j]
+relu(v)   = max(0, v)
+pool      = max(2×2 block)
+score_k   = mean(top 12% of relu(map_k))</pre>
+<p>卷积复杂度为 <span class="mono">O(H × W × k²)</span>，这里 H=W=14、k=3，共 3 个核，计算量很小，可以逐格动画而不掉帧。演示不训练、不更新权重，核是人工设定的，因此每一步都能解释“为什么这个位置响应强”。</p>
+
+<h3>11.4 注意力矩阵演示</h3>
 <p>输入一句中文，切成二元组 token；三个头分别按“邻近距离、重复字共享数、远距离”构造分数，逐行 softmax 得到 token×token 矩阵。点击某行高亮该行与该列，悬停显示百分比；切换头时矩阵重新计算。每行和为 1。</p>
 <pre>score_ij = head_k(i, j)
-A_ij = exp(score_ij) / Σ_j exp(score_ij)</pre>
-
-<img class="shot" src="assets/cnn.jpg" alt="CNN 演示">
-<div class="caption">图 12-1　CNN 演示：卷积核、特征图、ReLU、池化与三类分数</div>
+m_i = max_j score_ij
+A_ij = exp(score_ij - m_i) / Σ_j exp(score_ij - m_i)</pre>
+<p>先减行最大值再取指数，是 softmax 的数值稳定写法：避免 <span class="mono">exp</span> 溢出，同时不改变结果（分子分母同乘一个常数）。矩阵规模为 n×n，n 为 token 数，计算与渲染都是 <span class="mono">O(n²)</span>；页面上限制句子长度，保证在移动端也能即时重算。</p>
 
 <h2>12　音效模块</h2>
 <p>全部音效由 WebAudio 程序合成，无音频文件：翻书（带通噪声 + 短包络）、脚步（低频脉冲）、电梯（滑行 + 到站双音）、拾页（纸摩擦）、开关灯（短促 click + 电流）、盖章（低频闷响）、暗门（低频轰鸣）、星图 pad（三音 + 带通噪声 + 慢 LFO）。</p>
-<p>总音量 0.62，事件音整体压低；开启音效时启动房间底噪（棕噪声 + 360Hz 低通），关闭先播下行提示再停底噪。浏览器要求用户手势后才能启动 AudioContext，因此首次点击时 <span class="mono">resume()</span>；页面刷新后若音效为开，第一次 <span class="mono">pointerdown</span> 再接底噪。</p>
+<pre>噪声 buffer → BiquadFilter（带通 / 低通）→ Gain（包络）→ Destination
+振荡器 → Gain（ADSR）→ Destination</pre>
+<p>总音量 0.62，事件音整体压低；开启音效时启动房间底噪（棕噪声 + 360Hz 低通），关闭先播下行提示再停底噪。浏览器要求用户手势后才能启动 AudioContext，因此首次点击时 <span class="mono">resume()</span>；页面刷新后若音效为开，第一次 <span class="mono">pointerdown</span> 再接底噪。所有节点在停止后断开，避免长时间浏览后累积。</p>
 
 <h2>13　安全、性能与降级</h2>
 <h3>13.1 安全</h3>
 <ul>
-  <li>口令 scrypt + 随机盐 + 定时安全比较；登录/注册限流。</li>
-  <li>会话只走 HttpOnly Cookie（<span class="mono">mm_token</span>），前端不可读；HTTPS 下 Secure。</li>
-  <li>安全响应头：X-Content-Type-Options、X-Frame-Options、Referrer-Policy、Permissions-Policy、COOP。</li>
-  <li>批注引文 ≤2000 字；未写之书先校验格式再调用模型，密钥不入库、不进包。</li>
+  <li>口令 scrypt + 16 字节随机盐 + 64 字节输出；比较用 <span class="mono">timingSafeEqual</span>，降低比较阶段的时序泄露风险。</li>
+  <li>登录 / 注册 / 未写之书三处限流；登录失败统一返回“用户名或密码错误”，不区分账号是否存在。</li>
+  <li>会话只走 HttpOnly Cookie（<span class="mono">mm_token</span>），前端不可读；HTTPS 下 Secure；注销即删库中会话。</li>
+  <li>安全响应头：X-Content-Type-Options、X-Frame-Options、Referrer-Policy、Permissions-Policy、COOP；CSP 由 nginx 统一负责。</li>
+  <li>批注引文 ≤2000 字、注文 ≤4000 字；未写之书先校验格式再调用模型，密钥不入库、不进包。</li>
+  <li>静态路径拒绝 <span class="mono">..</span>，防止目录穿越；所有章节 id 先查已知集合再落库。</li>
 </ul>
 
 <h3>13.2 性能预算</h3>
@@ -442,15 +623,17 @@ A_ij = exp(score_ij) / Σ_j exp(score_ij)</pre>
   <tr><td>3D draw calls</td><td>≤700（实测约 615，含后处理）</td></tr>
   <tr><td>三角形</td><td>约 2.08 万</td></tr>
   <tr><td>门厅首屏</td><td>约 1.5s（本地 Chrome，gzip + ETag）</td></tr>
+  <tr><td>入馆到可交互</td><td>约 4s；物理包在首帧后延迟加载</td></tr>
   <tr><td>检索</td><td>20 并发全部 200；单次 ≤6ms</td></tr>
-  <tr><td>静态资源</td><td>app3d/star/audio/whatif/demos：no-cache + ETag；vendor：immutable</td></tr>
+  <tr><td>静态资源</td><td>app3d / star / audio / whatif / demos：no-cache + ETag；vendor：immutable 7 天</td></tr>
 </table>
 
 <h3>13.3 降级策略</h3>
 <ul>
-  <li>窄屏或低内存：DPR ≤1.25、关抗锯齿与阴影、FOV 66、尘埃/光锥/点光减半、完全跳过 Rapier。</li>
+  <li>窄屏或低内存：DPR ≤1.25、关抗锯齿与阴影、FOV 66、尘埃 / 光锥 / 点光减半、完全跳过 Rapier。</li>
   <li>后处理创建失败：捕获异常并回退为直接渲染。</li>
   <li>3D 不可用：书架视图、总览、阅读器仍可完成全部阅读。</li>
+  <li>模型服务不可用：未写之书返回提示，其余馆藏玩法与阅读不受影响。</li>
 </ul>
 
 <h2>14　测试与验收</h2>
@@ -459,21 +642,21 @@ A_ij = exp(score_ij) / Σ_j exp(score_ij)</pre>
   <tr><th style="width:38mm">类别</th><th>代表性断言</th></tr>
   <tr><td>门厅与身份</td><td>三按钮、核验动画、失败可重试、访客入馆、门厅星网不重叠、鼠标局部扰动</td></tr>
   <tr><td>3D 阅览室</td><td>后排可达、选字不持续移动、展柜 9 件、聚光灯、放大镜、draw call 预算、物理与光影读数</td></tr>
-  <tr><td>阅读器</td><td>三栏、页边注锚点、盖章/撤销、批注、读完/撤销、章节条、换章回页首</td></tr>
+  <tr><td>阅读器</td><td>三栏、页边注锚点、盖章 / 撤销、批注、读完 / 撤销、章节条、换章回页首</td></tr>
   <tr><td>检索</td><td>首条命中、why、零结果兜底、英文容错、概念卡</td></tr>
-  <tr><td>知识视图</td><td>星图节点/画布/关系线 0→2、书轨 63 站、时间轴 448 卡、平面图 5 档</td></tr>
+  <tr><td>知识视图</td><td>星图节点 / 画布 / 关系线 0→2、书轨 63 站、时间轴 448 卡、平面图 5 档</td></tr>
   <tr><td>馆藏玩法</td><td>残页拼合、失窃追回、躁动三态、暗门 10 本、未写之书格式拒绝</td></tr>
   <tr><td>演示</td><td>总览 7 件、CNN 520 格与三类分数、注意力 11×11 行和 1</td></tr>
   <tr><td>工程</td><td>安全头、Cookie 不可 JS 读、缓存头、20 并发、移动端无溢出、无 pageerror</td></tr>
 </table>
-<p>截图与线上验收均无 JS 报错；内容校验 448 章 FAIL=0。</p>
+<p>截图与线上验收均无 JS 报错；内容校验 448 章 FAIL=0。测试直接跑在真实浏览器里，覆盖“看得见的行为”，而不是只测函数返回值。</p>
 
 <h2>15　部署与运维</h2>
 <h3>15.1 拓扑</h3>
 <div class="diagram">
   <div class="row"><div class="tag">入口</div><div class="body"><div class="node"><b>HTTPS</b>150.158.1.111/ai/</div><div class="node"><b>备用</b>http://150.158.1.111:82/ai/</div></div></div>
   <div class="arrow">↓</div>
-  <div class="row"><div class="tag">反代</div><div class="body"><div class="node"><b>nginx</b>/ai/ → 127.0.0.1:3300</div><div class="node"><b>gzip</b>HTML/CSS/SVG/JS</div><div class="node"><b>CSP</b>script-src self + wasm-unsafe-eval + unsafe-inline</div></div></div>
+  <div class="row"><div class="tag">反代</div><div class="body"><div class="node"><b>nginx</b>/ai/ → 127.0.0.1:3300</div><div class="node"><b>gzip</b>HTML / CSS / SVG / JS</div><div class="node"><b>CSP</b>script-src self + wasm-unsafe-eval + unsafe-inline</div></div></div>
   <div class="arrow">↓</div>
   <div class="row"><div class="tag">应用</div><div class="body"><div class="node"><b>systemd</b>machine-memory（User=ubuntu）</div><div class="node"><b>代码</b>/opt/machine-memory</div><div class="node"><b>数据</b>.data/app.db + content/</div></div></div>
   <div class="arrow">↓</div>
@@ -487,14 +670,15 @@ scp mm-deploy.tar.gz ubuntu@server:/tmp/
 ssh server "sudo tar -xzf /tmp/mm-deploy.tar.gz -C /opt/machine-memory \
   && sudo chown -R ubuntu:ubuntu /opt/machine-memory \
   && sudo systemctl restart machine-memory"</pre>
-<p>压缩包排除 <span class="mono">.env</span>（模型密钥）、<span class="mono">.data</span>（用户数据）、<span class="mono">node_modules</span>、<span class="mono">.scratch</span> 与日志文件；HTTPS 证书由 Let's Encrypt IP 证书提供，续期 hooks 会短暂停/启占用 80 端口的容器。</p>
+<p>压缩包排除 <span class="mono">.env</span>（模型密钥）、<span class="mono">.data</span>（用户数据）、<span class="mono">node_modules</span>、<span class="mono">.scratch</span> 与日志文件；HTTPS 证书由 Let's Encrypt IP 证书提供，续期 hooks 会短暂停 / 启占用 80 端口的容器。重启后 systemd 拉起进程，启动时重建索引并打开数据库。</p>
 
 <h2>16　已知限制与演进方向</h2>
 <ul>
   <li>3D 场景在软件渲染（无 GPU）环境下帧率较低；已提供 2D 书架、总览与阅读器作为完整替代。</li>
   <li>移动端跳过 Rapier，书不会自由落体，但抽取、翻开、叠桌仍可用。</li>
   <li>未写之书依赖外部模型服务，服务不可用时只返回失败提示，不影响其余功能。</li>
-  <li>后续可在现有书架体系中接入新的专题馆藏，不需要改动底层数据模型。</li>
+  <li>内容在启动时载入内存，改稿后需重启进程；这与按版本发布的节奏一致，若需热更新可增加文件监听与索引重建。</li>
+  <li>英文拼写容错只在零结果时全词表扫描；词表扩大后可改为删除邻域索引，进一步降低最坏情况开销。</li>
 </ul>
 
 <div class="note">本文所述实现均对应当前线上版本：56 本书 / 448 章 / 16 个概念 / 7 个演示 / 169 项端到端测试。线上地址：https://150.158.1.111/ai/</div>
