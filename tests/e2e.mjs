@@ -278,6 +278,15 @@ const starLegend = await page.locator('.mm-star3d-legend span').count();
 starNodes >= 36 ? ok('立体星图节点数', String(starNodes)) : bad('立体星图节点数', String(starNodes));
 starCanvas === 1 ? ok('星图 WebGL 画布') : bad('星图 WebGL 画布', String(starCanvas));
 starLegend === 4 ? ok('星图四层图例', String(starLegend)) : bad('星图四层图例', String(starLegend));
+// 关系线默认收起，定位到某本书才点亮它自己那几条
+const starEdgesIdle = await page.evaluate(() => window.__mmStarEdges());
+await page.fill('.mm-star3d-find', '对话系统的前史');
+await page.press('.mm-star3d-find', 'Enter');
+await page.waitForTimeout(350);
+const starEdgesFocus = await page.evaluate(() => window.__mmStarEdges());
+(starEdgesIdle.total >= 40 && starEdgesIdle.lit === 0 && starEdgesFocus.lit >= 2)
+  ? ok('星图关系线按需点亮', `${starEdgesIdle.lit}/${starEdgesIdle.total} → ${starEdgesFocus.lit}`)
+  : bad('星图关系线按需点亮', `${JSON.stringify(starEdgesIdle)} → ${JSON.stringify(starEdgesFocus)}`);
 const starAudioOn = await page.evaluate(() => !!(window.mmAudioStarOn && window.mmAudioStarOn()));
 starAudioOn ? ok('星图星河流转音效挂载') : bad('星图星河流转音效挂载', '未挂载');
 // 星图文字版关系列表：WebGL 不可用 / 键盘读者也能读完关系

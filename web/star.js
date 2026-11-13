@@ -214,7 +214,7 @@ export async function showStarMap() {
   overlay.className = 'mm-star3d';
   overlay.innerHTML = `
     <div class="mm-star3d-head">
-      <div class="mm-star3d-title">星图 · 群星环绕<small>${data.nodes.length} 本书 · 四层星轨 · 点星开书</small></div>
+      <div class="mm-star3d-title">星图 · 群星环绕<small>${data.nodes.length} 本书 · 悬停点亮关系 · 点星开书</small></div>
       <div class="mm-star3d-legend">${FLOORS.map((f, i) => `<span><i style="background:${colors[i]};color:${colors[i]}"></i>${f.name}</span>`).join('')}</div>
       <div class="mm-star3d-tools">
         <input class="mm-star3d-find" type="text" placeholder="按书名定位" aria-label="按书名定位" autocomplete="off" list="mm-star3d-books">
@@ -455,7 +455,7 @@ export async function showStarMap() {
       .add(side.multiplyScalar(EDGE_R * 0.42));
     const curve = new THREE.QuadraticBezierCurve3(da, ctrl, db);
     const tubularSegments = angle > 1.8 ? 46 : 34;
-    const radius = angle > 1.2 ? 0.048 : 0.058;
+    const radius = angle > 1.2 ? 0.03 : 0.038;
     const geo = new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, false);
     const base = new THREE.Color(0x9a7a3a);
     const colorArr = new Float32Array(geo.attributes.position.count * 3);
@@ -470,16 +470,27 @@ export async function showStarMap() {
       colorArr[vi * 3 + 2] = base.b * k;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colorArr, 3));
-    const baseOpacity = angle > 2.1 ? 0.22 : angle > 1.2 ? 0.32 : 0.5;
     const mat = new THREE.MeshBasicMaterial({
-      vertexColors: true, transparent: true, opacity: baseOpacity,
+      vertexColors: true, transparent: true, opacity: 0,
       depthWrite: false, blending: THREE.AdditiveBlending,
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.renderOrder = 2;
     group.add(mesh);
-    edgeItems.push({ source: e.source, target: e.target, curve, material: mat, baseOpacity });
+    edgeItems.push({ source: e.source, target: e.target, curve, material: mat, lit: false });
   });
+
+  // 关系线默认全部收起，只留星星；悬停或定位到某颗星时，才点亮它自己的关系线。
+  // 50 条弧线同时挂在半径 13.6 的天球上会互相缠绕，看起来像一团乱线。
+  const applyEdgeFocus = (item) => {
+    const id = item ? item.node.id : '';
+    edgeItems.forEach((ed) => {
+      const lit = !!id && (ed.source === id || ed.target === id);
+      ed.lit = lit;
+      ed.material.opacity = lit ? 0.9 : 0;
+      ed.material.color.set(lit ? 0xffe2ae : 0xffffff);
+    });
+  };
 
   // 每条边一颗沿曲线缓慢移动的流星
   const meteorPos = new Float32Array(edgeItems.length * 3);
@@ -533,11 +544,7 @@ export async function showStarMap() {
   const setHover = (item) => {
     if (hoveredItem === item) return;
     hoveredItem = item;
-    edgeItems.forEach((ed) => {
-      const lit = item && (ed.source === item.node.id || ed.target === item.node.id);
-      ed.material.opacity = lit ? 0.95 : ed.baseOpacity;
-      ed.material.color.set(lit ? 0xffe2ae : 0xffffff);
-    });
+    applyEdgeFocus(item || focusItem);
     renderer.domElement.style.cursor = item ? 'pointer' : (dragging ? 'grabbing' : 'grab');
   };
 
@@ -558,6 +565,7 @@ export async function showStarMap() {
     lookAnim = null;
     focusItem = null;
     focusUntil = 0;
+    applyEdgeFocus(null);
     renderer.domElement.setPointerCapture?.(e.pointerId);
     renderer.domElement.style.cursor = 'grabbing';
     tip.style.display = 'none';
@@ -648,6 +656,7 @@ export async function showStarMap() {
     lookAnim = null;
     focusItem = null;
     focusUntil = 0;
+    applyEdgeFocus(hoveredItem);
     yaw = INITIAL_YAW;
     pitch = INITIAL_PITCH;
     camera.fov = INITIAL_FOV;
@@ -672,6 +681,7 @@ export async function showStarMap() {
     };
     focusItem = itemsById.get(target.id) || null;
     focusUntil = performance.now() + 950 + 1200;
+    applyEdgeFocus(focusItem);
   };
 
   renderer.domElement.addEventListener('pointerdown', onPointerDown);
@@ -789,17 +799,20 @@ export async function showStarMap() {
     });
     if (focusItem && now > focusUntil) {
       focusItem = null;
+      applyEdgeFocus(hoveredItem);
     }
   }
 
   function updateMeteors(now) {
     for (let i = 0; i < edgeItems.length; i++) {
+      const ed = edgeItems[i];
       const t = (now * 0.000032 + i * 0.081) % 1;
-      const pt = edgeItems[i].curve.getPointAt(t);
+      const pt = ed.curve.getPointAt(t);
       meteorPos[i * 3] = pt.x;
       meteorPos[i * 3 + 1] = pt.y;
       meteorPos[i * 3 + 2] = pt.z;
-      const k = 0.16 + 0.84 * Math.sin(Math.PI * t);
+      // 没有点亮的边不跑流星：默认画面里只剩星星，不再有 50 个光点到处窜
+      const k = ed.lit ? 0.16 + 0.84 * Math.sin(Math.PI * t) : 0;
       meteorCol[i * 3] = 1.0 * k;
       meteorCol[i * 3 + 1] = 0.83 * k;
       meteorCol[i * 3 + 2] = 0.52 * k;
@@ -881,6 +894,7 @@ export async function showStarMap() {
 
   startLoop();
   window.__mmStarNodes = data.nodes.length;
+  window.__mmStarEdges = () => ({ total: edgeItems.length, lit: edgeItems.filter((ed) => ed.lit).length });
 }
 
 window.mmShowStar = showStarMap;

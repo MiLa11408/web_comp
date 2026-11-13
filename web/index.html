@@ -2548,7 +2548,7 @@ window.mmCheckHiddenBook = mmCheckHiddenBook;
 
 async function mmShowStar() {
   try {
-    mmTip('star', '星图', '56 本书按四层球壳排布；点星开书，按 L 打开文字版关系列表。');
+    mmTip('star', '星图', '56 本书按四层球壳排布；悬停点亮这颗星的关系线，点星开书，按 L 打开文字版关系列表。');
     await ensureCatalog();
     const mod = await import('./star.js');
     mod.showStarMap();
@@ -2610,7 +2610,7 @@ async function showAbout(highlightTutorial = false) {
         <article class="tut-step"><span class="tut-num">04 / 电梯</span><h4>楼层就是分级</h4><p>L1 公开、L2 内部、L3 机密、L4 绝密。越往上书越残、环境越冷，馆员语气也会变。电梯面板和目标楼层互通，3D 与 2D 会同步。</p></article>
         <article class="tut-step"><span class="tut-num">05 / 平面</span><h4>书架视图与总览</h4><p>不想走 3D 就用<b>书架视图</b>按层找书，一格一格看书脊；<b>书架总览</b>一次列出全部书目、索书号、年份、标签与章节进度。</p></article>
         <article class="tut-step"><span class="tut-num">06 / 查找</span><h4>卡片目录的四级排序</h4><p>检索先锁<b>大标题</b>，再锁 <b>tag</b>，再看正文提及次数，最后才是相关内容。<b>前沿观察</b>每天从 arXiv 选新论文，由馆员编译成中文科普，可按领域筛选并跳回馆内旧书。</p></article>
-        <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：6 条主线、63 站，同名书就是换乘站；<b>星图</b>看 56 本书的 50 条关系，按 <kbd>L</kbd> 打开文字版列表；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
+        <article class="tut-step"><span class="tut-num">07 / 线路</span><h4>书轨、星图、时间轴</h4><p><b>书轨</b>是一张主题线路图：6 条主线、63 站，同名书就是换乘站；<b>星图</b>看 56 本书的 50 条关系（悬停点亮，<kbd>L</kbd> 打开文字版列表）；<b>时间轴</b>按年代筛。三者都不替你做结论，只把路摆出来。</p></article>
         <article class="tut-step"><span class="tut-num">08 / 阅读</span><h4>三栏阅读页</h4><p>左边是可收起的检索栏，右边是页边注（点一下跳到正文对应段）。右上角随时<b>合上书</b>；文末有上一章、下一章、本书目录与换乘章节；工具条可盖章、批注、标记读完，盖章和读完都能再次点击撤销。</p></article>
         <article class="tut-step"><span class="tut-num">09 / 隐藏</span><h4>不完整的档案</h4><p>读到章末会掉落<b>残页</b>（共 12 张，可拼合）；<b>失窃页</b>要先把对应章节读到末尾才显形；还有<b>躁动书页</b>、<b>隐藏书</b>与层板红线。L4 的蜡封桌上多了一张盖着红 X 的备忘，记得读它——那不是装饰。</p></article>
         <article class="tut-step"><span class="tut-num">10 / 暗门</span><h4>一扇不在平面图上的门</h4><p>先看 L4 蜡封桌的备忘，再点右墙那幅没有拉直的<b>帷幕</b>把它滑开。后面是一扇没有编号的门；点门进去，十本「假如之书」会等你。选符号 / 神经 / 具身任意一条科技树，点「走假如」就能生成一篇长故事。书架尽头还有一本<b>未写之书</b>：写下「如果没有 X」的假设，它只生成与这个问题相关的小故事。</p></article>
