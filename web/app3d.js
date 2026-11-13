@@ -726,6 +726,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   let __buildMs = 0;
   let __mergeMs = 0;
   let __firstFrameMs = null;
+  let __pendingPhysicsKick = null;
   let __rapierState = 'pending';
   injectCss();
 
@@ -2698,10 +2699,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   if (LOW_SPEC) {
     __rapierState = 'skipped-low-spec';
     console.info('[3D] 低配/移动端跳过 Rapier');
+  } else if (__firstFrameMs == null) {
+    // 首帧之前不碰 4.3MB 的 Rapier：它的下载与 WASM 编译会卡住入场那几秒
+    __pendingPhysicsKick = () => setTimeout(setupPhysics, 2500);
   } else {
-    const kickPhysics = () => { setupPhysics(); };
-    if ('requestIdleCallback' in window) requestIdleCallback(kickPhysics, { timeout: 2500 });
-    else setTimeout(kickPhysics, 900);
+    setTimeout(setupPhysics, 2500);
   }
 
   // ---------- UI：提示 / 提示条 / 遮罩 / 电梯面板 ----------
@@ -3855,6 +3857,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       __firstFrame = false;
       __firstFrameMs = Math.round(performance.now() - __t0);
       console.info(`[3D] 首帧渲染 ${Math.round(performance.now() - __r0)}ms · 距 init3D 开始 ${__firstFrameMs}ms`);
+      // 房间已经出现在屏幕上，再安静地把物理接上
+      if (__pendingPhysicsKick) { __pendingPhysicsKick(); __pendingPhysicsKick = null; }
     }
     drawLens();
   }
