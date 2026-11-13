@@ -320,8 +320,8 @@ await page.fill('.mm-star3d-find', '对话系统的前史');
 await page.press('.mm-star3d-find', 'Enter');
 await page.waitForTimeout(350);
 const starEdgesFocus = await page.evaluate(() => window.__mmStarEdges());
-(starEdgesIdle.total >= 40 && starEdgesIdle.lit === 0 && starEdgesFocus.lit >= 2)
-  ? ok('星图关系线按需点亮', `${starEdgesIdle.lit}/${starEdgesIdle.total} → ${starEdgesFocus.lit}`)
+(starEdgesIdle.total >= 40 && starEdgesIdle.lit === 0 && starEdgesFocus.lit >= 2 && starEdgesFocus.opacity > 0.4)
+  ? ok('星图关系线按需点亮', `${starEdgesIdle.lit}/${starEdgesIdle.total} → ${starEdgesFocus.lit} · 透明度 ${starEdgesFocus.opacity}`)
   : bad('星图关系线按需点亮', `${JSON.stringify(starEdgesIdle)} → ${JSON.stringify(starEdgesFocus)}`);
 const starAudioOn = await page.evaluate(() => !!(window.mmAudioStarOn && window.mmAudioStarOn()));
 starAudioOn ? ok('星图星河流转音效挂载') : bad('星图星河流转音效挂载', '未挂载');

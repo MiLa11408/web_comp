@@ -477,20 +477,33 @@ export async function showStarMap() {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.renderOrder = 2;
     group.add(mesh);
-    edgeItems.push({ source: e.source, target: e.target, curve, material: mat, lit: false });
+    edgeItems.push({ source: e.source, target: e.target, curve, material: mat, lit: false, fadeTarget: 0 });
   });
 
   // 关系线默认全部收起，只留星星；悬停或定位到某颗星时，才点亮它自己的关系线。
   // 50 条弧线同时挂在半径 13.6 的天球上会互相缠绕，看起来像一团乱线。
+  // 这里只改目标透明度，真正的淡入淡出交给 updateEdges 每帧推进。
   const applyEdgeFocus = (item) => {
     const id = item ? item.node.id : '';
     edgeItems.forEach((ed) => {
       const lit = !!id && (ed.source === id || ed.target === id);
       ed.lit = lit;
-      ed.material.opacity = lit ? 0.9 : 0;
+      ed.fadeTarget = lit ? 0.9 : 0;
       ed.material.color.set(lit ? 0xffe2ae : 0xffffff);
     });
   };
+  // 拖动视角时保留上一条链，不会一按下去线就消失；松开后指针移到别处再淡出
+  function updateEdges(dt) {
+    const k = 1 - Math.exp(-7 * dt);
+    for (const ed of edgeItems) {
+      const cur = ed.material.opacity;
+      if (Math.abs(ed.fadeTarget - cur) < 0.002) {
+        if (cur !== ed.fadeTarget) ed.material.opacity = ed.fadeTarget;
+        continue;
+      }
+      ed.material.opacity += (ed.fadeTarget - cur) * k;
+    }
+  }
 
   // 每条边一颗沿曲线缓慢移动的流星
   const meteorPos = new Float32Array(edgeItems.length * 3);
@@ -565,7 +578,7 @@ export async function showStarMap() {
     lookAnim = null;
     focusItem = null;
     focusUntil = 0;
-    applyEdgeFocus(null);
+    // 不在这里熄灭关系线：拖动视角时线留在原处，松手后指针移开再淡出
     renderer.domElement.setPointerCapture?.(e.pointerId);
     renderer.domElement.style.cursor = 'grabbing';
     tip.style.display = 'none';
@@ -811,8 +824,9 @@ export async function showStarMap() {
       meteorPos[i * 3] = pt.x;
       meteorPos[i * 3 + 1] = pt.y;
       meteorPos[i * 3 + 2] = pt.z;
-      // 没有点亮的边不跑流星：默认画面里只剩星星，不再有 50 个光点到处窜
-      const k = ed.lit ? 0.16 + 0.84 * Math.sin(Math.PI * t) : 0;
+      // 没有点亮的边不跑流星；用当前透明度做淡出，松开指针时不会突然消失
+      const fade = Math.min(1, ed.material.opacity / 0.9);
+      const k = fade * (0.16 + 0.84 * Math.sin(Math.PI * t));
       meteorCol[i * 3] = 1.0 * k;
       meteorCol[i * 3 + 1] = 0.83 * k;
       meteorCol[i * 3 + 2] = 0.52 * k;
@@ -824,6 +838,8 @@ export async function showStarMap() {
   function frame(now) {
     if (!running) return;
     anim = requestAnimationFrame(frame);
+    const dt = Math.min(0.05, Math.max(0.001, (now - lastNow) / 1000));
+    lastNow = now;
 
     if (lookAnim) {
       const t = Math.min(1, Math.max(0, (now - lookAnim.start) / lookAnim.dur));
@@ -836,6 +852,7 @@ export async function showStarMap() {
     group.rotation.set(pitch, yaw, 0);
     updateNodes(now);
     updateLabels();
+    updateEdges(dt);
     updateMeteors(now);
     renderer.render(scene, camera);
   }
@@ -894,7 +911,11 @@ export async function showStarMap() {
 
   startLoop();
   window.__mmStarNodes = data.nodes.length;
-  window.__mmStarEdges = () => ({ total: edgeItems.length, lit: edgeItems.filter((ed) => ed.lit).length });
+  window.__mmStarEdges = () => ({
+    total: edgeItems.length,
+    lit: edgeItems.filter((ed) => ed.lit).length,
+    opacity: Number(Math.max(0, ...edgeItems.map((ed) => ed.material.opacity)).toFixed(3)),
+  });
 }
 
 window.mmShowStar = showStarMap;
