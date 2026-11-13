@@ -858,27 +858,34 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
 
   // ---------- 灯光 ----------
-  const ambient = new THREE.AmbientLight(0x6f6858, 1.75);
+  // 只保留少量有明确来源的光：吊灯、壁灯、落地灯、窗光。
+  // 环境光压低，让「亮的地方由灯照出来」，木器与纸张保持哑光。
+  const ambient = new THREE.AmbientLight(0x6f6858, 1.35);
   scene.add(ambient);
-  const hemi = new THREE.HemisphereLight(0x9a8a6a, 0x3a2f22, 1.35);
+  const hemi = new THREE.HemisphereLight(0x9a8a6a, 0x3a2f22, 0.95);
   scene.add(hemi);
 
-  const key = new THREE.DirectionalLight(0xffe3b0, 2.2);
-  key.position.set(4.5, 8.5, 7.5);
+  const key = new THREE.DirectionalLight(0xffe3b0, 1.5);
+  key.position.set(6.5, 9.2, 8.2);
   scene.add(key);
+
+  // 入口方向补光：只抬书架正面的层次，不投影，避免出现第二套阴影
+  const fill = new THREE.DirectionalLight(0xd8c8a8, 0.75);
+  fill.position.set(-5, 6, 10);
+  scene.add(fill);
 
   // 书架灯：照亮书脊（只保留 2 盏，控制灯数）
   const shelfLights = [];
   for (const u of SHELF_UNITS.slice(0, 2)) {
-    const lamp = new THREE.PointLight(0xffc37a, 0.95, 8, 2);
-    lamp.position.set(u.x, 3.3, u.z + 1.05);
+    const lamp = new THREE.PointLight(0xffc37a, 1.0, 9, 2);
+    lamp.position.set(u.x, 2.75, u.z + 0.9);
     scene.add(lamp);
     shelfLights.push(lamp);
   }
 
-  const spot = new THREE.SpotLight(0xffd9a0, 5.4, 0, 0.62, 0.5, 1.15);
+  const spot = new THREE.SpotLight(0xffd9a0, 3.3, 0, 0.56, 0.64, 1.15);
   spot.position.set(CHANDELIER_POS.x, CHANDELIER_POS.y, CHANDELIER_POS.z);
-  spot.target.position.set(0, 0.6, CHANDELIER_POS.z);
+  spot.target.position.set(0, 0.62, 2.1);
   spot.castShadow = true;
   const shadowSize = LOW_SPEC ? 512 : 2048;
   spot.shadow.mapSize.set(shadowSize, shadowSize);
@@ -891,21 +898,22 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   scene.add(spot.target);
 
   // 楼层主题光（颜色随楼层变化）
-  const accent = new THREE.PointLight(0xffc37a, 0.9, 20, 2);
-  accent.position.set(0, 6.4, 2.4);
+  const accent = new THREE.PointLight(0xffc37a, 0.5, 18, 2);
+  accent.position.set(0, 5.6, 0.6);
   scene.add(accent);
 
   // 壁灯 / 落地灯共 6 个补光灯（随楼层换色，固定灯数避免 shader 重编译）
   const wallLights = [];
   for (const [sx, sz] of SCONCE_POS) {
-    const l = new THREE.PointLight(0xffb066, 1.05, 9, 2);
-    l.position.set(sx * (ROOM.sideX - 0.7), 3.65, sz);
+    const l = new THREE.PointLight(0xffb066, 0.55, 8, 2);
+    l.position.set(sx * (ROOM.sideX - 0.7), 3.66, sz);
     scene.add(l);
     wallLights.push(l);
   }
   for (const [fx, fz] of FLOOR_LAMP_POS) {
-    const l = new THREE.PointLight(0xffc37a, 1.25, 9, 2);
-    l.position.set(fx, 1.85, fz);
+    const l = new THREE.PointLight(0xffc37a, 0.8, 8, 2);
+    // 落在灯罩里的灯泡位置，而不是灯罩上方
+    l.position.set(fx, 1.6, fz);
     scene.add(l);
     wallLights.push(l);
   }
@@ -913,7 +921,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const windowLights = [];
   if (!LOW_SPEC) {
     for (const [wx, wz, tx] of [[-13.6, -2.2, 1], [13.6, 1.6, -1]]) {
-      const wl = new THREE.SpotLight(0xa8c8e8, 2.4, 26, 0.72, 0.85, 1.4);
+      const wl = new THREE.SpotLight(0xa8c8e8, 1.4, 26, 0.72, 0.85, 1.4);
       wl.position.set(wx, 4.3, wz);
       wl.target.position.set(tx, 1.2, wz * -0.4);
       scene.add(wl);
@@ -944,8 +952,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
 
   // ---------- 房间 ----------
-  const woodDark = new THREE.MeshStandardMaterial({ color: 0x523a24, roughness: 0.82, metalness: 0.05 });
-  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.75, metalness: 0.06 });
+  // 材质反射系数按类别定：木器哑光、布面几乎不吃反射、黄铜吃反射
+  const woodDark = new THREE.MeshStandardMaterial({ color: 0x523a24, roughness: 0.86, metalness: 0.02 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.8, metalness: 0.02 });
 
   // 每层地面材质：木纹 / 金属格栅 / 石纹 / 暗石（CanvasTexture 程序化）
   const floorTexCache = {};
@@ -958,8 +967,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       map: floorTexCache[kind],
       normalMap: makeMicroNormal(kind),
       normalScale: new THREE.Vector2(kind === 'metal' ? 0.22 : 0.12, kind === 'wood' ? 0.08 : 0.12),
-      roughness: kind === 'metal' ? 0.36 : kind === 'dark' ? 0.8 : 0.88,
-      metalness: kind === 'metal' ? 0.44 : 0.04,
+      roughness: kind === 'metal' ? 0.52 : kind === 'dark' ? 0.84 : 0.9,
+      metalness: kind === 'metal' ? 0.3 : kind === 'wood' ? 0.0 : 0.04,
     });
   }
 
@@ -972,8 +981,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     wallMats[fid] = new THREE.MeshStandardMaterial({
       color: wallHex[fid], map: plasterTex, normalMap: plasterNormal,
       normalScale: new THREE.Vector2(fid === 'L2' ? 0.18 : 0.11, fid === 'L2' ? 0.12 : 0.09),
-      roughness: fid === 'L2' ? 0.56 : 0.9,
-      metalness: fid === 'L2' ? 0.25 : 0.03,
+      roughness: fid === 'L2' ? 0.72 : 0.9,
+      metalness: fid === 'L2' ? 0.04 : 0.02,
     });
   }
 
@@ -982,7 +991,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const rugMat = new THREE.MeshStandardMaterial({ color: 0x5a3520, roughness: 0.95 });
+  // 地毯：纯布料，完全哑光
+  const rugMat = new THREE.MeshStandardMaterial({ color: 0x5a3520, roughness: 1, metalness: 0 });
   const rug = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 6.3), rugMat);
   rug.rotation.x = -Math.PI / 2;
   rug.position.set(0.5, 0.012, 2.8);
@@ -1022,7 +1032,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // 墙面挂画（共用一张程序化画布，边框随楼层换色）
   const paintingTex = makePaintingTexture();
-  const paintingFrameMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.4, metalness: 0.6 });
+  const paintingFrameMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.5, metalness: 0.55 });
   const paintingMat = new THREE.MeshStandardMaterial({ map: paintingTex, color: 0xd8c090, roughness: 0.85 });
   function addPainting(x, y, z, rotY, w, h) {
     const g = new THREE.Group();
@@ -1114,7 +1124,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   }
   const windowTex = makeWindowTexture();
   const windowMat = new THREE.MeshBasicMaterial({ map: windowTex, color: 0xffe6b8, fog: false });
-  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x1f1913, roughness: 0.7, metalness: 0.2 });
+  const windowFrameMat = new THREE.MeshStandardMaterial({ color: 0x1f1913, roughness: 0.8, metalness: 0.08 });
   const glowTexCanvas = document.createElement('canvas');
   glowTexCanvas.width = 128; glowTexCanvas.height = 128;
   (() => {
@@ -1128,7 +1138,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   })();
   const windowGlowTex = new THREE.CanvasTexture(glowTexCanvas);
   const windowGlowMat = new THREE.MeshBasicMaterial({
-    map: windowGlowTex, transparent: true, opacity: 0.7, depthWrite: false,
+    map: windowGlowTex, transparent: true, opacity: 0.34, depthWrite: false,
     blending: THREE.AdditiveBlending, fog: false, side: THREE.DoubleSide,
   });
 
@@ -1241,9 +1251,9 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const shelfCorniceGeo = new THREE.BoxGeometry(3.42, 0.13, 0.64);
   const shelfCorniceTopGeo = new THREE.BoxGeometry(3.54, 0.07, 0.7);
   const shelfEdgeGeo = new THREE.BoxGeometry(3.12, 0.018, 0.018);
-  const shelfEdgeMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.35, metalness: 0.7 });
+  const shelfEdgeMat = new THREE.MeshStandardMaterial({ color: 0x8a6a2f, roughness: 0.38, metalness: 0.72 });
   const shelfLabelGeo = new THREE.BoxGeometry(0.26, 0.05, 0.016);
-  const shelfLabelMat = new THREE.MeshStandardMaterial({ color: 0xb08a4a, metalness: 0.6, roughness: 0.38, emissive: 0x3a2a10, emissiveIntensity: 0.18 });
+  const shelfLabelMat = new THREE.MeshStandardMaterial({ color: 0xb08a4a, metalness: 0.55, roughness: 0.45, emissive: 0x3a2a10, emissiveIntensity: 0.1 });
   // 檐口齿饰：用一张重复贴图代替几十个小方块
   const dentilCanvas = document.createElement('canvas');
   dentilCanvas.width = 128;
@@ -1367,7 +1377,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const BOOK_HS = [0.54, 0.57, 0.60, 0.63];
   const bookItems = [];
   const floorSeq = {};
-  const goldBandMat = new THREE.MeshStandardMaterial({ color: 0xc8a24a, metalness: 0.72, roughness: 0.28, emissive: 0x3a2a10, emissiveIntensity: 0.25 });
+  const goldBandMat = new THREE.MeshStandardMaterial({ color: 0xc8a24a, metalness: 0.8, roughness: 0.32, emissive: 0x3a2a10, emissiveIntensity: 0.14 });
   const wornMat = new THREE.MeshStandardMaterial({ color: 0x17100a, roughness: 0.96, transparent: true, opacity: 0.7 });
   books.forEach((book, i) => {
     const unitIdx = i % SHELF_UNITS.length;
@@ -1389,13 +1399,13 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     const baseColor = new THREE.Color(book.color || '#4a3a2e');
     const sideMat = new THREE.MeshStandardMaterial({
       color: baseColor.clone().multiplyScalar(0.78),
-      roughness: [0.7, 0.58, 0.82][variant], metalness: [0.05, 0.12, 0.03][variant],
+      roughness: [0.82, 0.74, 0.9][variant], metalness: [0.02, 0.04, 0.01][variant],
     });
     const spineMat = new THREE.MeshStandardMaterial({
       map: spineTexture(book, variant, ordinal),
       normalMap: makeMicroNormal(variant === 0 ? 'cloth' : 'wood'),
       normalScale: new THREE.Vector2(0.1, 0.065),
-      roughness: [0.68, 0.48, 0.82][variant], metalness: [0.045, 0.2, 0.025][variant],
+      roughness: [0.8, 0.7, 0.88][variant], metalness: [0.015, 0.03, 0.01][variant],
       emissive: baseColor.clone().multiplyScalar(variant === 2 ? 0.1 : 0.12),
       emissiveIntensity: variant === 2 ? 0.18 : 0.2,
     });
@@ -1446,8 +1456,8 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // ---------- 黄铜电梯（左墙） ----------
   const elevator = new THREE.Group();
-  const brassMat = new THREE.MeshStandardMaterial({ color: 0x9a7a3a, roughness: 0.3, metalness: 0.8 });
-  const brassDark = new THREE.MeshStandardMaterial({ color: 0x5a4520, roughness: 0.45, metalness: 0.65 });
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0x9a7a3a, roughness: 0.34, metalness: 0.82 });
+  const brassDark = new THREE.MeshStandardMaterial({ color: 0x5a4520, roughness: 0.5, metalness: 0.62 });
   const frame = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.3, 0.3), brassDark);
   frame.position.set(0, 1.65, 0);
   elevator.add(frame);
@@ -1475,7 +1485,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 0.72, 16), woodDark);
   pedestal.position.y = 0.36;
   starTable.add(pedestal);
-  const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.92, 0.06, 32), new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: 0.4, metalness: 0.3 }));
+  const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.92, 0.06, 32), new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: 0.62, metalness: 0.05 }));
   tableTop.position.y = 0.76;
   tableTop.castShadow = true;
   starTable.add(tableTop);
@@ -1628,7 +1638,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   scene.add(cabinet);
 
   // ---------- 可互动道具：台灯 / 放大镜 / 抽屉 / 隐藏书 ----------
-  const lampLight = new THREE.PointLight(0xffc873, 1.6, 7, 1.5);
+  const lampLight = new THREE.PointLight(0xffc873, 1.05, 6, 1.6);
   lampLight.position.set(2.6, 1.32, 2.6);
   scene.add(lampLight);
   const lampGroup = new THREE.Group();
@@ -1684,11 +1694,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   // ---------- 各层专属陈设（切层显示） ----------
   const propGroups = {};
   const propMats = {
-    paper: new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.9 }),
-    parchment: new THREE.MeshStandardMaterial({ color: 0xd8c49a, roughness: 0.95, side: THREE.DoubleSide }),
+    paper: new THREE.MeshStandardMaterial({ color: 0xd6c8a8, roughness: 0.94 }),
+    parchment: new THREE.MeshStandardMaterial({ color: 0xcabb90, roughness: 0.96, side: THREE.DoubleSide }),
     blue: new THREE.MeshStandardMaterial({ color: 0x7fb6d6, roughness: 0.6 }),
     ledger: new THREE.MeshStandardMaterial({ color: 0x3a4a34, roughness: 0.8 }),
-    wax: new THREE.MeshStandardMaterial({ color: 0xd8c89e, roughness: 0.5 }),
+    wax: new THREE.MeshStandardMaterial({ color: 0xc6b68e, roughness: 0.55 }),
     flame: new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffa040, emissiveIntensity: 1.3 }),
     violetFlame: new THREE.MeshStandardMaterial({ color: 0xd8c8ff, emissive: 0x9a6aff, emissiveIntensity: 1.2 }),
     drape: new THREE.MeshStandardMaterial({ color: 0x241c33, roughness: 1, side: THREE.DoubleSide }),
@@ -1967,7 +1977,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     ch.position.set(CHANDELIER_POS.x, CHANDELIER_POS.y, CHANDELIER_POS.z);
     parent.add(ch);
     let coneColor = 0xffc37a;
-    let coneOpacity = 0.065;
+    let coneOpacity = 0.046;
     const rodMat = style === 'L2' ? propMats.steel : style === 'L4' ? propMats.iron : brassDark;
     const rodLen = ROOM.h - CHANDELIER_POS.y;
     put(ch, cylG(0.05, 0.05, rodLen, 8), rodMat, 0, rodLen / 2, 0);
@@ -1978,7 +1988,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       put(ch, cylG(0.78, 0.42, 0.42, 16, true), propMats.steelShade, 0, -0.03, 0);
       put(ch, sphereG(0.16, 12), shadeCoolMat, 0, -0.18, 0);
       coneColor = 0x8fc4ff;
-      coneOpacity = 0.06;
+      coneOpacity = 0.042;
     } else if (style === 'L4') {
       // 铁环 + 黑烛 + 悬链
       const ring = put(ch, torusG(0.9, 0.045, 8, 36), propMats.iron, 0, 0, 0);
@@ -1995,7 +2005,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         put(ch, sphereG(0.045, 8), propMats.violetFlame, Math.cos(a) * r, 0.44, Math.sin(a) * r);
       }
       coneColor = 0x8a6aff;
-      coneOpacity = 0.075;
+      coneOpacity = 0.052;
     } else {
       // L1 / L3 / 大厅：黄铜环 + 蜡烛
       const ring = put(ch, torusG(style === 'L3' ? 0.95 : 1.0, 0.04, 8, 40), brassMat, 0, 0, 0);
@@ -2012,7 +2022,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         put(ch, sphereG(0.045, 8), propMats.flame, Math.cos(a) * r, 0.44, Math.sin(a) * r);
       }
       coneColor = style === 'L3' ? 0xffb066 : 0xffc37a;
-      coneOpacity = style === 'L3' ? 0.065 : 0.07;
+      coneOpacity = style === 'L3' ? 0.046 : 0.049;
     }
     // 烛盘 + 水晶坠：细节层，低配直接跳过
     if (!LOW_SPEC && style !== 'L2') {
@@ -2629,7 +2639,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     mergeRemoved += r.removed;
     mergeAdded += r.added;
   }
-  // 金属吃反射、木料只吃漫反射：避免木头出现塑料高光
+  // 按材质分配环境反射强度：金属/玻璃吃反射，木头/纸张/布料几乎只吃漫反射
   if (scene.environment) {
     scene.traverse((o) => {
       if (!o.isMesh) return;
@@ -2637,7 +2647,11 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       for (const m of mats) {
         if (!m || !m.isMeshStandardMaterial) continue;
         const metal = typeof m.metalness === 'number' ? m.metalness : 0;
-        m.envMapIntensity = 0.3 + metal * 1.35;
+        const rough = typeof m.roughness === 'number' ? m.roughness : 0.8;
+        const glass = m.transparent && m.opacity != null && m.opacity < 0.45;
+        m.envMapIntensity = glass
+          ? 1.25
+          : 0.05 + metal * 1.1 + Math.max(0, 0.28 - rough) * 0.7;
       }
     });
   }
@@ -2865,16 +2879,16 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
 
   // 楼层氛围：越高层，雾越浓、光越暗、尘埃越少（但保证可读）
   const ATMOS = {
-    all: { near: 12, far: 48, bg: 0x171009, amb: 1.85, spot: 5.4, dir: 2.2, dust: 0.38, env: 0.58 },
-    L1: { near: 10.5, far: 42, bg: 0x1a130b, amb: 2.0, spot: 6.0, dir: 2.4, dust: 0.42, env: 0.62 },
-    L2: { near: 9.5, far: 38, bg: 0x0e1620, amb: 1.8, spot: 5.4, dir: 2.1, dust: 0.36, env: 0.6 },
-    L3: { near: 8.5, far: 34, bg: 0x1a140c, amb: 1.65, spot: 4.8, dir: 1.9, dust: 0.30, env: 0.52 },
-    L4: { near: 7.0, far: 28, bg: 0x120f1a, amb: 1.9, spot: 5.2, dir: 1.9, dust: 0.24, env: 0.46 },
+    all: { near: 12, far: 48, bg: 0x171009, amb: 1.35, spot: 3.6, dir: 1.5, dust: 0.38, env: 0.5 },
+    L1: { near: 10.5, far: 42, bg: 0x1a130b, amb: 1.45, spot: 3.9, dir: 1.6, dust: 0.42, env: 0.52 },
+    L2: { near: 9.5, far: 38, bg: 0x0e1620, amb: 1.3, spot: 3.5, dir: 1.4, dust: 0.36, env: 0.5 },
+    L3: { near: 8.5, far: 34, bg: 0x1a140c, amb: 1.25, spot: 3.2, dir: 1.3, dust: 0.30, env: 0.46 },
+    L4: { near: 7.0, far: 28, bg: 0x120f1a, amb: 1.3, spot: 3.3, dir: 1.3, dust: 0.24, env: 0.42 },
   };
   // 楼层主题：书架 / 墙面 / 地面 / 尘埃 / 灯光色温（越高层越冷、越神秘）
   const THEME = {
     all: {
-      shelf: 0x6b4a2a, shelfDark: 0x523a24, metal: 0.08, rough: 0.75,
+      shelf: 0x6b4a2a, shelfDark: 0x523a24, metal: 0.03, rough: 0.8,
       shelfAccent: 0x8a6a2f, shelfMetal: 0.7, shelfRough: 0.35,
       accent: 0xffc37a, acc: 0.9, trim: 0x2a2118, ceiling: 0x241c16, rug: 0x5a3520,
       painting: 0x8a6a2f, paintingCanvas: 0xd8c090,
@@ -2882,10 +2896,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       key: 0xffe3b0, hemiSky: 0x9a8a6a, hemiGround: 0x3a2f22,
       sideL: 0xffb066, sideR: 0x9fc2ff, accentLight: 0xffc37a,
       spot: 0xffd2a0, wallLamp: 0xffb066, floorLamp: 0xffc37a,
-      wallInt: 1.05, floorInt: 1.25, exposure: 1.7,
+      wallInt: 0.55, floorInt: 0.8, exposure: 1.5,
     },
     L1: {
-      shelf: 0x6b4a2a, shelfDark: 0x523a24, metal: 0.1, rough: 0.72,
+      shelf: 0x6b4a2a, shelfDark: 0x523a24, metal: 0.03, rough: 0.8,
       shelfAccent: 0x8a6a2f, shelfMetal: 0.7, shelfRough: 0.35,
       accent: 0xffc37a, acc: 1.0, trim: 0x2c2218, ceiling: 0x2a2118, rug: 0x5e3a24,
       painting: 0x8a6a2f, paintingCanvas: 0xd8c090,
@@ -2893,10 +2907,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       key: 0xffdfb0, hemiSky: 0xa08a68, hemiGround: 0x3a2f22,
       sideL: 0xffb066, sideR: 0xffcf9a, accentLight: 0xffc37a,
       spot: 0xffcf9a, wallLamp: 0xffb066, floorLamp: 0xffc37a,
-      wallInt: 1.05, floorInt: 1.25, exposure: 1.75,
+      wallInt: 0.6, floorInt: 0.85, exposure: 1.52,
     },
     L2: {
-      shelf: 0x5b6b74, shelfDark: 0x44525a, metal: 0.68, rough: 0.35,
+      shelf: 0x5b6b74, shelfDark: 0x44525a, metal: 0.05, rough: 0.76,
       shelfAccent: 0x7b8a94, shelfMetal: 0.8, shelfRough: 0.3,
       accent: 0x7fb6d6, acc: 1.0, trim: 0x20262a, ceiling: 0x1a2228, rug: 0x2c3a44,
       painting: 0x5a7a8a, paintingCanvas: 0xbcd8e8,
@@ -2904,10 +2918,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       key: 0xcfe6ff, hemiSky: 0x8aa8c0, hemiGround: 0x2a3a44,
       sideL: 0x7fb6d6, sideR: 0x9fc2ff, accentLight: 0x7fb6d6,
       spot: 0xaad4ff, wallLamp: 0x9fc2ff, floorLamp: 0x7fb6d6,
-      wallInt: 1.0, floorInt: 1.15, exposure: 1.65,
+      wallInt: 0.55, floorInt: 0.8, exposure: 1.44,
     },
     L3: {
-      shelf: 0x6b5230, shelfDark: 0x4f3a22, metal: 0.12, rough: 0.7,
+      shelf: 0x6b5230, shelfDark: 0x4f3a22, metal: 0.04, rough: 0.78,
       shelfAccent: 0x9a7a3a, shelfMetal: 0.72, shelfRough: 0.34,
       accent: 0xffd27a, acc: 1.0, trim: 0x241a10, ceiling: 0x221a10, rug: 0x4a2418,
       painting: 0x8a6a2f, paintingCanvas: 0xd8b878,
@@ -2915,10 +2929,10 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       key: 0xffd8a0, hemiSky: 0xa08060, hemiGround: 0x3a2818,
       sideL: 0xffc070, sideR: 0xffb066, accentLight: 0xffd27a,
       spot: 0xffc070, wallLamp: 0xffb066, floorLamp: 0xffc37a,
-      wallInt: 1.1, floorInt: 1.25, exposure: 1.72,
+      wallInt: 0.6, floorInt: 0.85, exposure: 1.48,
     },
     L4: {
-      shelf: 0x55465f, shelfDark: 0x3c3046, metal: 0.3, rough: 0.58,
+      shelf: 0x55465f, shelfDark: 0x3c3046, metal: 0.08, rough: 0.72,
       shelfAccent: 0x7a6a8e, shelfMetal: 0.62, shelfRough: 0.45,
       accent: 0xa98cff, acc: 0.9, trim: 0x1c1826, ceiling: 0x171320, rug: 0x2e1f2a,
       painting: 0x4a3a5a, paintingCanvas: 0x9a88b8,
@@ -2926,7 +2940,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       key: 0x9a88c8, hemiSky: 0x6a5a88, hemiGround: 0x1a1424,
       sideL: 0xff4040, sideR: 0x9a7aff, accentLight: 0xa98cff,
       spot: 0xb48cff, wallLamp: 0xff3030, floorLamp: 0x9a7aff,
-      wallInt: 1.3, floorInt: 1.15, exposure: 1.6,
+      wallInt: 0.7, floorInt: 0.7, exposure: 1.42,
     },
   };
   function applyAtmos(fid) {
@@ -2966,7 +2980,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     ceilBeamMat.emissive.setHex(th.shelfDark);
     ceilBeamMat.emissive.multiplyScalar(0.6);
     windowFrameMat.color.setHex(th.trim);
-    const winTint = { all: 0xffe6b8, L1: 0xffe0a8, L2: 0xa8d4f0, L3: 0xffce8a, L4: 0xb9a4ff };
+    const winTint = { all: 0xe6cfa0, L1: 0xdfc08e, L2: 0x8fb8d8, L3: 0xdfb878, L4: 0x9a88cc };
     windowMat.color.setHex(winTint[fid] || winTint.all);
     windowGlowMat.color.setHex(winTint[fid] || winTint.all);
 
@@ -3931,7 +3945,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     // 展陈聚光：从展柜斜上方打下来，像博物馆里被单独照亮的展品
     caseSpot.position.set(found.item.x + fx * 0.9, 3.5, found.item.z + fz * 0.9);
     caseSpot.target.position.set(found.item.x, 0.82, found.item.z);
-    caseSpotTarget = 7.2;
+    caseSpotTarget = 5.4;
     snapCamToPreset();
     return true;
   }
