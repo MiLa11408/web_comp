@@ -88,6 +88,12 @@ await page.getByRole('button', { name: '以访客身份入馆' }).click();
 await page.waitForFunction(() => !document.getElementById('gate'), null, { timeout: 5000 });
 await page.waitForTimeout(1200);
 ok('访客入馆后门厅移除（二次访问不跳教程）');
+// 门撤走后不是黑屏：先出现「馆内正在开灯」过渡，等 3D 首帧再收起
+const bootVeil = await page.evaluate(() => ({
+  shown: !!window.__mmBootVeilShown,
+  veil: !!document.getElementById('roomBoot'),
+}));
+(bootVeil.shown && bootVeil.veil) ? ok('入馆开灯过渡出现') : bad('入馆开灯过渡', JSON.stringify(bootVeil));
 await page.waitForTimeout(800);
 const mainVisible = await page.locator('#app').isVisible();
 mainVisible ? ok('主界面可见') : bad('主界面可见');
@@ -122,6 +128,11 @@ if (await page.locator('#mmTipCard.show').count()) {
 
 // 导览（3D 已就绪，直接开场；避免先切 2D 再回 3D 的软件渲染重编译）
 await page.waitForFunction(() => window.mm3d && typeof window.mm3d.startTour === 'function', null, { timeout: 25000 });
+await page.waitForFunction(() => {
+  const v = document.getElementById('roomBoot');
+  return !v || v.hidden;
+}, null, { timeout: 15000 });
+ok('3D 首帧后收起开灯过渡');
 await page.getByRole('button', { name: '导览' }).click();
 await page.waitForSelector('#tourCard .tour-card', { timeout: 15000 });
 // 自动导览会按 20s/站推进；测试里先暂停，避免软件渲染慢导致串站
@@ -870,22 +881,14 @@ const secHeaders = secRes.headers();
   ? ok('安全响应头')
   : bad('安全响应头', JSON.stringify({ xcto: secHeaders['x-content-type-options'], xfo: secHeaders['x-frame-options'] }));
 
-// 6f. 演示编排面板
-await page.evaluate(() => window.mmDemoToggle(true));
-const dockVisible = await page.locator('#demoDock').isVisible();
-dockVisible ? ok('演示编排面板可打开') : bad('演示编排面板', '不可见');
-const dockButtons = await page.locator('#demoDock .dd-grid button').count();
-dockButtons >= 6 ? ok('演示编排六个入口', String(dockButtons)) : bad('演示编排入口', String(dockButtons));
-await page.evaluate(() => window.mmDemoTech());
-const techProfile = await page.locator('#demoProfile').innerText();
-const techExpected = await page.evaluate(() => {
+// 6f. 3D 技术剖面（不再依赖调试面板，直接读取渲染器实测值）
+const tech = await page.evaluate(() => {
   const p = window.mm3d.getTechProfile();
-  return [`${p.calls}`, `${p.triangles}`, `${p.dpr.toFixed(2)}`, `${p.buildMs}ms`];
+  return { calls: p.calls, triangles: p.triangles, dpr: p.dpr, buildMs: p.buildMs, firstFrameMs: p.firstFrameMs };
 });
-techExpected.every((v) => techProfile.includes(v))
-  ? ok('技术剖面显示真实渲染读数', techExpected.join(' / '))
-  : bad('技术剖面真实读数', `${techExpected.join(' / ')} != ${techProfile}`);
-await page.evaluate(() => window.mmDemoToggle(false));
+(tech.calls > 0 && tech.triangles > 0 && tech.dpr > 0 && tech.buildMs > 0 && tech.firstFrameMs > 0)
+  ? ok('3D 技术剖面真实读数', `${tech.calls} / ${tech.triangles} / ${tech.dpr.toFixed(2)} / ${tech.buildMs}ms / 首帧 ${tech.firstFrameMs}ms`)
+  : bad('3D 技术剖面', JSON.stringify(tech));
 
 // 6g. 尘埃改为 GPU 着色器
 const dustGpu = await page.evaluate(() => {
