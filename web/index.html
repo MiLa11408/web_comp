@@ -352,10 +352,14 @@
   .rb-text { color: var(--gold); font-size: 13px; letter-spacing: 4px; text-align: center; font-family: var(--font-serif); }
   .rb-text span { display: block; margin-top: 7px; color: #8a7a5c; font-size: 11px; letter-spacing: 2px; font-family: var(--font-ui); }
   @keyframes rbBreath { 0%, 100% { transform: scale(.94); opacity: .72; } 50% { transform: scale(1.04); opacity: 1; } }
-  #gate { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: radial-gradient(900px 520px at 50% 28%, #2a1f14, #0c0906 72%); transition: opacity .55s ease, transform .55s ease; }
-  #gate::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(200,162,74,.035) 0 1px, transparent 1px 88px); pointer-events: none; }
-  #gate-map { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; opacity: .74; pointer-events: none; }
+  #gate { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: radial-gradient(1100px 680px at 50% 30%, #453221, #1a130d 66%, #0e0a06 100%); transition: opacity .55s ease, transform .55s ease; }
+  #gate::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(200,162,74,.045) 0 1px, transparent 1px 88px); pointer-events: none; }
+  /* 登记卡背后的一盏前台灯：把门厅中心提亮，四周仍保持闭馆后的暗 */
+  #gate::after { content: ""; position: absolute; left: 50%; top: 42%; width: min(860px, 92vw); height: min(600px, 76vh); transform: translate(-50%, -50%);
+    background: radial-gradient(closest-side, rgba(255,214,138,.16), rgba(255,196,96,.06) 52%, rgba(255,196,96,0) 100%); pointer-events: none; }
+  #gate-map { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; opacity: .86; pointer-events: none; }
   #gate.leaving { pointer-events: none; background: transparent; }
+  #gate.leaving::after { opacity: 0; transition: opacity .4s; }
   .gate-doors { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
   .gate-doors .door { position: absolute; top: 0; bottom: 0; width: 50.5%; background: linear-gradient(180deg, #1b1510, #14100c); box-shadow: inset 0 0 70px rgba(0,0,0,.72); transition: transform 1s cubic-bezier(.76,0,.24,1); }
   .gate-doors .door::after { content: ""; position: absolute; inset: 14px; border: 1px solid rgba(200,162,74,.18); }
@@ -983,11 +987,11 @@
     g.setTransform(mapDpr, 0, 0, mapDpr, 0, 0);
     const W = mapW, H = mapH;
     g.lineWidth = 1;
-    g.strokeStyle = 'rgba(200,162,74,.09)';
+    g.strokeStyle = 'rgba(200,162,74,.14)';
     for (let row = 0; row < 4; row++) {
       const y = H * (.2 + row * .2);
       g.beginPath(); g.moveTo(W * .05, y); g.lineTo(W * .95, y); g.stroke();
-      g.fillStyle = 'rgba(230,217,189,.22)';
+      g.fillStyle = 'rgba(230,217,189,.3)';
       g.font = '10px Consolas, monospace';
       g.fillText(`L${row + 1} / INDEX`, W * .035, y - 7);
     }
@@ -997,7 +1001,7 @@
     const skew = unitW * .26, lift = unitW * .16;
     const drawShelf = (x0, y0, mirror) => {
       const sx = mirror ? -1 : 1;
-      g.strokeStyle = 'rgba(200,162,74,.19)';
+      g.strokeStyle = 'rgba(200,162,74,.27)';
       g.strokeRect(x0, y0, unitW, unitH);
       g.beginPath();
       g.moveTo(x0, y0); g.lineTo(x0 + skew * sx, y0 - lift);
@@ -1007,7 +1011,7 @@
       g.moveTo(x0 + unitW, y0); g.lineTo(x0 + unitW + skew * sx, y0 - lift);
       g.lineTo(x0 + unitW + skew * sx, y0 + unitH - lift); g.lineTo(x0 + unitW, y0 + unitH);
       g.stroke();
-      g.strokeStyle = 'rgba(200,162,74,.13)';
+      g.strokeStyle = 'rgba(200,162,74,.19)';
       const rows = 4;
       for (let s = 1; s < rows; s++) {
         const sy = y0 + (unitH / rows) * s;
@@ -1028,7 +1032,7 @@
     drawShelf(Math.max(16, W * .055), baseY - unitH, false);
     drawShelf(Math.min(W - unitW - 16, W * .945 - unitW), baseY - unitH, true);
     // 穹顶与地面透视线
-    g.strokeStyle = 'rgba(200,162,74,.1)';
+    g.strokeStyle = 'rgba(200,162,74,.15)';
     g.beginPath();
     g.arc(cx, baseY - unitH * .92, Math.min(W * .34, unitW * 2.6), Math.PI * 1.08, Math.PI * 1.92);
     g.stroke();
@@ -1039,7 +1043,7 @@
       g.stroke();
     }
     // 中央书桌轮廓，低一点，避免和登记卡打架
-    g.strokeStyle = 'rgba(200,162,74,.08)';
+    g.strokeStyle = 'rgba(200,162,74,.12)';
     g.beginPath();
     g.moveTo(cx - unitW * 1.1, baseY + 24);
     g.lineTo(cx + unitW * 1.1, baseY + 24);
@@ -1167,7 +1171,7 @@
     for (const e of edges) {
       const [x1, y1] = pos[e.a], [x2, y2] = pos[e.b];
       const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
-      ctx.strokeStyle = 'rgba(200,162,74,.12)';
+      ctx.strokeStyle = 'rgba(200,162,74,.2)';
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.quadraticCurveTo(midX + (midY - y1) * .06, midY, x2, y2);
@@ -1178,12 +1182,12 @@
       const n = nodes[i], [x, y] = pos[i];
       const pulse = lowMotion ? 1 : .74 + Math.sin(mapFrame * .018 + n.phase) * .2;
       ctx.fillStyle = colors[n.layer];
-      ctx.globalAlpha = .56 * pulse;
+      ctx.globalAlpha = .72 * pulse;
       ctx.beginPath();
       ctx.arc(x, y, n.layer === 3 ? 2.3 : 1.6, 0, Math.PI * 2);
       ctx.fill();
       if (i % 6 === 0) {
-        ctx.globalAlpha = .3;
+        ctx.globalAlpha = .42;
         ctx.fillStyle = '#e6d9bd';
         ctx.font = '9px Consolas, monospace';
         ctx.fillText(n.code, x + 5, y - 4);
