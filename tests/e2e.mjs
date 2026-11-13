@@ -542,6 +542,24 @@ await page.evaluate(() => showChapter('b3-c7'));
 await page.waitForSelector('.chapter-concepts', { timeout: 10000 });
 const chapterConceptText = await page.locator('.chapter-concepts').innerText();
 chapterConceptText.includes('深度学习') ? ok('阅读页本章概念卡') : bad('阅读页本章概念卡', chapterConceptText.slice(0, 80));
+
+// 从阅读页点概念卡进概念手册：阅读模式隐藏了全部导航，必须自带退出键，且退出后回到原章节
+const conceptExit = await page.evaluate(async () => {
+  const btn = document.querySelector('.chapter-concepts .chc-row button');
+  if (!btn) return { entered: false, reason: 'no-entry' };
+  btn.click();
+  await new Promise((r) => setTimeout(r, 1100));
+  const exit = document.querySelector('.concept-exit');
+  const entered = !!document.querySelector('.concept-view');
+  const readingCleared = !document.body.classList.contains('reading');
+  if (!exit) return { entered, readingCleared, hasExit: false };
+  exit.click();
+  await new Promise((r) => setTimeout(r, 1200));
+  return { entered, readingCleared, hasExit: true, back: !!document.getElementById('paperBody') && document.body.classList.contains('reading') };
+});
+(conceptExit.entered && conceptExit.readingCleared && conceptExit.hasExit && conceptExit.back)
+  ? ok('概念手册退出键', '退出后回到原章节')
+  : bad('概念手册退出键', JSON.stringify(conceptExit));
 await page.evaluate(() => { document.body.classList.remove('reading'); enterShelf('all'); });
 await page.waitForFunction(() => !window.mmViewBusy, null, { timeout: 15000 });
 await page.waitForTimeout(500);

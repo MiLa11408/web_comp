@@ -534,8 +534,11 @@
 
   /* ---------- 概念手册 / 概念卡 ---------- */
   .concept-view { max-width: 1180px; margin: 0 auto; }
-  .concept-head { border-bottom: 1px solid var(--line); padding: 4px 0 14px; margin-bottom: 16px; }
-  .concept-head h2 { margin: 0 0 6px; color: var(--gold); font-family: var(--font-serif); font-size: 24px; letter-spacing: 3px; font-weight: 500; }
+  .concept-head { position: sticky; top: 0; z-index: 6; background: linear-gradient(180deg, rgba(20,16,13,.98), rgba(20,16,13,.93)); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding: 10px 0 12px; margin-bottom: 16px; }
+  .concept-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .concept-head h2 { flex: 1 1 auto; margin: 0 0 6px; color: var(--gold); font-family: var(--font-serif); font-size: 24px; letter-spacing: 3px; font-weight: 500; }
+  .concept-exit { flex: 0 0 auto; background: #2c241a; border: 1px solid #8a6320; color: #e2c06a; padding: 7px 14px; font-size: 12px; letter-spacing: 1px; cursor: pointer; font-family: inherit; }
+  .concept-exit:hover { border-color: var(--gold); color: var(--gold); background: #3a291a; }
   .concept-head p { margin: 0; color: #b09a72; font-size: 12.5px; line-height: 1.85; }
   .concept-group { margin: 18px 0 22px; }
   .concept-group-head { display: flex; align-items: baseline; gap: 10px; color: #c8a24a; font-size: 13px; letter-spacing: 3px; border-bottom: 1px dashed #3a2f22; padding-bottom: 6px; margin-bottom: 10px; }
@@ -2298,8 +2301,13 @@ function conceptCardHtml(c, open, byId) {
     </div>
   </details>`;
 }
-async function showConcepts(focusId) {
+// 退出概念手册：从阅读页进来的，退回原章节；从导航进来的，回 3D 阅览室
+let conceptBack = '';
+async function showConcepts(focusId, backTo) {
+  // 阅读页会把 header / 导航整体隐藏；进概念手册必须摘掉 reading，否则页面上没有任何出口
+  document.body.classList.remove('reading');
   document.body.classList.add('grid');
+  if (backTo !== undefined) conceptBack = backTo || '';
   mmTip('concepts', '概念手册', '先看一句话和生活类比；每条概念都给历史、技术、产业、前沿四条线，点站点直接开书。');
   state.findMarks = []; state.global = []; state.chapterMain = '';
   app.innerHTML = '<div class="empty">正在整理概念卡……</div>';
@@ -2312,7 +2320,8 @@ async function showConcepts(focusId) {
   const groups = ['入门', '模型', '训练', '应用与治理'];
   const byId = new Map(list.map((c) => [c.id, c]));
   app.innerHTML = `<div class="concept-view">
-    <div class="concept-head"><h2>概念手册 · ${list.length} 个入口</h2>
+    <div class="concept-head"><div class="concept-bar"><h2>概念手册 · ${list.length} 个入口</h2>
+      <button class="concept-exit" type="button" onclick="mmExitConcepts()">退出概念手册 →</button></div>
       <p>每个概念先给一句话和生活类比，再给准确解释与常见误解。四条线分别是历史、技术、产业、前沿——想深读，点任意一站直接开书。</p></div>
     ${groups.map((g) => {
       const items = list.filter((c) => c.group === g);
@@ -2326,8 +2335,25 @@ async function showConcepts(focusId) {
     if (el) setTimeout(() => { el.open = true; el.scrollIntoView({ block: 'center' }); }, 60);
   }
 }
-window.enterConcepts = () => fadeSwap(() => showConcepts());
-window.mmShowConcept = (id) => fadeSwap(() => showConcepts(id));
+// 阅读页里 state.chapterMain 存的是正文而不是章节 id，退出目标要用 readerActions.id
+function conceptOrigin() {
+  return document.body.classList.contains('reading') ? (readerActions.id || '') : '';
+}
+window.enterConcepts = () => {
+  const back = conceptOrigin();
+  fadeSwap(() => showConcepts(undefined, back));
+};
+window.mmShowConcept = (id) => {
+  // 在概念之间跳转时保留最初的来处，不能把退出目标改成概念页自己
+  const back = document.querySelector('.concept-view') ? conceptBack : conceptOrigin();
+  fadeSwap(() => showConcepts(id, back));
+};
+window.mmExitConcepts = () => {
+  const back = conceptBack;
+  conceptBack = '';
+  if (back) fadeSwap(() => showChapter(back));
+  else enter3D();
+};
 
 // ---------- 残页拼合板 ----------
 let fragMosaicCtx = null;
