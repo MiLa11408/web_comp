@@ -1977,7 +1977,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     ch.position.set(CHANDELIER_POS.x, CHANDELIER_POS.y, CHANDELIER_POS.z);
     parent.add(ch);
     let coneColor = 0xffc37a;
-    let coneOpacity = 0.046;
+    let coneOpacity = 0.15;
     const rodMat = style === 'L2' ? propMats.steel : style === 'L4' ? propMats.iron : brassDark;
     const rodLen = ROOM.h - CHANDELIER_POS.y;
     put(ch, cylG(0.05, 0.05, rodLen, 8), rodMat, 0, rodLen / 2, 0);
@@ -1988,7 +1988,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       put(ch, cylG(0.78, 0.42, 0.42, 16, true), propMats.steelShade, 0, -0.03, 0);
       put(ch, sphereG(0.16, 12), shadeCoolMat, 0, -0.18, 0);
       coneColor = 0x8fc4ff;
-      coneOpacity = 0.042;
+      coneOpacity = 0.14;
     } else if (style === 'L4') {
       // 铁环 + 黑烛 + 悬链
       const ring = put(ch, torusG(0.9, 0.045, 8, 36), propMats.iron, 0, 0, 0);
@@ -2005,7 +2005,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         put(ch, sphereG(0.045, 8), propMats.violetFlame, Math.cos(a) * r, 0.44, Math.sin(a) * r);
       }
       coneColor = 0x8a6aff;
-      coneOpacity = 0.052;
+      coneOpacity = 0.17;
     } else {
       // L1 / L3 / 大厅：黄铜环 + 蜡烛
       const ring = put(ch, torusG(style === 'L3' ? 0.95 : 1.0, 0.04, 8, 40), brassMat, 0, 0, 0);
@@ -2022,7 +2022,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
         put(ch, sphereG(0.045, 8), propMats.flame, Math.cos(a) * r, 0.44, Math.sin(a) * r);
       }
       coneColor = style === 'L3' ? 0xffb066 : 0xffc37a;
-      coneOpacity = style === 'L3' ? 0.046 : 0.049;
+      coneOpacity = style === 'L3' ? 0.15 : 0.16;
     }
     // 烛盘 + 水晶坠：细节层，低配直接跳过
     if (!LOW_SPEC && style !== 'L2') {
@@ -2047,19 +2047,53 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
       crystals.instanceMatrix.needsUpdate = true;
       ch.add(crystals);
     }
-    // 体积光锥：Additive + 低透明度 + 不写深度
+    // 体积光锥：自定义着色器做「中心亮、边缘虚、向下渐隐」，避免一个硬边圆锥戳在地上
     // 低配：只给半数吊灯生成光锥（透明叠绘减半），分段数同时减半
     const coneH = CHANDELIER_POS.y - 0.6;
     if (!LOW_SPEC || volumeCones.length % 2 === 0) {
       const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(2.25, coneH, LOW_SPEC ? 14 : 28, 1, true),
-        new THREE.MeshBasicMaterial({
-          color: coneColor, transparent: true, opacity: coneOpacity,
-          depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+        new THREE.ConeGeometry(2.6, coneH, LOW_SPEC ? 18 : 40, 1, true),
+        new THREE.ShaderMaterial({
+          uniforms: {
+            uColor: { value: new THREE.Color(coneColor) },
+            uOpacity: { value: coneOpacity },
+            uHeight: { value: coneH },
+          },
+          vertexShader: `
+            varying vec3 vNormalV;
+            varying vec3 vViewV;
+            varying float vH;
+            uniform float uHeight;
+            void main() {
+              vec4 mv = modelViewMatrix * vec4(position, 1.0);
+              vNormalV = normalize(normalMatrix * normal);
+              vViewV = normalize(-mv.xyz);
+              vH = clamp((position.y + uHeight * 0.5) / uHeight, 0.0, 1.0);
+              gl_Position = projectionMatrix * mv;
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 uColor;
+            uniform float uOpacity;
+            varying vec3 vNormalV;
+            varying vec3 vViewV;
+            varying float vH;
+            void main() {
+              // 正对相机的面最亮，掠射的边缘淡出，光柱就没有硬轮廓
+              float facing = abs(dot(normalize(vNormalV), normalize(vViewV)));
+              float edge = smoothstep(0.0, 0.4, facing);
+              float top = smoothstep(0.0, 0.16, vH);
+              float fall = mix(0.3, 1.0, pow(vH, 1.2));
+              float a = uOpacity * edge * top * fall;
+              gl_FragColor = vec4(uColor * (0.55 + 0.45 * vH), a);
+            }
+          `,
+          transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide, fog: false,
         })
       );
       cone.position.y = -coneH / 2;
-      cone.rotation.z = 0.04;
+      cone.renderOrder = 3;
       ch.add(cone);
       volumeCones.push({ mesh: cone, base: coneOpacity, phase: volumeCones.length * 1.6, spin: style === 'L4' ? 0.05 : 0.03 });
     }
@@ -3824,7 +3858,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     for (let i = 0; i < volumeCones.length; i++) {
       const v = volumeCones[i];
       v.mesh.rotation.y += dt * v.spin;
-      v.mesh.material.opacity = v.base * (0.82 + 0.18 * Math.sin(elapsed * 0.7 + v.phase));
+      v.mesh.material.uniforms.uOpacity.value = v.base * (0.82 + 0.18 * Math.sin(elapsed * 0.7 + v.phase));
     }
     for (let i = 0; i < beacons.length; i++) {
       beacons[i].mesh.rotation.y += dt * 1.6;
