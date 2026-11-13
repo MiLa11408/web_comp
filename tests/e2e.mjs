@@ -44,6 +44,31 @@ const gateDebug = await page.evaluate(() => window.mmGateDebug || null);
 (gateDebug && gateDebug.nodes >= 20 && gateDebug.edges >= 10 && gateDebug.minDist > 0.08)
   ? ok('门厅星网节点不重叠', `${gateDebug.nodes} 节点 / ${gateDebug.edges} 连线 / 最近 ${gateDebug.minDist.toFixed(3)}`)
   : bad('门厅星网节点', JSON.stringify(gateDebug));
+// 鼠标只扰动光标附近：把指针移到画面中央，附近点动、远处点只做缓慢漫游
+await page.waitForTimeout(600);
+const gateBefore = await page.evaluate(() => window.mmGateNodes());
+await page.mouse.move(683, 450);
+await page.waitForTimeout(800);
+const gateAfter = await page.evaluate(() => window.mmGateNodes());
+const nearMove = [], farMove = [];
+gateBefore.forEach((p, i) => {
+  const d = Math.hypot(gateAfter[i].x - p.x, gateAfter[i].y - p.y);
+  (Math.hypot(p.x - 683, p.y - 450) < 170 ? nearMove : farMove).push(d);
+});
+const avgMove = (a) => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length);
+const nearAvg = avgMove(nearMove), farAvg = avgMove(farMove);
+(nearMove.length && farMove.length && nearAvg > farAvg * 1.8)
+  ? ok('门厅鼠标只扰动光标附近', `近 ${nearAvg.toFixed(1)}px / 远 ${farAvg.toFixed(1)}px`)
+  : bad('门厅鼠标扰动范围', `近 ${nearMove.length}/${nearAvg.toFixed(1)} 远 ${farMove.length}/${farAvg.toFixed(1)}`);
+const gateMinGap = await page.evaluate(() => {
+  const ns = window.mmGateNodes();
+  let m = Infinity;
+  for (let i = 0; i < ns.length; i++) {
+    for (let j = i + 1; j < ns.length; j++) m = Math.min(m, Math.hypot(ns[i].x - ns[j].x, ns[i].y - ns[j].y));
+  }
+  return m;
+});
+gateMinGap > 24 ? ok('门厅星点不缠在一起', `最近 ${gateMinGap.toFixed(1)}px`) : bad('门厅星点间距', String(gateMinGap));
 await page.locator('#gateUser').fill('e2e_probe');
 await page.locator('#gatePass').fill('testing-password');
 await page.route('**/api/login', async (route) => {

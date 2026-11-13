@@ -893,7 +893,8 @@
   let mapW = 0, mapH = 0, mapDpr = 1;
   let backdrop = null;
   let backdropKey = '';
-  let mx = 0, my = 0, tmx = 0, tmy = 0;
+  // 鼠标只作用于光标附近的一小片区域，不再驱动整张星图做视差位移
+  const gatePointer = { x: -9999, y: -9999, active: false };
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const lowMotion = reducedMotion || window.innerWidth < 760 || (navigator.deviceMemory && navigator.deviceMemory <= 4);
   const gateHash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
@@ -944,7 +945,6 @@
     bx: p.x, by: p.y,
     layer: Math.min(3, Math.floor(p.y * 4)),
     phase: gateHash(i * 13.7) * Math.PI * 2,
-    amp: .005 + gateHash(i * 29.3) * .011,
     code: String.fromCharCode(65 + (i % 26)) + String(i + 1).padStart(2, '0'),
   }));
   // 邻接表预先算好，每帧不再做 O(n²) 扫描
@@ -957,13 +957,15 @@
       if (d2 < .032) cand.push({ j, d2 });
     }
     cand.sort((a, b) => a.d2 - b.d2);
-    cand.slice(0, 2).forEach((c) => edges.push([i, c.j]));
+    cand.slice(0, 2).forEach((c) => edges.push({ a: i, b: c.j, rest: 0 }));
   }
   window.mmGateDebug = {
     nodes: nodes.length,
     edges: edges.length,
     minDist: Math.min(...nodes.map((n, i) => Math.min(...nodes.slice(i + 1).map((m) => Math.hypot(m.bx - n.bx, m.by - n.by)).concat([9])))),
   };
+  // 调试用：读取当前星点像素坐标，验证鼠标局部扰动与最小间距
+  window.mmGateNodes = () => nodes.map((n) => ({ x: n.x, y: n.y }));
 
   // 细线图书馆剖面：书架、层板、书脊与穹顶，只画一次到离屏画布
   function buildBackdrop() {
@@ -1045,31 +1047,121 @@
 
   function resizeGateMap() {
     if (!canvas || !ctx) return;
+    const oldW = mapW, oldH = mapH;
     mapDpr = Math.min(1.5, window.devicePixelRatio || 1);
     mapW = window.innerWidth; mapH = window.innerHeight;
     canvas.width = Math.round(mapW * mapDpr); canvas.height = Math.round(mapH * mapDpr);
     ctx.setTransform(mapDpr, 0, 0, mapDpr, 0, 0);
+    // 窗口尺寸变了：按比例搬动已经跑起来的节点，别让它们跳到画面外
+    if (oldW > 0 && oldH > 0 && Number.isFinite(nodes[0] && nodes[0].x)) {
+      const sx = mapW / oldW, sy = mapH / oldH;
+      nodes.forEach((n) => { n.x *= sx; n.y *= sy; });
+      edges.forEach((e) => { e.rest *= Math.min(sx, sy); });
+    }
     buildBackdrop();
     if (lowMotion) drawGateMap();
+  }
+
+  // 第一次绘制前把归一化坐标换成像素坐标，并记录每条关系线的自然长度
+  function ensureGatePositions() {
+    nodes.forEach((n) => {
+      if (Number.isFinite(n.x)) return;
+      n.x = n.bx * mapW;
+      n.y = n.by * mapH;
+      n.vx = 0;
+      n.vy = 0;
+    });
+    edges.forEach((e) => {
+      if (e.rest) return;
+      const a = nodes[e.a], b = nodes[e.b];
+      // 太短的关系线给一个下限，否则两个点会被斥力推着越跑越远
+      e.rest = Math.max(86, Math.hypot((b.bx - a.bx) * mapW, (b.by - a.by) * mapH));
+    });
+  }
+
+  // 每个点自由漫游：随机漂移 + 近距斥力 + 关系线弹簧 + 鼠标局部斥力。
+  // 没有任何点被钉死在一小块区域，但也不会缠成一团或飘出画面。
+  function stepGatePhysics() {
+    ensureGatePositions();
+    const W = mapW, H = mapH;
+    const t = mapFrame * .009;
+    let meanX = 0, meanY = 0;
+    for (const n of nodes) {
+      // 随机漫游：每个点用自己的相位慢慢改向，不是整齐划一的正弦摆动
+      n.vx += Math.cos(t * .6 + n.phase) * .015;
+      n.vy += Math.sin(t * .8 + n.phase * 1.7) * .015;
+      // 鼠标只推开光标 170px 以内的点，屏幕其它区域不受影响
+      if (gatePointer.active) {
+        const dx = n.x - gatePointer.x, dy = n.y - gatePointer.y;
+        const d = Math.hypot(dx, dy);
+        if (d > 1 && d < 170) {
+          const f = (1 - d / 170) * 9;
+          n.vx += (dx / d) * f;
+          n.vy += (dy / d) * f;
+        }
+      }
+      meanX += n.x; meanY += n.y;
+    }
+    meanX /= nodes.length; meanY /= nodes.length;
+    // 整片星图慢慢回到画面中心：只平移，不压缩形状
+    const ox = (W / 2 - meanX) * .00012, oy = (H / 2 - meanY) * .00012;
+
+    // 近距斥力：两个点靠得太近就互相推开，避免缠在一起
+    const minSep = Math.max(34, Math.min(W, H) * .045);
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > minSep * minSep || d2 < 1e-6) continue;
+        const d = Math.sqrt(d2);
+        const f = (1 - d / minSep) * .35;
+        dx /= d; dy /= d;
+        a.vx -= dx * f; a.vy -= dy * f;
+        b.vx += dx * f; b.vy += dy * f;
+      }
+    }
+
+    // 关系线弹簧：拉太长有引力，缩太短有斥力
+    for (const e of edges) {
+      const a = nodes[e.a], b = nodes[e.b];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.max(1, Math.hypot(dx, dy));
+      dx /= d; dy /= d;
+      const strain = d - e.rest;
+      const f = strain * (strain > 0 ? .00012 : .00024);
+      a.vx += dx * f; a.vy += dy * f;
+      b.vx -= dx * f; b.vy -= dy * f;
+    }
+
+    // 积分 + 阻尼 + 边界回弹
+    for (const n of nodes) {
+      n.vx = (n.vx + ox) * .965;
+      n.vy = (n.vy + oy) * .965;
+      const sp = Math.hypot(n.vx, n.vy);
+      if (sp > 1.6) { n.vx = (n.vx / sp) * 1.6; n.vy = (n.vy / sp) * 1.6; }
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 40) { n.x = 40; n.vx = Math.abs(n.vx) * .4; }
+      if (n.x > W - 40) { n.x = W - 40; n.vx = -Math.abs(n.vx) * .4; }
+      if (n.y < 50) { n.y = 50; n.vy = Math.abs(n.vy) * .4; }
+      if (n.y > H - 50) { n.y = H - 50; n.vy = -Math.abs(n.vy) * .4; }
+    }
   }
 
   function drawGateMap() {
     mapRaf = 0;
     if (!ctx || !gate.isConnected || document.hidden) return;
     mapFrame += 1;
-    mx += (tmx - mx) * .055;
-    my += (tmy - my) * .055;
-    const t = mapFrame * .009;
     ctx.clearRect(0, 0, mapW, mapH);
-    if (backdrop) ctx.drawImage(backdrop, mx * 6, my * 4, mapW, mapH);
-    // 节点位置：轻微漂浮 + 鼠标分层视差
-    const pos = nodes.map((n) => [
-      (n.bx + Math.sin(t + n.phase) * n.amp * (lowMotion ? 0 : 1)) * mapW + mx * (7 + n.layer * 5),
-      (n.by + Math.cos(t * .8 + n.phase) * n.amp * (lowMotion ? 0 : 1)) * mapH + my * (5 + n.layer * 4),
-    ]);
+    if (backdrop) ctx.drawImage(backdrop, 0, 0, mapW, mapH);
+    if (lowMotion) ensureGatePositions();
+    else stepGatePhysics();
+    const pos = nodes.map((n) => [n.x, n.y]);
     ctx.lineWidth = 1;
-    for (const [a, b] of edges) {
-      const [x1, y1] = pos[a], [x2, y2] = pos[b];
+    for (const e of edges) {
+      const [x1, y1] = pos[e.a], [x2, y2] = pos[e.b];
       const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
       ctx.strokeStyle = 'rgba(200,162,74,.12)';
       ctx.beginPath();
@@ -1098,8 +1190,12 @@
   }
 
   function onGatePointer(e) {
-    tmx = (e.clientX / Math.max(1, window.innerWidth) - .5) * 2;
-    tmy = (e.clientY / Math.max(1, window.innerHeight) - .5) * 2;
+    gatePointer.x = e.clientX;
+    gatePointer.y = e.clientY;
+    gatePointer.active = true;
+  }
+  function onGatePointerLeave() {
+    gatePointer.active = false;
   }
   function onGateVisibility() {
     if (!document.hidden && !lowMotion && !mapRaf) mapRaf = requestAnimationFrame(drawGateMap);
@@ -1109,6 +1205,7 @@
     if (!lowMotion) mapRaf = requestAnimationFrame(drawGateMap);
     window.addEventListener('resize', resizeGateMap, { passive: true });
     window.addEventListener('pointermove', onGatePointer, { passive: true });
+    document.addEventListener('pointerleave', onGatePointerLeave, { passive: true });
     document.addEventListener('visibilitychange', onGateVisibility);
   }
   if (saved) userIn.value = saved;
