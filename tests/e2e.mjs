@@ -332,6 +332,19 @@ if (await page.locator('button:has-text("可玩演示")').count()) {
   (await page.locator('.mm-demo-overlay').count()) === 0 ? ok('可玩演示弹层与关闭') : bad('可玩演示弹层', 'Esc 未关闭');
 } else bad('可玩演示入口', '当前章节没有演示按钮');
 
+// 演示总览：导航「演示标本」直接看到全部 7 件，点 CNN 卡进入卷积演示
+await page.evaluate(() => window.mmOpenDemo('gallery'));
+await page.waitForSelector('.mm-demo-overlay [data-demo-open]', { timeout: 8000 });
+const galleryCount = await page.locator('[data-demo-open]').count();
+const galleryCnn = await page.locator('[data-demo-open="cnn"]').count();
+(galleryCount >= 7 && galleryCnn === 1)
+  ? ok('可玩演示总览 7 件', String(galleryCount)) : bad('可玩演示总览', `${galleryCount}/${galleryCnn}`);
+await page.locator('[data-demo-open="cnn"]').click();
+await page.waitForSelector('[data-demo="cnn"]', { timeout: 8000 });
+(await page.locator('[data-demo="cnn"]').count()) === 1 ? ok('从总览打开 CNN 演示') : bad('从总览打开 CNN 演示');
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+
 // CNN 卷积演示：滑窗 / 特征图 / 池化 / 三类分数
 const cnnState = await page.evaluate(async () => {
   window.mmOpenDemo('cnn');

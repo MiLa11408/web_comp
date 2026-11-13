@@ -39,7 +39,15 @@ const DEMO_META = {
     sub: '把一张像素图喂给 3×3 卷积核，看它怎样滑动、激活、池化，最后得到分类分数。',
     foot: '示意：真实 CNN 的卷积核由训练学得，这里用固定核演示运算过程',
   },
+  gallery: {
+    title: '可玩演示 · 七件标本',
+    sub: '每个演示只讲一个机制：先动手，再看它为什么成立。',
+    foot: '全部演示都在浏览器里实时计算，没有预录动画',
+  },
 };
+
+// 总览里的展示顺序：从最容易上手的开始，CNN 排在注意力之后
+const DEMO_ORDER = ['turing', 'chinese-room', 'attention', 'cnn', 'rules', 'diffusion', 'scaling'];
 
 const CSS = `
 .mm-demo-overlay {
@@ -386,6 +394,16 @@ const CSS = `
   margin-top: 6px; color: #8a7a5c; font-size: 10.5px;
 }
 .mm-attn-readout { min-height: 17px; margin-top: 6px; color: #9a8a6f; font-size: 11.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.mm-demo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.mm-gallery-card {
+  display: flex; flex-direction: column; gap: 5px; padding: 12px 14px;
+  border: 1px solid #4a3a24; background: linear-gradient(160deg, #211a13, #191310);
+  color: #cbb892; text-align: left; cursor: pointer; font-family: inherit;
+}
+.mm-gallery-card:hover { border-color: #c8a24a; background: #241c14; }
+.mm-gallery-no { color: #8a7a5c; font-family: Consolas, monospace; font-size: 10.5px; letter-spacing: 1px; }
+.mm-gallery-card b { color: #f0d68a; font-size: 14px; font-weight: 500; letter-spacing: .5px; }
+.mm-gallery-card i { color: #9a8a6f; font-size: 11.5px; font-style: normal; line-height: 1.7; }
 @media (max-width: 520px) {
   .mm-demo-overlay { padding: 8px; align-items: flex-start; }
   .mm-demo-panel { max-height: calc(100vh - 16px); padding: 16px 14px 14px; }
@@ -1813,6 +1831,18 @@ function buildCnn(root) {
   setPosition(0, 0);
 }
 
+function buildGallery(root) {
+  root.innerHTML = `<div class="mm-demo-gallery">${DEMO_ORDER.map((kind, index) => `
+    <button type="button" class="mm-gallery-card" data-demo-open="${kind}">
+      <span class="mm-gallery-no">标本 ${String(index + 1).padStart(2, '0')}</span>
+      <b>${escHtml(DEMO_META[kind].title)}</b>
+      <i>${escHtml(DEMO_META[kind].sub)}</i>
+    </button>`).join('')}</div>`;
+  root.querySelectorAll('[data-demo-open]').forEach((btn) => {
+    btn.addEventListener('click', () => openDemo(btn.dataset.demoOpen));
+  });
+}
+
 const BUILDERS = {
   turing: buildTuring,
   'chinese-room': buildChineseRoom,
@@ -1821,6 +1851,7 @@ const BUILDERS = {
   diffusion: buildDiffusion,
   scaling: buildScaling,
   cnn: buildCnn,
+  gallery: buildGallery,
 };
 
 export function openDemo(kind) {
