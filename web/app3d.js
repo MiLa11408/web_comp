@@ -870,7 +870,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
   scene.add(key);
 
   // 入口方向补光：只抬书架正面的层次，不投影，避免出现第二套阴影
-  const fill = new THREE.DirectionalLight(0xd8c8a8, 0.75);
+  const fill = new THREE.DirectionalLight(0xd8c8a8, 0.95);
   fill.position.set(-5, 6, 10);
   scene.add(fill);
 
@@ -2955,6 +2955,7 @@ export async function init3D({ container, books, floors, shelfConfig = {}, onOpe
     spot.color.setHex(th.spot);
     key.intensity = a.dir;
     key.color.setHex(th.key);
+    fill.color.setHex(th.key);
     hemi.color.setHex(th.hemiSky);
     hemi.groundColor.setHex(th.hemiGround);
     accent.color.setHex(th.accentLight);
