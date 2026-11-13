@@ -423,6 +423,29 @@ const attnState = await page.evaluate(async () => {
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
 
+// 阅读页常驻章节条：翻章不用滚回文末；换章后回到页首
+const chapBar = await page.locator('.reader-chapbar').count();
+const chapBarText = await page.locator('.reader-chapbar .rcb-pos').innerText();
+chapBar === 1 ? ok('阅读页常驻章节条', chapBarText.replace(/\n/g, ' ').slice(0, 36)) : bad('阅读页常驻章节条', String(chapBar));
+const chapterSwitch = await page.evaluate(async () => {
+  const before = (window.__mmChapterMeta || {}).id || '';
+  window.scrollTo(0, document.body.scrollHeight);
+  await new Promise((r) => setTimeout(r, 250));
+  const btn = [...document.querySelectorAll('.reader-chapbar button')].find((b) => b.textContent.includes('下一章'));
+  if (!btn) return { before, moved: false };
+  btn.click();
+  await new Promise((r) => setTimeout(r, 1500));
+  return {
+    before,
+    after: (window.__mmChapterMeta || {}).id || '',
+    scrollY: Math.round(window.scrollY),
+    bar: !!document.querySelector('.reader-chapbar'),
+  };
+});
+(chapterSwitch.moved !== false && chapterSwitch.after && chapterSwitch.after !== chapterSwitch.before && chapterSwitch.scrollY < 8 && chapterSwitch.bar)
+  ? ok('点下一章回到页首', `${chapterSwitch.before} → ${chapterSwitch.after} · scrollY ${chapterSwitch.scrollY}`)
+  : bad('点下一章回到页首', JSON.stringify(chapterSwitch));
+
 // 残页：切到 b1-c3（藏着 R-01），纸片掉落 → 主动捡起 → 残缺内容 + 馆员旁白
 await page.evaluate(() => window.showChapter('b1-c3'));
 await page.waitForTimeout(1400);
