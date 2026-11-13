@@ -1,0 +1,369 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>机忆书库 · 概要设计说明书</title>
+<style>
+  :root{--ink:#241d15;--brass:#8a6a2f;--brass2:#c8a24a;--paper:#fbf7ee;--muted:#6f6251;--line:#d9cbb0;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif;font-size:10.5pt;line-height:1.76;}
+  .cover{min-height:245mm;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;break-after:page;position:relative;}
+  .cover .rule{width:100%;height:1px;background:var(--line);margin:10px 0 18px;}
+  .cover .kicker{font-size:9.5pt;letter-spacing:4px;color:var(--brass);}
+  .cover h1{font-size:30pt;line-height:1.25;margin:14px 0 6px;letter-spacing:2px;font-weight:600;}
+  .cover .en{font-size:11pt;letter-spacing:5px;color:var(--muted);margin-bottom:26px;}
+  .cover .lead{font-size:12pt;line-height:2;color:#3b3024;max-width:150mm;}
+  .cover .meta{margin-top:34px;display:grid;grid-template-columns:28mm 1fr;gap:4px 12px;font-size:9.8pt;}
+  .cover .meta dt{color:var(--muted);}
+  .cover .meta dd{margin:0;}
+  .cover .seal{position:absolute;right:0;bottom:6mm;width:34mm;height:34mm;border:1.5px solid var(--brass2);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--brass);font-size:8pt;letter-spacing:2px;text-align:center;transform:rotate(-8deg);opacity:.9;}
+  h1{font-size:21pt;margin:0 0 8px;}
+  h2{font-size:14.5pt;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line);}
+  h3{font-size:11.6pt;margin:14px 0 5px;color:var(--brass);}
+  p{margin:0 0 8px;text-align:justify;}
+  ul,ol{margin:0 0 8px 17px;padding:0;}
+  li{margin:2px 0;}
+  table{width:100%;border-collapse:collapse;font-size:9.3pt;margin:7px 0 12px;}
+  th{background:#f3ead8;text-align:left;font-weight:600;}
+  th,td{border:1px solid var(--line);padding:4.5px 6px;vertical-align:top;}
+  .caption{font-size:8.5pt;color:var(--muted);text-align:center;margin:3px 0 11px;}
+  .shot{width:100%;display:block;border:1px solid var(--line);border-radius:2px;}
+  .kpis{display:flex;gap:7px;margin:9px 0 13px;}
+  .kpi{flex:1;border:1px solid var(--line);background:#faf4e8;padding:7px 9px;}
+  .kpi b{display:block;font-size:16pt;color:var(--brass);line-height:1.2;}
+  .kpi span{font-size:8.4pt;color:var(--muted);}
+  .diagram{border:1px solid var(--line);background:#fcf8ef;padding:9px 11px;margin:7px 0 11px;}
+  .layer{display:flex;gap:7px;align-items:stretch;margin:4px 0;}
+  .layer .tag{width:22mm;flex:none;background:#f0e5d0;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:8.5pt;color:var(--brass);text-align:center;padding:3px;}
+  .layer .body{flex:1;display:flex;gap:5px;flex-wrap:wrap;}
+  .node{flex:1;min-width:27mm;border:1px solid #cdbb9c;background:#fff;padding:4px 6px;font-size:8.6pt;line-height:1.45;}
+  .node b{display:block;color:var(--brass);font-size:9pt;}
+  .arrow{text-align:center;color:var(--brass);font-size:9pt;line-height:1;margin:1px 0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .card{border:1px solid var(--line);background:#fdfaf3;padding:7px 9px;font-size:9.4pt;}
+  .card b{color:var(--brass);}
+  .note{border-left:3px solid var(--brass2);background:#faf4e6;padding:6px 9px;font-size:9.2pt;margin:7px 0 10px;}
+  .mono{font-family:"Cascadia Mono","Consolas",monospace;font-size:8.6pt;}
+  .pb{break-before:page;}
+  .toc{font-size:10pt;line-height:2.05;}
+  .toc span{color:var(--muted);}
+  h2,h3,h4{break-after:avoid;page-break-after:avoid;}
+  table,.diagram,.shot{break-inside:avoid;page-break-inside:avoid;}
+  .shot{break-after:avoid;page-break-after:avoid;}
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">第十二届网页设计大赛 · 动态网页组</div>
+  <div class="rule"></div>
+  <h1>机忆书库</h1>
+  <div class="en">THE MACHINE MEMORY</div>
+  <p class="lead">一座闭馆后的 AI 知识档案馆。把 56 本书、448 章 AI 通史放进可走动的 3D 阅览室，让检索、阅读与知识关系重新变成一次“逛图书馆”的体验。</p>
+  <dl class="meta">
+    <dt>作品名称</dt><dd>机忆书库 · THE MACHINE MEMORY</dd>
+    <dt>参赛组别</dt><dd>动态网页组</dd>
+    <dt>队伍名称</dt><dd>塔之诅咒队</dd>
+    <dt>队长 / 学号</dt><dd>盛梓杨 / 2421010219</dd>
+    <dt>线上地址</dt><dd>https://150.158.1.111/ai/</dd>
+    <dt>文档版本</dt><dd>概要设计说明书 v1.0 · 2026-11-13</dd>
+  </dl>
+  <div class="seal">机忆<br>书库<br>· 藏</div>
+</section>
+
+<h1>目录</h1>
+<div class="toc">
+  一、作品概述 <span>· 定位、问题与主题回应</span><br>
+  二、创意设计 <span>· 灵感、核心隐喻与体验路径</span><br>
+  三、总体架构 <span>· 分层结构、技术栈与设计原则</span><br>
+  四、模块设计 <span>· 模块划分、职责与接口</span><br>
+  五、数据设计 <span>· 数据表、内容文件与流转</span><br>
+  六、关键设计决策 <span>· 为什么这样做</span><br>
+  七、工程质量与验证 <span>· 内容校验、端到端测试与性能</span><br>
+  八、部署与运行 <span>· 线上拓扑与启动方式</span><br>
+  九、创新点与可扩展方向
+</div>
+
+<h2>一、作品概述</h2>
+<h3>1.1 一句话定位</h3>
+<p>“机忆书库”是一座可以在浏览器里走进去的 AI 知识档案馆：读者从门厅领证入馆，在 3D 阅览室的书架上取书、翻开、阅读，也可以乘黄铜电梯去不同楼层、在星图上观察概念关系、在卡片目录里检索，或参与残页、失窃页、暗门等馆藏玩法。</p>
+<p>作品把“AI 知识”从一条条链接和列表，重新组织成有空间、有路径、有仪式感的阅读经验。它不提供“问一句答一句”的聊天框，而是保留“自己走一趟”的部分：路线可以给你，判断尽量留给你。</p>
+
+<h3>1.2 要解决的问题</h3>
+<ul>
+  <li><b>AI 知识碎片化</b>：新闻、论文、教程、观点散落在不同平台，初学者缺少一条能按时间、人物、机构串起来的主线。</li>
+  <li><b>检索结果缺少上下文</b>：关键词能给出链接，却很难说明“这条结果在整个 AI 史里处在什么位置”。</li>
+  <li><b>科普内容难读</b>：术语密度高、句子长，读者容易在开头三段放弃。</li>
+  <li><b>展示型网站缺少“留下来”的理由</b>：看完一页就走，没有探索、收集与回访动机。</li>
+</ul>
+
+<h3>1.3 对大赛主题的回应</h3>
+<p>大赛强调“AI 与网页载体深度融合”，而不只是把 AI 当作绘图或编码工具。本作品的回应是：<b>让 AI 成为内容组织与交互的一部分，而不是页面上的一个按钮</b>。</p>
+<ul>
+  <li><b>AI 作为馆藏</b>：448 章内容本身就是一部可检索、可漫游的 AI 通史，覆盖符号主义、神经网络、产业、治理与前沿。</li>
+  <li><b>AI 作为理解工具</b>：概念手册把 16 个核心概念拆成“一句话、生活类比、准确解释、常见误解、四镜路径”；CNN 与注意力演示把卷积、softmax 的计算过程直接画出来。</li>
+  <li><b>AI 作为内容管线</b>：前沿观察每日从 arXiv 与官方 RSS 取源，经大模型编译成中文科普新闻，再进入馆内检索。</li>
+  <li><b>校园情感入口</b>：以高校图书馆这一河海师生熟悉的日常空间作为叙事载体，把“找资料”变成“进馆阅读”。</li>
+</ul>
+
+<div class="kpis">
+  <div class="kpi"><b>56</b><span>本书（48 正册 + 8 增补册）</span></div>
+  <div class="kpi"><b>448</b><span>章，每章 9 段结构</span></div>
+  <div class="kpi"><b>16</b><span>概念，四镜路径</span></div>
+  <div class="kpi"><b>7</b><span>可玩演示</span></div>
+  <div class="kpi"><b>169</b><span>项端到端测试全部通过</span></div>
+</div>
+
+<img class="shot" src="assets/gate.jpg" alt="门厅">
+<div class="caption">图 1　入馆门厅：借书证 / 新办证 / 访客入馆，背景是程序化生成的图书馆剖面与星网</div>
+
+<h2>二、创意设计</h2>
+<h3>2.1 灵感来源</h3>
+<p>灵感来自闭馆后的图书馆：灯还亮着，书架还在，但人已经走了。这个场景天然适合承载“知识仍在，等待被重新发现”的主题。项目把 AI 发展史看作一座馆藏：有的书是公开的旧纸，有的是内部蓝图，有的是机密账簿，最上层则封着蜡与帷幕。</p>
+<p>视觉上采用暗色古籍外壳：暖木、黄铜、旧纸、蜡封；交互上借用真实图书馆的动作：领证、乘电梯、抽书、翻页、盖章、放大镜、卡片目录。读者不需要先学一套新 UI，就能凭直觉行动。</p>
+
+<h3>2.2 核心隐喻</h3>
+<table>
+  <tr><th style="width:26mm">网页元素</th><th style="width:42mm">对应现实</th><th>承载的功能</th></tr>
+  <tr><td>书</td><td>知识单元</td><td>56 本书、448 章；书脊版式、厚度、磨损随书变化，L4 只露罗马数字与“未编目”</td></tr>
+  <tr><td>电梯</td><td>知识分区</td><td>L1 公开 / L2 内部 / L3 机密 / L4 绝密；选层、转场、馆员欢迎语</td></tr>
+  <tr><td>星图</td><td>概念关系</td><td>56 个节点、50 条关系；悬停点亮关系线，点星开书</td></tr>
+  <tr><td>卡片目录</td><td>检索</td><td>中文二元组 + 英文词倒排索引；书名 > 章节标题 > tag > 正文频次</td></tr>
+  <tr><td>借阅证</td><td>身份</td><td>访客只读；注册后可盖章、批注、记录进度</td></tr>
+  <tr><td>残页 / 失窃页 / 躁动书页</td><td>馆藏异常</td><td>收集、追回、收容与归位；把“读完”变成可完成的动作</td></tr>
+</table>
+
+<h3>2.3 体验路径</h3>
+<div class="diagram">
+  <div class="layer"><div class="tag">01 入馆</div><div class="body"><div class="node"><b>门厅</b>借书证 / 办证 / 访客；两扇木门滑开，进入大厅</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">02 找书</div><div class="body"><div class="node"><b>3D 阅览室</b>WASD 走动、拖拽视角；书架按楼层分区</div><div class="node"><b>书架视图 / 总览</b>不想走时，用 2D 视图直接点书</div><div class="node"><b>卡片目录</b>搜书名、章节、标签、人物、概念</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">03 取书</div><div class="body"><div class="node"><b>抽书</b>书飞到右手，随视角移动</div><div class="node"><b>翻开</b>E / 左键 → 黑场 → 阅读页</div><div class="node"><b>叠桌</b>Q 放到本层桌子，最多三摞</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">04 阅读</div><div class="body"><div class="node"><b>三栏</b>检索 / 正文 / 页边注</div><div class="node"><b>接待卡</b>宾客、目的、馆员、结果</div><div class="node"><b>工具条</b>盖章、批注、标记读完（均可撤销）</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">05 探索</div><div class="body"><div class="node"><b>星图 / 书轨 / 时间轴</b>换一条路径理解同一批知识</div><div class="node"><b>馆藏玩法</b>残页、失窃页、躁动书页、暗门、未写之书</div><div class="node"><b>借阅档案</b>徽章、书榜、我的翻阅记录</div></div></div>
+</div>
+<div class="caption">图 2　从入馆到探索的五段体验路径</div>
+
+<h2>三、总体架构</h2>
+<h3>3.1 分层结构</h3>
+<div class="diagram">
+  <div class="layer">
+    <div class="tag">表现层</div>
+    <div class="body">
+      <div class="node"><b>3D 阅览室</b>three.js r187<br>场景 / 材质 / 后处理</div>
+      <div class="node"><b>2D 视图</b>书架 / 总览 / 星图 / 书轨 / 时间轴 / 平面图</div>
+      <div class="node"><b>阅读器</b>三栏 / 接待卡 / 页边注 / 工具条</div>
+      <div class="node"><b>玩法与演示</b>馆藏收集 / 7 个演示 / 未写之书</div>
+    </div>
+  </div>
+  <div class="arrow">↑ ↓</div>
+  <div class="layer">
+    <div class="tag">接口层</div>
+    <div class="body">
+      <div class="node"><b>静态资源</b>HTML / CSS / JS / vendor<br>ETag + 缓存头</div>
+      <div class="node"><b>REST API</b>Fastify 5<br>catalog / search / graph / collectibles</div>
+      <div class="node"><b>身份</b>注册 / 登录 / 会话<br>HttpOnly Cookie</div>
+    </div>
+  </div>
+  <div class="arrow">↑ ↓</div>
+  <div class="layer">
+    <div class="tag">数据层</div>
+    <div class="body">
+      <div class="node"><b>内容文件</b>books.json / chapters/*.md<br>graph / rail / timeline / concepts</div>
+      <div class="node"><b>SQLite</b>用户 / 会话 / 印章 / 批注<br>进度 / 阅读 / 收藏</div>
+      <div class="node"><b>检索索引</b>启动时构建<br>中文二元组 + 英文词</div>
+    </div>
+  </div>
+  <div class="arrow">↑ ↓</div>
+  <div class="layer">
+    <div class="tag">运行层</div>
+    <div class="body">
+      <div class="node"><b>systemd</b>machine-memory<br>127.0.0.1:3300</div>
+      <div class="node"><b>nginx</b>/ai/ 反代<br>gzip / CSP / 安全头</div>
+      <div class="node"><b>定时任务</b>前沿入库 04:17<br>备份 03:40</div>
+    </div>
+  </div>
+</div>
+<div class="caption">图 3　四层总体架构：表现层不依赖构建工具，接口层与数据层保持薄而清晰</div>
+
+<h3>3.2 技术栈选择</h3>
+<table>
+  <tr><th style="width:32mm">层次</th><th style="width:48mm">选型</th><th>选择理由</th></tr>
+  <tr><td>3D 渲染</td><td>three.js r187（本地 vendor）</td><td>生态成熟、文档充足；直接以 ES module 引入，不引入 React Three Fiber 等额外抽象，便于控制 draw call 与后处理链。</td></tr>
+  <tr><td>物理</td><td>Rapier（wasm）</td><td>书本能真实静置、坠落与堆叠；移动端直接跳过，避免下载 4.3MB 物理包。</td></tr>
+  <tr><td>前端框架</td><td>原生 HTML / CSS / JavaScript</td><td>零构建、零框架运行时；页面本身就是交付物，评委打开即可运行，减少工具链风险。</td></tr>
+  <tr><td>后端</td><td>Fastify 5 + node:sqlite</td><td>轻量、启动快；SQLite 单文件便于备份与迁移，适合单机部署的参赛作品。</td></tr>
+  <tr><td>内容</td><td>Markdown + JSON</td><td>写作者只关心正文；结构、关系、楼层、标签全部数据化，便于校验与批量生成。</td></tr>
+  <tr><td>检索</td><td>自建倒排索引</td><td>中文用二元组切分，英文按词；无需外部搜索引擎，启动时构建，查询稳定在毫秒级。</td></tr>
+  <tr><td>音效</td><td>WebAudio 程序生成</td><td>不依赖音频文件；翻书、脚步、电梯、星图 pad 全部合成，体积为零。</td></tr>
+  <tr><td>部署</td><td>nginx + systemd + Let's Encrypt</td><td>子路径 /ai/ 反代；HTTPS 使用 IP 证书，评委打开不撞“不安全”提示。</td></tr>
+</table>
+
+<h3>3.3 设计原则</h3>
+<ul>
+  <li><b>内容优先</b>：视觉与交互服务于“读到内容”，不为 3D 而 3D；任何 3D 操作都有 2D 替代路径。</li>
+  <li><b>渐进增强</b>：低配设备自动关闭阴影、后处理、物理与部分尘埃；核心阅读始终可用。</li>
+  <li><b>单一数据源</b>：书、章、关系、楼层、玩法状态都来自数据文件或数据库，前端不写死内容。</li>
+  <li><b>可验证</b>：内容有 verify 规则，交互有 E2E 断言，性能有 draw call 与首帧预算。</li>
+</ul>
+
+<h2>四、模块设计</h2>
+<h3>4.1 模块划分</h3>
+<div class="grid2">
+  <div class="card"><b>M1 门厅与身份</b><br>登录、注册、访客入馆、门开动画、门厅星网、开灯过渡。</div>
+  <div class="card"><b>M2 3D 阅览室</b><br>场景、书架、书、灯光材质、取书/手持/叠桌、电梯、道具互动。</div>
+  <div class="card"><b>M3 阅读器</b><br>三栏渲染、接待卡、页边注锚点、印章/批注/进度、章节条。</div>
+  <div class="card"><b>M4 检索</b><br>倒排索引、四级排序、命中理由、零结果兜底、联想补全。</div>
+  <div class="card"><b>M5 知识视图</b><br>星图、书轨、时间轴、楼层平面图、书架视图与总览。</div>
+  <div class="card"><b>M6 馆藏玩法</b><br>残页、失窃页、躁动书页、暗门假如之书、未写之书。</div>
+  <div class="card"><b>M7 概念与前沿</b><br>16 个概念、四镜路径、每日 arXiv 与热点编译。</div>
+  <div class="card"><b>M8 演示与音效</b><br>7 个可玩演示、总览入口、WebAudio 事件音与底噪。</div>
+  <div class="card"><b>M9 档案与统计</b><br>借阅档案、徽章、书榜、我的翻阅、章节总结卡。</div>
+  <div class="card"><b>M10 运维与测试</b><br>静态资源、缓存、备份、前沿定时任务、verify 与 E2E。</div>
+</div>
+<div class="caption">图 4　十个模块，前后端职责边界清晰</div>
+
+<h3>4.2 模块职责与关键接口</h3>
+<table>
+  <tr><th style="width:30mm">模块</th><th style="width:60mm">核心职责</th><th>关键接口 / 入口</th></tr>
+  <tr><td>M1 门厅与身份</td><td>身份核验、访客只读、入场动画、门厅星网物理场</td><td><span class="mono">POST /api/register</span>、<span class="mono">/api/login</span>、<span class="mono">/api/me</span></td></tr>
+  <tr><td>M2 3D 阅览室</td><td>场景构建、取书与阅读、楼层切换、展柜与暗门</td><td><span class="mono">mm3d.setFloor / focusStolen / getTechProfile</span></td></tr>
+  <tr><td>M3 阅读器</td><td>章节渲染、三栏、锚点、盖章与进度</td><td><span class="mono">GET /api/chapters/:id</span>、<span class="mono">/api/stamps</span>、<span class="mono">/api/progress</span></td></tr>
+  <tr><td>M4 检索</td><td>索引构建、排序、理由、兜底、联想</td><td><span class="mono">GET /api/search?q=</span>、<span class="mono">/api/suggest?q=</span></td></tr>
+  <tr><td>M5 知识视图</td><td>星图、书轨、时间轴、平面图、书架</td><td><span class="mono">/api/graph</span>、<span class="mono">/api/rail</span>、<span class="mono">/api/floors</span>、<span class="mono">/api/catalog</span></td></tr>
+  <tr><td>M6 馆藏玩法</td><td>收集、追回、收容、假如故事、未写之书</td><td><span class="mono">/api/fragments</span>、<span class="mono">/api/stolen</span>、<span class="mono">/api/restless</span>、<span class="mono">/api/collectibles</span>、<span class="mono">/api/oracle</span></td></tr>
+  <tr><td>M7 概念与前沿</td><td>概念卡、四镜路径、每日论文与热点</td><td><span class="mono">/api/concepts</span>、<span class="mono">/api/frontier</span></td></tr>
+  <tr><td>M8 演示与音效</td><td>演示渲染、交互、音效开关</td><td><span class="mono">mmOpenDemo(id)</span>、<span class="mono">mmAudio*</span></td></tr>
+  <tr><td>M9 档案与统计</td><td>徽章、书榜、记录、总结卡导出</td><td><span class="mono">/api/stats</span>、Canvas 导出 PNG</td></tr>
+  <tr><td>M10 运维与测试</td><td>缓存、备份、内容校验、E2E</td><td><span class="mono">npm run verify</span>、<span class="mono">npm run test:e2e</span></td></tr>
+</table>
+
+<h2>五、数据设计</h2>
+<h3>5.1 内容数据</h3>
+<table>
+  <tr><th style="width:38mm">文件 / 目录</th><th style="width:44mm">内容</th><th>用途</th></tr>
+  <tr><td><span class="mono">content/books.json</span></td><td>56 本书的元数据</td><td>书名、英文名、索书号、楼层、标签、别名、增补标记</td></tr>
+  <tr><td><span class="mono">content/chapters/&lt;book&gt;/&lt;no&gt;.md</span></td><td>448 章 Markdown</td><td>frontmatter + 九段正文 + 页边注 + 档案来源</td></tr>
+  <tr><td><span class="mono">content/graph.json</span></td><td>56 节点 / 50 边</td><td>星图与关系线；关系双向校验</td></tr>
+  <tr><td><span class="mono">content/rail.json</span></td><td>6 主线 / 7 支线 / 63 站</td><td>书轨 SVG 与换乘关系</td></tr>
+  <tr><td><span class="mono">content/concepts.json</span></td><td>16 个概念</td><td>一句话、类比、解释、误解、四镜路径</td></tr>
+  <tr><td><span class="mono">content/stolen.json</span></td><td>9 件失窃页</td><td>展柜位置、绑定章节、追回状态</td></tr>
+  <tr><td><span class="mono">content/fragments.json</span></td><td>12 张残页</td><td>残缺文本、掉落章节、拼合顺序</td></tr>
+  <tr><td><span class="mono">content/whatif.json</span></td><td>10 本假如之书</td><td>premise / spark / twist / return</td></tr>
+  <tr><td><span class="mono">content/frontier.json</span></td><td>arXiv 30 篇 + 编译新闻</td><td>前沿观察论文区</td></tr>
+  <tr><td><span class="mono">content/frontier-hot.json</span></td><td>12 条本周热点</td><td>官方 RSS + 馆员精选</td></tr>
+</table>
+
+<h3>5.2 业务数据（SQLite）</h3>
+<table>
+  <tr><th style="width:36mm">表</th><th style="width:52mm">关键字段</th><th>说明</th></tr>
+  <tr><td><span class="mono">users</span></td><td>id, username, password_hash, email, created_at</td><td>借书证号唯一；scrypt 口令</td></tr>
+  <tr><td><span class="mono">sessions</span></td><td>token, user_id, expires_at</td><td>HttpOnly Cookie 会话</td></tr>
+  <tr><td><span class="mono">stamps</span></td><td>reader_id, chapter_id, created_at</td><td>盖章；可撤销</td></tr>
+  <tr><td><span class="mono">annotations</span></td><td>reader_id, chapter_id, quote, note</td><td>批注；引文 ≤2000 字</td></tr>
+  <tr><td><span class="mono">progress</span></td><td>reader_id, chapter_id, state, read_at</td><td>标记读完；可撤销</td></tr>
+  <tr><td><span class="mono">reads</span></td><td>reader_id, chapter_id, read_at</td><td>翻阅记录，用于书榜与徽章</td></tr>
+  <tr><td><span class="mono">fragment_picks</span></td><td>reader_id, fragment_id, picked_at</td><td>残页拾取</td></tr>
+  <tr><td><span class="mono">collectibles</span></td><td>reader_id, kind, item_id, state</td><td>失窃 / 躁动 / 分岔等状态</td></tr>
+</table>
+
+<h3>5.3 数据流转</h3>
+<div class="diagram">
+  <div class="layer"><div class="tag">内容生产</div><div class="body"><div class="node"><b>Markdown / JSON</b>写作者提交章节、书单、关系</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">校验</div><div class="body"><div class="node"><b>verify</b>字数、来源、关系双向、索书号唯一</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">服务端</div><div class="body"><div class="node"><b>启动构建</b>检索索引 + 目录缓存</div><div class="node"><b>REST API</b>按需返回 JSON</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">前端</div><div class="body"><div class="node"><b>视图渲染</b>3D / 2D / 阅读器</div><div class="node"><b>用户操作</b>盖章、批注、拾取、追回</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">持久化</div><div class="body"><div class="node"><b>SQLite</b>写入状态</div><div class="node"><b>下次访问</b>恢复印章、进度、收藏</div></div></div>
+</div>
+<div class="caption">图 5　内容与业务数据的两条链路：内容只读、业务可写</div>
+
+<h2>六、关键设计决策</h2>
+<table>
+  <tr><th style="width:40mm">决策</th><th>理由与代价</th></tr>
+  <tr><td>不引入前端框架</td><td>零构建、打开即运行；代价是 DOM 与状态管理需要手写，因此用清晰的模块边界与统一的事件入口控制复杂度。</td></tr>
+  <tr><td>访客只读</td><td>评委与路人无需注册即可读全部内容，摩擦最小；盖章、批注、进度需要办证，形成自然的身份动机。</td></tr>
+  <tr><td>3D 与 2D 双路径</td><td>3D 负责氛围与“逛”的体验；书架视图、总览、平面图提供快速直达。低配设备也能完成全部阅读。</td></tr>
+  <tr><td>物理延迟加载</td><td>Rapier 4.3MB 不阻塞首屏；先出画面，再补物理。移动端完全跳过。</td></tr>
+  <tr><td>按材质分配反射</td><td>黄铜、木头、布料、纸张分别设定 metalness / roughness / envMapIntensity；避免“全场景塑料高光”。</td></tr>
+  <tr><td>内容即数据</td><td>448 章不写进 HTML；书籍、关系、玩法状态全部数据化，便于批量写作、校验与扩展。</td></tr>
+</table>
+
+<h2>七、工程质量与验证</h2>
+<h3>7.1 内容校验</h3>
+<p><span class="mono">npm run verify</span> 对 448 章执行结构与事实规范检查：九段齐全、字数 1500–2500、来源 3–6 条且标记已核验、关系双向引用、索书号唯一。当前结果：<b>448 章，FAIL=0</b>。</p>
+
+<h3>7.2 端到端测试</h3>
+<p><span class="mono">npm run test:e2e</span> 使用 Playwright + 系统 Chrome，覆盖门厅、登录、3D 交互、阅读器、检索、星图、书轨、馆藏玩法、安全头、缓存头、移动端等。<b>169 项全部通过</b>。其中与 3D 相关的关键断言包括：</p>
+<ul>
+  <li>draw call 预算 ≤700（实测约 615，含后处理）；</li>
+  <li>泛光后处理启用、阴影贴图 2048；</li>
+  <li>展柜聚光灯在聚焦后打亮展品；</li>
+  <li>星图关系线默认 0/50，定位后点亮且透明度平滑上升；</li>
+  <li>门厅星点不重叠、鼠标只扰动光标附近；</li>
+  <li>移动端 390px 无横向溢出。</li>
+</ul>
+
+<h3>7.3 性能</h3>
+<table>
+  <tr><th style="width:52mm">指标</th><th>结果</th></tr>
+  <tr><td>门厅首屏（本地 Chrome）</td><td>约 1.5s；静态资源 gzip + ETag，二次访问 304</td></tr>
+  <tr><td>入馆到可交互场景</td><td>约 4s；物理包在首帧后延迟加载</td></tr>
+  <tr><td>3D draw calls</td><td>约 615（静态合批前 774，mesh 1219 → 549）</td></tr>
+  <tr><td>内容检索</td><td>20 并发全部 200，单次 ≤6ms</td></tr>
+  <tr><td>低配降级</td><td>&lt;760px 或 deviceMemory ≤4：DPR≤1.25、关阴影、尘埃/光锥减半、跳过 Rapier</td></tr>
+</table>
+
+<img class="shot" src="assets/hall.jpg" alt="3D 阅览室">
+<div class="caption">图 6　3D 主阅览室：暖木书架、黄铜吊灯、体积光柱与星图台</div>
+
+<h2>八、部署与运行</h2>
+<h3>8.1 线上拓扑</h3>
+<div class="diagram">
+  <div class="layer"><div class="tag">浏览器</div><div class="body"><div class="node"><b>HTTPS</b>150.158.1.111/ai/<br>Let's Encrypt IP 证书</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">入口</div><div class="body"><div class="node"><b>nginx</b>/ai/ 反代<br>gzip / CSP / 安全头</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">应用</div><div class="body"><div class="node"><b>systemd</b>machine-memory<br>127.0.0.1:3300</div><div class="node"><b>Fastify</b>静态资源 + REST API</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="layer"><div class="tag">数据</div><div class="body"><div class="node"><b>SQLite</b>.data/machine-memory.db</div><div class="node"><b>内容</b>content/ 448 章</div><div class="node"><b>备份</b>/opt/mm-backups 保留 14 天</div></div></div>
+</div>
+<div class="caption">图 7　线上部署拓扑</div>
+
+<h3>8.2 运行方式</h3>
+<ol>
+  <li>环境：Node.js ≥ 22.5（使用 <span class="mono">node:sqlite</span>）。</li>
+  <li>安装依赖：<span class="mono">npm install</span>。</li>
+  <li>启动：<span class="mono">npm start</span>，默认 <span class="mono">http://127.0.0.1:3300/</span>。</li>
+  <li>内容校验：<span class="mono">npm run verify</span>；端到端测试：<span class="mono">npm run test:e2e</span>。</li>
+  <li>线上：<span class="mono">git archive HEAD</span> → scp → <span class="mono">/opt/machine-memory</span> → 重启 systemd。</li>
+</ol>
+
+<h2>九、创新点与可扩展方向</h2>
+<h3>9.1 创新点</h3>
+<ol>
+  <li><b>空间化知识组织</b>：把 448 章 AI 史放进四层图书馆，楼层=知识梯度，书架=主题，电梯=分区，读者用身体移动建立记忆。</li>
+  <li><b>可计算的阅读反馈</b>：盖章、批注、读完、拾页、追回、收容都落到数据库，形成徽章、书榜与“今日可做”，让阅读有回访理由。</li>
+  <li><b>科普可视化</b>：CNN 卷积逐格展示卷积核、特征图、ReLU、池化与分类分数；注意力用 token×token 热图展示 softmax 与多头差异。</li>
+  <li><b>内容管线自动化</b>：arXiv + 官方 RSS → 中文科普编译 → 馆内检索，保持“前沿”每天更新。</li>
+  <li><b>克制的写实光影</b>：Bloom + 软阴影 + 按材质反射 + 程序化体积光柱；手机上自动降级，不为效果牺牲可读性。</li>
+</ol>
+
+<h3>9.2 可扩展方向</h3>
+<ul>
+  <li>在现有书架体系中增加“校园专题架”，把河海校史、学科与校园文化作为一组可检索的馆藏接入，无需改动底层结构。</li>
+  <li>把概念手册扩展为可交互的知识图谱，支持从任意章节反向查看概念路径。</li>
+  <li>为视障读者补充更完整的键盘导航与朗读标记；为低带宽环境提供纯 2D 轻量入口。</li>
+  <li>将前沿编译管线开放为可配置主题，支持更多学科方向。</li>
+</ul>
+
+<div class="note">本说明书中的数据来自作品当前版本：56 本书 / 448 章 / 16 个概念 / 7 个演示 / 169 项端到端测试。线上地址：https://150.158.1.111/ai/</div>
+
+</body>
+</html>

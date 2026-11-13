@@ -1,0 +1,503 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>机忆书库 · 详细设计说明书</title>
+<style>
+  :root{--ink:#241d15;--brass:#8a6a2f;--brass2:#c8a24a;--muted:#6f6251;--line:#d9cbb0;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif;font-size:10.3pt;line-height:1.74;}
+  .cover{min-height:245mm;display:flex;flex-direction:column;justify-content:center;break-after:page;position:relative;}
+  .cover .rule{width:100%;height:1px;background:var(--line);margin:10px 0 18px;}
+  .cover .kicker{font-size:9.5pt;letter-spacing:4px;color:var(--brass);}
+  .cover h1{font-size:29pt;line-height:1.25;margin:14px 0 6px;letter-spacing:2px;font-weight:600;}
+  .cover .en{font-size:11pt;letter-spacing:5px;color:var(--muted);margin-bottom:24px;}
+  .cover .lead{font-size:11.6pt;line-height:1.95;color:#3b3024;max-width:150mm;}
+  .cover .meta{margin-top:32px;display:grid;grid-template-columns:28mm 1fr;gap:4px 12px;font-size:9.6pt;}
+  .cover .meta dt{color:var(--muted);} .cover .meta dd{margin:0;}
+  .cover .seal{position:absolute;right:0;bottom:6mm;width:34mm;height:34mm;border:1.5px solid var(--brass2);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--brass);font-size:8pt;letter-spacing:2px;text-align:center;transform:rotate(-8deg);}
+  h1{font-size:20pt;margin:0 0 8px;}
+  h2{font-size:14pt;margin:19px 0 7px;padding-bottom:4px;border-bottom:1px solid var(--line);}
+  h3{font-size:11.3pt;margin:13px 0 5px;color:var(--brass);}
+  h4{font-size:10.4pt;margin:10px 0 4px;}
+  p{margin:0 0 7px;text-align:justify;}
+  ul,ol{margin:0 0 7px 17px;padding:0;} li{margin:2px 0;}
+  table{width:100%;border-collapse:collapse;font-size:8.9pt;margin:6px 0 11px;}
+  th{background:#f3ead8;text-align:left;font-weight:600;}
+  th,td{border:1px solid var(--line);padding:4px 6px;vertical-align:top;}
+  .caption{font-size:8.4pt;color:var(--muted);text-align:center;margin:3px 0 10px;}
+  .shot{width:100%;display:block;border:1px solid var(--line);border-radius:2px;}
+  .diagram{border:1px solid var(--line);background:#fcf8ef;padding:8px 10px;margin:6px 0 10px;}
+  .row{display:flex;gap:6px;align-items:stretch;margin:4px 0;}
+  .row .tag{width:24mm;flex:none;background:#f0e5d0;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:8.2pt;color:var(--brass);text-align:center;padding:2px;}
+  .row .body{flex:1;display:flex;gap:5px;flex-wrap:wrap;}
+  .node{flex:1;min-width:27mm;border:1px solid #cdbb9c;background:#fff;padding:4px 6px;font-size:8.4pt;line-height:1.42;}
+  .node b{display:block;color:var(--brass);font-size:8.8pt;}
+  .arrow{text-align:center;color:var(--brass);font-size:8.8pt;line-height:1;margin:1px 0;}
+  pre{background:#f7f1e3;border:1px solid var(--line);padding:7px 9px;font-family:"Cascadia Mono","Consolas",monospace;font-size:8pt;line-height:1.55;white-space:pre-wrap;margin:5px 0 10px;}
+  code{font-family:"Cascadia Mono","Consolas",monospace;font-size:8.5pt;background:#f6efdf;padding:0 2px;}
+  .mono{font-family:"Cascadia Mono","Consolas",monospace;font-size:8.5pt;}
+  .note{border-left:3px solid var(--brass2);background:#faf4e6;padding:5px 9px;font-size:9pt;margin:6px 0 9px;}
+  .pb{break-before:page;}
+  .toc{font-size:9.8pt;line-height:1.95;}
+  .toc span{color:var(--muted);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .mini{border:1px solid var(--line);padding:6px 8px;font-size:8.8pt;background:#fdfaf3;}
+  h2,h3,h4{break-after:avoid;page-break-after:avoid;}
+  table,.diagram,.shot,pre{break-inside:avoid;page-break-inside:avoid;}
+  .shot{break-after:avoid;page-break-after:avoid;}
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">第十二届网页设计大赛 · 动态网页组</div>
+  <div class="rule"></div>
+  <h1>机忆书库 · 详细设计说明书</h1>
+  <div class="en">THE MACHINE MEMORY · DETAILED DESIGN</div>
+  <p class="lead">本文描述作品的运行环境、启动时序、各功能模块的具体实现、数据流转过程、关键算法与部署方式，供评审与答辩查阅。</p>
+  <dl class="meta">
+    <dt>作品名称</dt><dd>机忆书库 · THE MACHINE MEMORY</dd>
+    <dt>参赛组别</dt><dd>动态网页组</dd>
+    <dt>队伍名称</dt><dd>塔之诅咒队</dd>
+    <dt>队长 / 学号</dt><dd>盛梓杨 / 2421010219</dd>
+    <dt>线上地址</dt><dd>https://150.158.1.111/ai/</dd>
+    <dt>文档版本</dt><dd>详细设计说明书 v1.0 · 2026-11-13</dd>
+  </dl>
+  <div class="seal">详细<br>设计<br>· 藏</div>
+</section>
+
+<h1>目录</h1>
+<div class="toc">
+  1　范围与术语<br>
+  2　运行环境与启动时序<br>
+  3　身份与门厅模块<br>
+  4　内容与数据层<br>
+  5　检索模块<br>
+  6　3D 阅览室模块<br>
+  7　阅读器模块<br>
+  8　星图模块<br>
+  9　书轨 / 时间轴 / 平面图<br>
+  10　馆藏玩法模块<br>
+  11　概念层与前沿观察（含可玩演示）<br>
+  12　音效模块<br>
+  13　安全、性能与降级<br>
+  14　测试与验收<br>
+  15　部署与运维<br>
+  16　已知限制与演进方向
+</div>
+
+<h2>1　范围与术语</h2>
+<p>本文覆盖前端（原生 HTML/CSS/JS + three.js）、后端（Fastify 5 + node:sqlite）、内容数据与部署脚本。读者对象为评审、答辩老师与后续维护者。</p>
+<table>
+  <tr><th style="width:34mm">术语</th><th>含义</th></tr>
+  <tr><td>书 / 章</td><td>书是主题单元（56 本），章是阅读单元（448 章，每本 8 章）。</td></tr>
+  <tr><td>楼层</td><td>知识梯度：L1 公开、L2 内部、L3 机密、L4 绝密；同时作为 3D 场景主题。</td></tr>
+  <tr><td>馆藏玩法</td><td>残页、失窃页、躁动书页、暗门假如之书、未写之书等可交互内容。</td></tr>
+  <tr><td>低配模式</td><td>屏幕 &lt;760px 或 deviceMemory ≤4 时启用的降级路径。</td></tr>
+  <tr><td>hold / stack</td><td>书被拿在手里 / 放到桌面书堆的状态。</td></tr>
+</table>
+
+<h2>2　运行环境与启动时序</h2>
+<h3>2.1 运行环境</h3>
+<table>
+  <tr><th style="width:36mm">项</th><th>要求</th></tr>
+  <tr><td>浏览器</td><td>Chrome / Edge 等支持 ES module、WebGL2、WebAudio 的现代浏览器</td></tr>
+  <tr><td>Node.js</td><td>≥ 22.5（使用内置 <span class="mono">node:sqlite</span>）</td></tr>
+  <tr><td>服务端</td><td>Fastify 5、yaml；无数据库服务依赖，SQLite 单文件</td></tr>
+  <tr><td>前端</td><td>无构建工具；three.js r187 与后处理模块以本地 vendor 形式加载</td></tr>
+  <tr><td>部署</td><td>nginx 子路径 <span class="mono">/ai/</span> 反代到 127.0.0.1:3300；systemd 守护</td></tr>
+</table>
+
+<h3>2.2 启动时序</h3>
+<div class="diagram">
+  <div class="row"><div class="tag">1 页面</div><div class="body"><div class="node"><b>HTML + CSS</b>门厅骨架、导航、阅读器容器一次加载</div><div class="node"><b>模块图</b>预取 app3d / three / catalog；手机不预取</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">2 门厅</div><div class="body"><div class="node"><b>门厅星网</b>Canvas 物理场开始演算</div><div class="node"><b>身份恢复</b>读取 Cookie，<span class="mono">/api/me</span> 回显</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">3 入馆</div><div class="body"><div class="node"><b>门开</b>1s 滑门 + 淡出</div><div class="node"><b>开灯过渡</b>#roomBoot 覆盖首帧前的空窗</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">4 3D</div><div class="body"><div class="node"><b>mmBoot3D</b>构建场景、材质、书架、书</div><div class="node"><b>首帧</b>渲染完成，收起开灯过渡</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">5 物理</div><div class="body"><div class="node"><b>延迟加载</b>首帧 + 2.5s 后 import Rapier</div><div class="node"><b>补体</b>跳过手持 / 叠桌 / 动画中的书</div></div></div>
+</div>
+<div class="caption">图 2-1　从页面加载到 3D 可交互的启动时序</div>
+
+<pre>// 伪代码：首帧后补物理
+requestAnimationFrame(() => {
+  markFirstFrame();
+  setTimeout(() => import('./vendor/rapier.mjs').then(initPhysics), 2500);
+});</pre>
+
+<h2>3　身份与门厅模块</h2>
+<h3>3.1 功能</h3>
+<ul>
+  <li>借书证登录、新办借书证、访客入馆三种入口；登录流程有“核验中”动画与失败重试。</li>
+  <li>访客只读：可读全部章节，盖章/批注/进度会提示办证。</li>
+  <li>门厅星网：54 个节点、57 条连线，鼠标只扰动附近、节点全图漫游且保持间距。</li>
+  <li>入门动画：两扇木门滑开 → 门厅淡出 → 开灯过渡 → 3D 首帧 → 过渡淡出。</li>
+</ul>
+
+<h3>3.2 口令与会话</h3>
+<p>口令使用 Node <span class="mono">crypto.scrypt</span>：N=16384、r=8、p=1、盐 16 字节、输出 64 字节，存储格式为 <span class="mono">scrypt:N:r:p:salt:hash</span>。校验使用 <span class="mono">timingSafeEqual</span>，避免时序侧信道。</p>
+<p>登录成功后服务端生成 32 字节随机 token，写入 <span class="mono">sessions</span> 表（14 天有效），并通过 <span class="mono">Set-Cookie: mm_token=...; HttpOnly; SameSite=Lax; Path=/</span> 下发；HTTPS 下自动加 <span class="mono">Secure</span>。前端不把 token 写入 localStorage，请求由浏览器自动携带 Cookie。</p>
+<table>
+  <tr><th style="width:44mm">接口</th><th>说明</th></tr>
+  <tr><td><span class="mono">POST /api/register</span></td><td>借书证号 + 口令；同一 IP 每小时最多 10 次</td></tr>
+  <tr><td><span class="mono">POST /api/login</span></td><td>同一 IP + 用户名 30 秒内最多 5 次</td></tr>
+  <tr><td><span class="mono">GET /api/me</span></td><td>返回当前用户；未登录返回空</td></tr>
+  <tr><td><span class="mono">POST /api/logout</span></td><td>删除会话并清 Cookie</td></tr>
+</table>
+
+<h3>3.3 门厅星网物理</h3>
+<p>节点初始位置用 Bridson 泊松盘采样，避免开局重叠。每帧按以下顺序积分：</p>
+<ol>
+  <li><b>随机漫游</b>：每个节点有独立相位，缓慢改变期望方向与速度。</li>
+  <li><b>鼠标局部斥力</b>：只对光标 170px 内的节点生效，力随距离衰减。</li>
+  <li><b>两两近距斥力</b>：最小间距约 <span class="mono">max(34, min(W,H)*0.045)</span>。</li>
+  <li><b>关系线弹簧</b>：初始距离作为自然长度；拉长产生引力，过短产生斥力，下限 86px。</li>
+  <li><b>质心回中</b>：整片星图缓慢平移回画布中心，只平移不压缩；边缘回弹。</li>
+</ol>
+<p>速度上限 1.6px/帧，阻尼 0.965；窗口 resize 时按比例搬运节点。该实现保证“鼠标只影响附近”“点会漫游到全图”“不会缠在一起”三个目标同时成立。</p>
+
+<h2>4　内容与数据层</h2>
+<h3>4.1 章节文件结构</h3>
+<pre>---
+id: b1-c1
+book: b1
+title: 图灵的问题
+year: 1950
+people: [...]
+tags: [...]
+summary: "45–90 字的人话结论"
+checked: true
+---
+
+## 一句话
+## 时间·人物·机构
+## 为什么是这个时候
+## 怎么工作
+## 它改变了什么
+## 今天的地位
+## 争议与局限
+## 关系
+## 档案</pre>
+<p>frontmatter 由 YAML 解析，正文按 <span class="mono">##</span> 二级标题切成九段；页边注使用固定语法，前端渲染为侧栏卡片并生成〔段落名〕锚点。来源条目必须带链接与核验标记。</p>
+
+<h3>4.2 校验规则</h3>
+<table>
+  <tr><th style="width:46mm">规则</th><th>判定</th></tr>
+  <tr><td>九段完整</td><td>缺少任一固定二级标题 → FAIL</td></tr>
+  <tr><td>字数</td><td>1500–2500 汉字；&lt;1500 FAIL，&gt;2500 WARN</td></tr>
+  <tr><td>来源</td><td>3–6 条，且 <span class="mono">checked: true</span></td></tr>
+  <tr><td>关系双向</td><td>A 引用 B，则 B 必须引用 A</td></tr>
+  <tr><td>索书号</td><td>全书唯一；书单数量与目录一致</td></tr>
+</table>
+<p>当前 <span class="mono">npm run verify</span>：448 章，FAIL=0，WARN=2（两章超过 2500 字，属历史遗留）。</p>
+
+<h3>4.3 数据库</h3>
+<pre>users(id, username, password_hash, email, created_at)
+sessions(token, user_id, expires_at)
+stamps(id, user_id, chapter_id, kind, created_at)
+annotations(id, user_id, chapter_id, quote, note, created_at)
+progress(user_id, chapter_id, state, read_at)
+reads(id, reader_id, book_id, chapter_id, created_at)
+fragment_picks(reader_id, fragment_id, chapter_id, created_at)
+collectibles(reader_id, kind, item_id, state, chapter_id, updated_at)</pre>
+<p>SQLite 开启 WAL 与外键；备份使用 <span class="mono">VACUUM INTO</span> 生成一致性快照，再与 <span class="mono">content/</span> 一起打包，保留 14 天。</p>
+
+<h3>4.4 数据流</h3>
+<div class="diagram">
+  <div class="row"><div class="tag">读</div><div class="body"><div class="node"><b>内容文件</b>启动时载入内存</div><div class="node"><b>索引</b>tokenize 后建倒排表</div><div class="node"><b>API</b>按请求返回 JSON</div><div class="node"><b>渲染</b>3D / 2D / 阅读器</div></div></div>
+  <div class="arrow">↓ 写</div>
+  <div class="row"><div class="tag">写</div><div class="body"><div class="node"><b>用户动作</b>盖章 / 批注 / 读完 / 拾页 / 追回</div><div class="node"><b>API 鉴权</b>Cookie → sessions</div><div class="node"><b>SQLite</b>INSERT / DELETE</div><div class="node"><b>回读</b>页面状态恢复</div></div></div>
+</div>
+<div class="caption">图 4-1　内容只读、业务可写两条链路</div>
+
+<h2>5　检索模块</h2>
+<h3>5.1 分词</h3>
+<p>中文按连续汉字串切二元组（单字串保留单字），含停用字的二元组丢弃；英文转小写按 <span class="mono">[a-z0-9][a-z0-9-]{1,}</span> 取词并去停用词。这样无需词典即可支持“神经网络”“反向传播”等术语的包含匹配。</p>
+
+<h3>5.2 索引与排序</h3>
+<table>
+  <tr><th style="width:44mm">字段</th><th style="width:20mm">索引权重</th><th>查询加成</th></tr>
+  <tr><td>书名（book.title）</td><td>14</td><td>+60 / 命中词</td></tr>
+  <tr><td>章节标题</td><td>12</td><td>+35 / 命中词</td></tr>
+  <tr><td>章节 tag / 书 tag / 别名</td><td>8</td><td>+12 / 命中词</td></tr>
+  <tr><td>摘要 / 小标题 / 人物</td><td>4 / 3 / 3</td><td>—</td></tr>
+  <tr><td>正文</td><td>1（逐次累计）</td><td>—</td></tr>
+</table>
+<p>最终得分为“倒排权重累加 + 层级加成”。排序后取前 N 条，返回书名、标题、标签、命中理由与正文片段。</p>
+
+<h3>5.3 容错与兜底</h3>
+<ul>
+  <li><b>英文拼写容错</b>：仅在完全无命中时启用，对长度 ≥3 的英文 token 做编辑距离 ≤1 的替换，避免影响正常排序。</li>
+  <li><b>why</b>：按“书名/章节标题/标签/正文提及次数”生成最多 4 条命中理由。</li>
+  <li><b>fallback</b>：零结果时返回书目与标签建议，不让页面空着。</li>
+  <li><b>suggest</b>：书名、标签、别名、人物、概念名统一补全；书名优先、去重、每类最多 3 条。</li>
+</ul>
+
+<pre>// 查询主流程（简化）
+tokens = tokenize(q)
+scores = accumulate(index, tokens)
+if (scores.empty) scores = accumulate(index, fuzzy(tokens))
+for (doc of scores) score += bookTitleHit*60 + chapterTitleHit*35 + tagHit*12
+return topN(scores)</pre>
+
+<img class="shot" src="assets/shelf.jpg" alt="书架视图">
+<div class="caption">图 5-1　书架视图：左侧黄铜电梯选层，右侧按楼层过滤的 2D 书脊</div>
+
+<h2>6　3D 阅览室模块</h2>
+<h3>6.1 场景构成</h3>
+<ul>
+  <li>房间 28.5 × 21 × 6.6；三面护墙板、壁柱、4 扇拱形高窗、天花藻井与木梁。</li>
+  <li>11 组书架单元；每组 3 层可放书，按 56 本容量动态布局，奇数行错开半格保证 x=0 通道。</li>
+  <li>四层主题：L1 旧纸暖木、L2 蓝灰钢、L3 深棕账房、L4 紫黑暗石；书架、墙面、地毯、灯光、尘埃随层切换。</li>
+  <li>可交互道具：台灯、放大镜、卡片柜 6 抽屉、星图台、失窃展柜、L4 暗门与帷幕。</li>
+</ul>
+
+<h3>6.2 书架布局算法</h3>
+<pre>units = ceil(totalBooks / capacity)
+rows = ceil(units / maxPerRow)
+base = floor(units / rows); extra = units % rows
+for r in rows:
+  count = base + (r < extra ? 1 : 0)
+  shift = count % 2 === 1 ? (r % 2 === 0 ? -1 : 1) * spacing/2 : 0
+  z = -5.4 + r * 2.9
+  x = startX + i * 4.4</pre>
+<p>书脊纹理使用 Canvas 程序化绘制：三种版式（竖排书名 + 金线框、横排金带、极简标签），确定性随机（FNV-1a 哈希 + LCG）保证刷新不变；厚度 0.16/0.21/0.26、高度 0.54–0.63；L4 隐去书名，只留罗马数字与“未编目”。</p>
+
+<h3>6.3 材质与反射</h3>
+<p>所有标准材质在场景构建完成后统一计算环境反射强度：</p>
+<pre>envMapIntensity =
+  glass ? 1.25
+        : 0.05 + metalness * 1.1 + max(0, 0.28 - roughness) * 0.7</pre>
+<table>
+  <tr><th style="width:34mm">材质类别</th><th style="width:30mm">metalness</th><th style="width:26mm">roughness</th><th>反射</th></tr>
+  <tr><td>黄铜 / 铜 / 金</td><td>0.72–0.82</td><td>0.30–0.38</td><td>≈0.84–1.0，保留金属高光</td></tr>
+  <tr><td>木器（书架、桌面、护墙板）</td><td>0.02–0.05</td><td>0.76–0.86</td><td>≈0.07，只吃漫反射</td></tr>
+  <tr><td>地毯 / 帷幕 / 布料</td><td>0</td><td>1.0</td><td>≈0.05</td></tr>
+  <tr><td>纸张 / 书脊 / 蜡</td><td>0.01–0.04</td><td>0.88–0.96</td><td>≈0.08</td></tr>
+  <tr><td>玻璃（展柜、窗）</td><td>—</td><td>—</td><td>1.25</td></tr>
+</table>
+
+<h3>6.4 光照与后处理</h3>
+<table>
+  <tr><th style="width:40mm">光源 / 效果</th><th>参数与位置</th></tr>
+  <tr><td>环境光 / 半球光</td><td>1.35 / 0.95；半球天空 0x9a8a6a，地面 0x3a2f22</td></tr>
+  <tr><td>主光</td><td>1.5，位于 (6.5, 9.2, 8.2)</td></tr>
+  <tr><td>入口补光</td><td>0.95，不投影，颜色随楼层主题</td></tr>
+  <tr><td>吊灯聚光</td><td>3.6（L1 3.9），32° 半角，2048 阴影贴图，radius 2.6</td></tr>
+  <tr><td>壁灯 / 落地灯</td><td>0.55 / 0.8；落地灯光源在灯罩内灯泡高度 1.6</td></tr>
+  <tr><td>窗光</td><td>1.4，冷色，从两翼斜射入室</td></tr>
+  <tr><td>展柜聚光</td><td>聚焦时 5.4，切层 / 复位熄灭</td></tr>
+  <tr><td>后处理</td><td>EffectComposer → RenderPass → UnrealBloom(0.34/0.68/0.74) → OutputPass</td></tr>
+  <tr><td>色调映射</td><td>ACESFilmic，曝光 1.42–1.52</td></tr>
+</table>
+<p>体积光柱是自定义 ShaderMaterial：以法线与视线夹角做边缘柔化，顶端渐入，向下按 <span class="mono">pow(vH,1.2)</span> 衰减；锥体半径 2.6 与聚光灯半角对齐，竖直不倾斜。</p>
+
+<h3>6.5 取书、手持与叠桌</h3>
+<div class="diagram">
+  <div class="row"><div class="tag">书架上</div><div class="body"><div class="node"><b>点击书</b>raycast 命中，排除展柜/门/道具</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">手持</div><div class="body"><div class="node"><b>跟随</b>相机前 0.95m / 右 0.42m / 下 0.22m，缩放 0.5</div><div class="node"><b>操作</b>E 或左键翻开；右键 / Esc 放回；Q 放桌</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">桌面</div><div class="body"><div class="node"><b>三摞</b>按厚度自然加高，最多 12 本</div><div class="node"><b>按层分组</b>每层自己的桌子，跨层不串</div><div class="node"><b>取回</b>点击桌上书可拿回</div></div></div>
+</div>
+<p>关键技术点：tick 中的物理同步必须跳过 <span class="mono">heldBook</span> 与 <span class="mono">stacked</span> 的书，否则旧坐标会写回 mesh；<span class="mono">setFloor</span> 的显隐也要豁免手持/叠桌书；<span class="mono">reset()</span> 先把叠桌书 <span class="mono">scene.attach</span> 回场景再统一回架。</p>
+
+<h3>6.6 性能与降级</h3>
+<ul>
+  <li>静态合批：按“材质 + 阴影标记 + 索引 + 属性签名”合并静态网格，保留楼层显隐边界；交互/动画对象全部跳过。</li>
+  <li>结果：mesh 1219 → 549，draw calls 774 → 约 615（含后处理），三角形约 2.08 万。</li>
+  <li>尘埃：GPU 顶点着色器，2150 颗，每帧只推 <span class="mono">uTime</span>。</li>
+  <li>页面隐藏或处于 2D 视图时停止 3D step/render。</li>
+  <li>低配：DPR ≤1.25、关阴影、FOV 66、尘埃/光锥/点光减半、完全跳过 Rapier。</li>
+</ul>
+
+<h2>7　阅读器模块</h2>
+<h3>7.1 渲染流程</h3>
+<pre>showChapter(id)
+  → GET /api/chapters/:id
+  → 解析九段 / 页边注 / 来源
+  → 渲染左栏检索、中栏正文、右栏页边注与卡片
+  → 绑定锚点跳转、工具条、章节条
+  → window.scrollTo(0, 0)</pre>
+<p>正文用统一排版：标题、英文副题、接待卡、段落、来源列表。来源中的 URL 自动 linkify；<span class="mono">.paper</span> 设置 <span class="mono">overflow-wrap:anywhere</span>，避免长链接把移动端布局撑宽。</p>
+
+<h3>7.2 接待卡与页边注</h3>
+<p>接待卡由章节 meta 自动生成：宾客（登录用户名或“一位登记读者”）、资料状态（楼层/等级/残破度）、来访目的（一句话）、当值馆员（按楼层）、接待结果、馆员按语。页边注使用固定语法解析，右侧栏渲染为卡片，点击〔段落名〕锚点定位正文对应段并高亮 1.6 秒。</p>
+
+<h3>7.3 盖章、批注、进度</h3>
+<table>
+  <tr><th style="width:32mm">动作</th><th style="width:52mm">接口</th><th>行为</th></tr>
+  <tr><td>盖章</td><td><span class="mono">POST/DELETE /api/stamps</span></td><td>二次确认 → 纸面落章动画 → 按钮变“已盖章 · 撤销”</td></tr>
+  <tr><td>批注</td><td><span class="mono">POST /api/annotations</span></td><td>引文 ≤2000 字；右栏“我的批注”折叠显示</td></tr>
+  <tr><td>标记读完</td><td><span class="mono">POST/DELETE /api/progress</span></td><td>二次确认；可撤销；驱动徽章与书榜</td></tr>
+</table>
+
+<h3>7.4 章节导航</h3>
+<p>底部常驻章节条：上一章 / 第 n / 8 章 + 章名 / 下一章；首章末章自动禁用，最后一章显示“本书读完 →”进书架总览。右上角固定“合上书”，文末也有合书入口。换章后强制回到页首。</p>
+
+<img class="shot" src="assets/reading.jpg" alt="阅读页">
+<div class="caption">图 7-1　阅读页三栏：左检索、中正文、右页边注；底部常驻章节条</div>
+
+<h2>8　星图模块</h2>
+<h3>8.1 节点分布</h3>
+<p>56 本书按楼层分布在四个同心球壳（半径 6.2 / 8.2 / 10.2 / 12.2），每层用 Fibonacci 球面采样保证均匀；相机固定在球心，拖拽改变 yaw/pitch，滚轮调整 FOV，不自动旋转。</p>
+<pre>for i in 0..n-1:
+  y = 1 - (i / (n - 1)) * 2
+  r = sqrt(1 - y*y)
+  theta = i * goldenAngle
+  pos = (cos(theta)*r, y, sin(theta)*r) * shellRadius</pre>
+
+<h3>8.2 关系线</h3>
+<p>50 条关系用二次贝塞尔弧线连接，管径 0.03–0.038。默认透明度 0；悬停或定位某颗星时，只点亮与它相连的线（目标 0.9），移开后回落。透明度不是瞬间赋值，而是每帧向目标推进：</p>
+<pre>k = 1 - exp(-7 * dt)
+opacity += (fadeTarget - opacity) * k</pre>
+<p>拖动视角时不清空当前焦点，因此线不会在按下鼠标的一刻消失；松手后指针移到别处才淡出。流星亮度乘当前透明度，与线一起收放。</p>
+
+<h3>8.3 标签与交互</h3>
+<ul>
+  <li>只显示正前方一定角度内的书名标签，避免 56 个标签互相压住。</li>
+  <li>悬停显示书名、英文名、主题标签、相连书名；点击开书。</li>
+  <li>“按书名定位”输入后相机平滑转向该节点；“重置视线”回到初始朝向。</li>
+  <li>关系列表（L 键）提供文字版 50 条关系，兼顾低配与读屏。</li>
+</ul>
+
+<img class="shot" src="assets/star.jpg" alt="星图">
+<div class="caption">图 8-1　星图：四层球壳、星野与正前方标签；关系线按需点亮</div>
+
+<h2>9　书轨 / 时间轴 / 平面图</h2>
+<h3>9.1 书轨</h3>
+<p>书轨是一张 SVG 线路图：6 条主线、7 条支线、63 个站点、31 条换乘曲线。主线每条均分站点（年份只作为标签，严格年代看时间轴），按文字宽度布置间距；支线从最近主线站点接出，起点按标签总宽回推，避免越过右边缘。核心线用 <span class="mono">pathLength=1</span> + <span class="mono">stroke-dashoffset</span> 从左向右铺开；站点按线路/序号延迟浮现；“发车”逐站点亮并带三层拖尾。</p>
+
+<h3>9.2 时间轴</h3>
+<p>时间轴从每章 frontmatter 的 <span class="mono">year</span> 自动聚合，按年代分为 9 组，共 448 张卡；点卡开章。页面底部嵌入失败博物馆 20 件与模型尺寸墙 12 项，尺寸墙把参数量换算到同一横向标尺。</p>
+
+<h3>9.3 楼层平面图</h3>
+<p>SVG 按 app3d 世界坐标映射（房间 1000×760）：书架 x/z、电梯、星图台、卡片柜、台灯、暗格。五档选层（全馆 / L1–L4），每层高亮本层有书的书架并标“N 本 + 索书号范围”；点书架进书架视图，底部一键进本层 3D。暗格不标文字，只画一块比地面深半度的圆角色块，点击按条件给线索。</p>
+
+<h2>10　馆藏玩法模块</h2>
+<h3>10.1 残页</h3>
+<p>12 张残页（R-01–R-12），正文在关键结局处使用“纸页被撕去 / 烧毁”或 <span class="mono">█</span> 缺字，只给走向不给结局。阅读章节时低概率出现“书页之间”的纸片提示，点击“捡起来”才写入 <span class="mono">fragment_picks</span>；3D 展厅地板另有 2 张可点击残页。拼合板 12 格，错位抖动、正确锁定；6/9/12 三档奖励，集齐后追加“蜡封馆员 · 结局批注”。</p>
+
+<h3>10.2 失窃页</h3>
+<p>9 件（S-01–S-09），每件绑定一个已有章节。阅读页显示缺页卡；读到章末（<span class="mono">.paper-end</span> 进入视口）才允许追回，未读完时按钮是“去读这一章 →”。3D 每层设展柜（铜柱 + 斜台 + 玻璃罩 + 标签 + 暗红呼吸环），追回后换金封条，状态写入 <span class="mono">collectibles(kind='stolen')</span>。</p>
+
+<h3>10.3 躁动书页</h3>
+<div class="diagram">
+  <div class="row"><div class="tag">状态机</div><div class="body"><div class="node"><b>未发现</b>章节中出现提示</div><div class="node"><b>已收容</b>在同书其他章“按住它”</div><div class="node"><b>已归位</b>到正确章节“安抚并归位”，弹安抚章</div></div></div>
+</div>
+<p>12 件（F-01–F-12），对应失败博物馆条目；状态写入 <span class="mono">collectibles(kind='restless')</span>，收容编号与安抚章由前端渲染。</p>
+
+<h3>10.4 L4 暗门与假如之书</h3>
+<p>L4 右墙有实体暗门，前面挂帷幕。点击帷幕滑开 2.3m 后露出门，再点门进入 2D 暗门书架：10 本“假如之书”（1956 达特茅斯、1969 感知机、1974 寒冬、1986 反向传播、1997 深蓝、2012 AlexNet、2017 Transformer、2020 GPT-3、2022 ChatGPT、2024 开源）。每本可选符号树 / 神经树 / 具身树，生成序章 + 五幕 + 尾声共 12 段故事；换树重新生成不同内容。</p>
+
+<h3>10.5 未写之书</h3>
+<p>暗门第十一本是一张空白书页。读者输入“如果没有……会怎么样 / 会怎样 / 会如何 / 会发生什么”的问题，服务端先做格式校验，不合格不调用模型；合格后调用 SiliconFlow 的 <span class="mono">deepseek-ai/DeepSeek-V3.2</span>，system prompt 约束只写 500–900 字、与假设直接相关。限流 8 次 / 10 分钟 / IP + reader，<span class="mono">max_tokens=1400</span>，45 秒超时。密钥只存在服务器 <span class="mono">.env</span>（600），不进压缩包。</p>
+
+<h2>11　概念层与前沿观察</h2>
+<h3>11.1 概念手册</h3>
+<p>16 个概念：机器学习、深度学习、神经网络、反向传播、CNN、训练、过拟合、注意力、Transformer、LLM、生成模型、扩散、RL、RLHF、对齐、Agent。每个概念包含：一句话、生活类比、准确解释、≥2 条常见误解、历史/技术/产业/前沿四镜路径、先读章、相关概念。</p>
+<p>检索接口并列返回概念卡，不改变原有章节排序；阅读页显示“本章概念”；概念手册支持概念之间互跳，退出时按来处回到原章节或 3D。</p>
+
+<h3>11.2 前沿观察</h3>
+<div class="diagram">
+  <div class="row"><div class="tag">管线</div><div class="body"><div class="node"><b>抓取</b>arXiv cs.AI/CL/CV/LG，近 30 篇</div><div class="node"><b>编译</b>DeepSeek 生成中文标题/导读/说人话/术语/难度</div><div class="node"><b>热点</b>官方 RSS 近 14 天，强关键词过滤</div><div class="node"><b>输出</b>frontier.json / frontier-hot.json</div></div></div>
+</div>
+<p>定时任务每日 04:17 依次执行：<span class="mono">fetch-arxiv → fetch-hot → rewrite-frontier → rewrite-hot</span>。抓取失败保留旧文件，不清库。前端提供领域筛选、英文摘要折叠、arXiv 原文外链与“馆内找同方向的旧书”。</p>
+
+<h3>11.3 可玩演示</h3>
+<h4>CNN 卷积</h4>
+<p>14×14 猫脸像素图，3 个固定核（竖/横/对角）。每个位置计算 3×3 窗口与核的点积，得到 12×12 特征图；ReLU 后做 2×2 最大池化得到 6×6。分类分数取每个核特征图 ReLU 后最强 12% 响应的均值，再归一化为百分比。</p>
+<pre>out[y][x] = ΣΣ input[y+i][x+j] * kernel[i][j]
+relu(v) = max(0, v)
+pool = max(2x2 block)
+score_k = mean(top 12% of relu(map_k))</pre>
+<h4>注意力矩阵</h4>
+<p>输入一句中文，切成二元组 token；三个头分别按“邻近距离、重复字共享数、远距离”构造分数，逐行 softmax 得到 token×token 矩阵。点击某行高亮该行与该列，悬停显示百分比；切换头时矩阵重新计算。每行和为 1。</p>
+<pre>score_ij = head_k(i, j)
+A_ij = exp(score_ij) / Σ_j exp(score_ij)</pre>
+
+<img class="shot" src="assets/cnn.jpg" alt="CNN 演示">
+<div class="caption">图 12-1　CNN 演示：卷积核、特征图、ReLU、池化与三类分数</div>
+
+<h2>12　音效模块</h2>
+<p>全部音效由 WebAudio 程序合成，无音频文件：翻书（带通噪声 + 短包络）、脚步（低频脉冲）、电梯（滑行 + 到站双音）、拾页（纸摩擦）、开关灯（短促 click + 电流）、盖章（低频闷响）、暗门（低频轰鸣）、星图 pad（三音 + 带通噪声 + 慢 LFO）。</p>
+<p>总音量 0.62，事件音整体压低；开启音效时启动房间底噪（棕噪声 + 360Hz 低通），关闭先播下行提示再停底噪。浏览器要求用户手势后才能启动 AudioContext，因此首次点击时 <span class="mono">resume()</span>；页面刷新后若音效为开，第一次 <span class="mono">pointerdown</span> 再接底噪。</p>
+
+<h2>13　安全、性能与降级</h2>
+<h3>13.1 安全</h3>
+<ul>
+  <li>口令 scrypt + 随机盐 + 定时安全比较；登录/注册限流。</li>
+  <li>会话只走 HttpOnly Cookie（<span class="mono">mm_token</span>），前端不可读；HTTPS 下 Secure。</li>
+  <li>安全响应头：X-Content-Type-Options、X-Frame-Options、Referrer-Policy、Permissions-Policy、COOP。</li>
+  <li>批注引文 ≤2000 字；未写之书先校验格式再调用模型，密钥不入库、不进包。</li>
+</ul>
+
+<h3>13.2 性能预算</h3>
+<table>
+  <tr><th style="width:44mm">项</th><th>预算 / 实测</th></tr>
+  <tr><td>3D draw calls</td><td>≤700（实测约 615，含后处理）</td></tr>
+  <tr><td>三角形</td><td>约 2.08 万</td></tr>
+  <tr><td>门厅首屏</td><td>约 1.5s（本地 Chrome，gzip + ETag）</td></tr>
+  <tr><td>检索</td><td>20 并发全部 200；单次 ≤6ms</td></tr>
+  <tr><td>静态资源</td><td>app3d/star/audio/whatif/demos：no-cache + ETag；vendor：immutable</td></tr>
+</table>
+
+<h3>13.3 降级策略</h3>
+<ul>
+  <li>窄屏或低内存：DPR ≤1.25、关抗锯齿与阴影、FOV 66、尘埃/光锥/点光减半、完全跳过 Rapier。</li>
+  <li>后处理创建失败：捕获异常并回退为直接渲染。</li>
+  <li>3D 不可用：书架视图、总览、阅读器仍可完成全部阅读。</li>
+</ul>
+
+<h2>14　测试与验收</h2>
+<p><span class="mono">npm run test:e2e</span> 使用 Playwright + 系统 Chrome，覆盖以下类别（共 169 项）：</p>
+<table>
+  <tr><th style="width:38mm">类别</th><th>代表性断言</th></tr>
+  <tr><td>门厅与身份</td><td>三按钮、核验动画、失败可重试、访客入馆、门厅星网不重叠、鼠标局部扰动</td></tr>
+  <tr><td>3D 阅览室</td><td>后排可达、选字不持续移动、展柜 9 件、聚光灯、放大镜、draw call 预算、物理与光影读数</td></tr>
+  <tr><td>阅读器</td><td>三栏、页边注锚点、盖章/撤销、批注、读完/撤销、章节条、换章回页首</td></tr>
+  <tr><td>检索</td><td>首条命中、why、零结果兜底、英文容错、概念卡</td></tr>
+  <tr><td>知识视图</td><td>星图节点/画布/关系线 0→2、书轨 63 站、时间轴 448 卡、平面图 5 档</td></tr>
+  <tr><td>馆藏玩法</td><td>残页拼合、失窃追回、躁动三态、暗门 10 本、未写之书格式拒绝</td></tr>
+  <tr><td>演示</td><td>总览 7 件、CNN 520 格与三类分数、注意力 11×11 行和 1</td></tr>
+  <tr><td>工程</td><td>安全头、Cookie 不可 JS 读、缓存头、20 并发、移动端无溢出、无 pageerror</td></tr>
+</table>
+<p>截图与线上验收均无 JS 报错；内容校验 448 章 FAIL=0。</p>
+
+<h2>15　部署与运维</h2>
+<h3>15.1 拓扑</h3>
+<div class="diagram">
+  <div class="row"><div class="tag">入口</div><div class="body"><div class="node"><b>HTTPS</b>150.158.1.111/ai/</div><div class="node"><b>备用</b>http://150.158.1.111:82/ai/</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">反代</div><div class="body"><div class="node"><b>nginx</b>/ai/ → 127.0.0.1:3300</div><div class="node"><b>gzip</b>HTML/CSS/SVG/JS</div><div class="node"><b>CSP</b>script-src self + wasm-unsafe-eval + unsafe-inline</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">应用</div><div class="body"><div class="node"><b>systemd</b>machine-memory（User=ubuntu）</div><div class="node"><b>代码</b>/opt/machine-memory</div><div class="node"><b>数据</b>.data/app.db + content/</div></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="tag">定时</div><div class="body"><div class="node"><b>04:17</b>前沿入库 + 编译</div><div class="node"><b>03:40</b>备份到 /opt/mm-backups（14 天）</div></div></div>
+</div>
+<div class="caption">图 15-1　部署拓扑与定时任务</div>
+
+<h3>15.2 发布流程</h3>
+<pre>git archive HEAD -o mm-deploy.tar.gz
+scp mm-deploy.tar.gz ubuntu@server:/tmp/
+ssh server "sudo tar -xzf /tmp/mm-deploy.tar.gz -C /opt/machine-memory \
+  && sudo chown -R ubuntu:ubuntu /opt/machine-memory \
+  && sudo systemctl restart machine-memory"</pre>
+<p>压缩包排除 <span class="mono">.env</span>（模型密钥）、<span class="mono">.data</span>（用户数据）、<span class="mono">node_modules</span>、<span class="mono">.scratch</span> 与日志文件；HTTPS 证书由 Let's Encrypt IP 证书提供，续期 hooks 会短暂停/启占用 80 端口的容器。</p>
+
+<h2>16　已知限制与演进方向</h2>
+<ul>
+  <li>3D 场景在软件渲染（无 GPU）环境下帧率较低；已提供 2D 书架、总览与阅读器作为完整替代。</li>
+  <li>移动端跳过 Rapier，书不会自由落体，但抽取、翻开、叠桌仍可用。</li>
+  <li>未写之书依赖外部模型服务，服务不可用时只返回失败提示，不影响其余功能。</li>
+  <li>后续可在现有书架体系中接入“校园专题架”，把校史、学科与校园文化作为一组馆藏扩展，不需要改动底层数据模型。</li>
+</ul>
+
+<div class="note">本文所述实现均对应当前线上版本：56 本书 / 448 章 / 16 个概念 / 7 个演示 / 169 项端到端测试。线上地址：https://150.158.1.111/ai/</div>
+
+</body>
+</html>
